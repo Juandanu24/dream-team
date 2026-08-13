@@ -28,11 +28,16 @@ export async function createSessionClient() {
   );
 }
 
-// Devuelve el usuario admin autenticado o null.
+// Devuelve el usuario admin autenticado, o null si no hay sesión
+// (o Supabase aún no está configurado).
 export async function getAdminUser() {
-  const supabase = await createSessionClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  try {
+    const supabase = await createSessionClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user;
+  } catch {
+    return null;
+  }
 }

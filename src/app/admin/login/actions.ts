@@ -18,11 +18,14 @@ export async function login(
     return { error: "Escribe el email y la contraseña" };
   }
 
-  const supabase = await createSessionClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    return { error: "Credenciales inválidas" };
+  try {
+    const supabase = await createSessionClient();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      return { error: "Credenciales inválidas" };
+    }
+  } catch {
+    return { error: "Supabase no está configurado todavía (mira SETUP.md)" };
   }
 
   redirect("/admin");
