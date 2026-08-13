@@ -60,9 +60,10 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
 
 ## Estado del proyecto
 
-Construido: landing, inscripción, `/torneo`, login admin, cola de aprobación.
-Pendiente (en orden): CRUD de equipos + asignación de jugadores → fixture + carga de
-resultados/eventos → PWA (manifest + service worker) → deploy en Vercel.
+Construido: landing, inscripción, `/torneo`, login admin, cola de aprobación,
+equipos (CRUD + asignación de aprobados).
+Pendiente (en orden): fixture + carga de resultados/eventos → PWA (manifest +
+service worker) → deploy en Vercel.
 
 El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migración,
 `.env.local`, usuario admin). Sin `.env.local` el sitio compila y muestra estados vacíos.
