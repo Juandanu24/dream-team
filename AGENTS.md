@@ -62,8 +62,9 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
 
 Construido: landing, inscripción, `/torneo`, login admin, cola de aprobación,
 equipos (CRUD + asignación de aprobados), partidos (fixture generado desde el
-martes de la semana 1, marcadores, goles/tarjetas por jugador, cruces de finales).
-Pendiente (en orden): PWA (manifest + service worker) → deploy en Vercel.
+martes de la semana 1, marcadores, goles/tarjetas por jugador, cruces de finales),
+PWA (`src/app/manifest.ts`, `public/sw.js` registrado solo en producción).
+Pendiente: deploy en Vercel (pasos en `SETUP.md`).
 
 El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migración,
 `.env.local`, usuario admin). Sin `.env.local` el sitio compila y muestra estados vacíos.

@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Archivo, Bebas_Neue } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { SwRegister } from "@/components/sw-register";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -21,6 +22,15 @@ export const metadata: Metadata = {
   },
   description:
     "Un torneo. Un equipo. Un sueño. El torneo relámpago de fútbol del Dream Team: 4 equipos, fase de grupos, semifinales y gran final.",
+  appleWebApp: {
+    capable: true,
+    title: "Dream Team",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({
@@ -35,6 +45,7 @@ export default function RootLayout({
       >
         {children}
         <Toaster position="top-center" richColors />
+        <SwRegister />
       </body>
     </html>
   );
