@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const links = [
@@ -33,6 +34,18 @@ export function SiteHeader() {
           ))}
           <Button size="sm" className="ml-1 font-semibold" asChild>
             <Link href="/inscripcion">Inscríbete</Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            title="Panel de administración"
+            asChild
+          >
+            <Link href="/admin">
+              <ShieldCheck aria-hidden />
+              <span className="hidden sm:inline">Admin</span>
+            </Link>
           </Button>
         </nav>
       </div>
