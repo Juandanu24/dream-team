@@ -12,11 +12,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatKickoff, getTournamentData } from "@/lib/data";
+import {
+  formatKickoff,
+  getTournamentData,
+  type EventWithPlayer,
+} from "@/lib/data";
 import {
   POSITION_SHORT,
   STAGE_LABELS,
   type Match,
+  type MatchEvent,
   type Team,
 } from "@/lib/types";
 
@@ -40,33 +45,60 @@ function teamName(teams: Team[], id: string | null): string {
   return teams.find((t) => t.id === id)?.name ?? "Por definir";
 }
 
-function MatchRow({ match, teams }: { match: Match; teams: Team[] }) {
+function eventLabel(type: MatchEvent["type"]): string {
+  return type === "goal" ? "⚽" : type === "yellow_card" ? "🟨" : "🟥";
+}
+
+function MatchRow({
+  match,
+  teams,
+  events,
+}: {
+  match: Match;
+  teams: Team[];
+  events: EventWithPlayer[];
+}) {
   const kickoff = formatKickoff(match.kickoff_at);
+  const matchEvents = events.filter((e) => e.match_id === match.id);
   return (
-    <div className="flex flex-col gap-1 border-b border-border/40 py-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-4">
-      <div className="flex w-40 shrink-0 flex-col">
-        <span className="text-xs tracking-widest text-volt uppercase">
-          {STAGE_LABELS[match.stage]}
-        </span>
-        {kickoff ? (
-          <span className="text-xs text-muted-foreground capitalize">{kickoff}</span>
-        ) : null}
-      </div>
-      <div className="flex flex-1 items-center gap-3">
-        <span className="flex-1 text-right font-medium">
-          {teamName(teams, match.home_team_id)}
-        </span>
-        {match.status === "finished" ? (
-          <span className="font-display text-2xl text-volt">
-            {match.home_score} - {match.away_score}
+    <div className="border-b border-border/40 py-3 last:border-b-0">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex w-40 shrink-0 flex-col">
+          <span className="text-xs tracking-widest text-volt uppercase">
+            {STAGE_LABELS[match.stage]}
           </span>
-        ) : (
-          <span className="font-display text-xl text-muted-foreground">VS</span>
-        )}
-        <span className="flex-1 font-medium">
-          {teamName(teams, match.away_team_id)}
-        </span>
+          {kickoff ? (
+            <span className="text-xs text-muted-foreground capitalize">{kickoff}</span>
+          ) : null}
+        </div>
+        <div className="flex flex-1 items-center gap-3">
+          <span className="flex-1 text-right font-medium">
+            {teamName(teams, match.home_team_id)}
+          </span>
+          {match.status === "finished" ? (
+            <span className="font-display text-2xl text-volt">
+              {match.home_score} - {match.away_score}
+            </span>
+          ) : (
+            <span className="font-display text-xl text-muted-foreground">VS</span>
+          )}
+          <span className="flex-1 font-medium">
+            {teamName(teams, match.away_team_id)}
+          </span>
+        </div>
       </div>
+      {match.status === "finished" && matchEvents.length > 0 ? (
+        <p className="mt-1 text-center text-xs text-muted-foreground sm:pl-44">
+          {matchEvents
+            .map(
+              (e) =>
+                `${eventLabel(e.type)} ${e.players.full_name}${
+                  e.minute !== null ? ` ${e.minute}'` : ""
+                }`,
+            )
+            .join(" · ")}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -89,7 +121,8 @@ export default async function TournamentPage() {
     );
   }
 
-  const { tournament, standings, teams, roster, matches, scorers, cards } = data;
+  const { tournament, standings, teams, roster, matches, events, scorers, cards } =
+    data;
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
 
   return (
@@ -194,7 +227,12 @@ export default async function TournamentPage() {
                   {matches
                     .filter((m) => m.week === week)
                     .map((match) => (
-                      <MatchRow key={match.id} match={match} teams={teams} />
+                      <MatchRow
+                        key={match.id}
+                        match={match}
+                        teams={teams}
+                        events={events}
+                      />
                     ))}
                 </CardContent>
               </Card>

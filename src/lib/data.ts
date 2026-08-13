@@ -5,6 +5,7 @@ import {
   ACTIVE_TOURNAMENT_SLUG,
   type GroupStandingRow,
   type Match,
+  type MatchEvent,
   type Player,
   type PlayerCardsRow,
   type Team,
@@ -17,12 +18,17 @@ export interface RosterEntry extends TeamPlayer {
   players: Player;
 }
 
+export interface EventWithPlayer extends MatchEvent {
+  players: Pick<Player, "full_name">;
+}
+
 export interface TournamentData {
   tournament: Tournament;
   standings: GroupStandingRow[];
   teams: Team[];
   roster: RosterEntry[];
   matches: Match[];
+  events: EventWithPlayer[];
   scorers: TopScorerRow[];
   cards: PlayerCardsRow[];
 }
@@ -80,12 +86,27 @@ export async function getTournamentData(): Promise<TournamentData | null> {
         b.points - a.points || b.goal_diff - a.goal_diff || b.goals_for - a.goals_for,
     );
 
+    const matchRows = (matches.data as Match[]) ?? [];
+    let events: EventWithPlayer[] = [];
+    if (matchRows.length > 0) {
+      const { data: eventRows } = await supabase
+        .from("match_events")
+        .select("*, players(full_name)")
+        .in(
+          "match_id",
+          matchRows.map((m) => m.id),
+        )
+        .order("minute", { nullsFirst: false });
+      events = (eventRows as unknown as EventWithPlayer[]) ?? [];
+    }
+
     return {
       tournament: tournament as Tournament,
       standings: sortedStandings,
       teams: (teams.data as Team[]) ?? [],
       roster: (roster.data as unknown as RosterEntry[]) ?? [],
-      matches: (matches.data as Match[]) ?? [],
+      matches: matchRows,
+      events,
       scorers: (scorers.data as TopScorerRow[]) ?? [],
       cards: (cards.data as PlayerCardsRow[]) ?? [],
     };
