@@ -12,12 +12,26 @@ export function SiteFooter() {
             Pasión, amistad y buen fútbol. Montería, Colombia.
           </p>
         </div>
-        <Link
-          href="/admin"
-          className="text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
-        >
-          Admin
-        </Link>
+        <div className="flex flex-col items-center gap-1 sm:items-end">
+          <p className="text-xs text-muted-foreground">
+            Desarrollado por{" "}
+            <a
+              href="https://github.com/Juandanu24"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-volt underline-offset-4 hover:underline"
+            >
+              Juan David
+            </a>{" "}
+            ⚡
+          </p>
+          <Link
+            href="/admin"
+            className="text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+          >
+            Admin
+          </Link>
+        </div>
       </div>
     </footer>
   );

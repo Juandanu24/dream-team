@@ -27,6 +27,8 @@ export interface TournamentData {
   standings: GroupStandingRow[];
   teams: Team[];
   roster: RosterEntry[];
+  /** Jugadores con inscripción aprobada (tengan equipo o no). */
+  approvedPlayers: Player[];
   matches: Match[];
   events: EventWithPlayer[];
   scorers: TopScorerRow[];
@@ -47,7 +49,7 @@ export async function getTournamentData(): Promise<TournamentData | null> {
 
     if (!tournament) return null;
 
-    const [standings, teams, roster, matches, scorers, cards] =
+    const [standings, teams, roster, approved, matches, scorers, cards] =
       await Promise.all([
         supabase
           .from("group_standings")
@@ -62,6 +64,11 @@ export async function getTournamentData(): Promise<TournamentData | null> {
           .from("team_players")
           .select("*, players(*)")
           .eq("tournament_id", tournament.id),
+        supabase
+          .from("registrations")
+          .select("players(*)")
+          .eq("tournament_id", tournament.id)
+          .eq("status", "approved"),
         supabase
           .from("matches")
           .select("*")
@@ -105,6 +112,11 @@ export async function getTournamentData(): Promise<TournamentData | null> {
       standings: sortedStandings,
       teams: (teams.data as Team[]) ?? [],
       roster: (roster.data as unknown as RosterEntry[]) ?? [],
+      approvedPlayers: (
+        (approved.data as unknown as { players: Player }[] | null) ?? []
+      )
+        .map((r) => r.players)
+        .sort((a, b) => a.full_name.localeCompare(b.full_name)),
       matches: matchRows,
       events,
       scorers: (scorers.data as TopScorerRow[]) ?? [],

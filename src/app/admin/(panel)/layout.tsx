@@ -25,7 +25,7 @@ export default async function AdminLayout({
           <Link href="/admin" className="font-display text-xl tracking-wide">
             ADMIN <span className="text-volt">DT</span>
           </Link>
-          <nav className="flex items-center gap-1 overflow-x-auto">
+          <nav className="scrollbar-none flex items-center gap-1 overflow-x-auto">
             {nav.map((item) => (
               <Button
                 key={item.href}

@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PlayerCard } from "@/components/player-card";
+import { TiltCard } from "@/components/tilt-card";
 import {
   FOOT_LABELS,
   POSITION_LABELS,
@@ -95,14 +96,17 @@ export function RegistrationForm() {
   }
 
   const card = (
-    <PlayerCard
-      name={fullName}
-      age={age}
-      positionShort={position ? POSITION_SHORT[position] : ""}
-      footLabel={foot ? FOOT_LABELS[foot] : ""}
-      memberSince={memberSince}
-      photoUrl={photoPreview}
-    />
+    <TiltCard className="w-full max-w-[280px]">
+      <PlayerCard
+        name={fullName}
+        age={age}
+        positionShort={position ? POSITION_SHORT[position] : ""}
+        footLabel={foot ? FOOT_LABELS[foot] : ""}
+        memberSince={memberSince}
+        photoUrl={photoPreview}
+        className="max-w-none"
+      />
+    </TiltCard>
   );
 
   if (done) {

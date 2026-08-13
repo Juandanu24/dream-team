@@ -12,12 +12,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlayerCard } from "@/components/player-card";
+import { TiltCard } from "@/components/tilt-card";
 import {
   formatKickoff,
   getTournamentData,
   type EventWithPlayer,
 } from "@/lib/data";
 import {
+  FOOT_LABELS,
   POSITION_SHORT,
   STAGE_LABELS,
   type Match,
@@ -121,8 +124,23 @@ export default async function TournamentPage() {
     );
   }
 
-  const { tournament, standings, teams, roster, matches, events, scorers, cards } =
-    data;
+  const {
+    tournament,
+    standings,
+    teams,
+    roster,
+    approvedPlayers,
+    matches,
+    events,
+    scorers,
+    cards,
+  } = data;
+  const teamOfPlayer = new Map(
+    roster.map((entry) => [
+      entry.player_id,
+      teams.find((t) => t.id === entry.team_id)?.name ?? null,
+    ]),
+  );
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
 
   return (
@@ -145,6 +163,7 @@ export default async function TournamentPage() {
           <TabsTrigger value="posiciones">Posiciones</TabsTrigger>
           <TabsTrigger value="calendario">Calendario</TabsTrigger>
           <TabsTrigger value="equipos">Equipos</TabsTrigger>
+          <TabsTrigger value="jugadores">Jugadores</TabsTrigger>
           <TabsTrigger value="goleadores">Goleadores</TabsTrigger>
         </TabsList>
 
@@ -301,6 +320,32 @@ export default async function TournamentPage() {
                   </Card>
                 );
               })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="jugadores" className="mt-6">
+          {approvedPlayers.length === 0 ? (
+            <EmptyNote>
+              Los jugadores aparecen aquí cuando los organizadores aprueben las
+              inscripciones. ¿Ya sumaste tu nombre?
+            </EmptyNote>
+          ) : (
+            <div className="grid grid-cols-2 justify-items-center gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {approvedPlayers.map((player) => (
+                <TiltCard key={player.id} className="w-full max-w-[280px]">
+                  <PlayerCard
+                    name={player.full_name}
+                    age={player.age}
+                    positionShort={POSITION_SHORT[player.position]}
+                    footLabel={FOOT_LABELS[player.dominant_foot]}
+                    memberSince={player.member_since}
+                    photoUrl={player.photo_url}
+                    teamName={teamOfPlayer.get(player.id) ?? "Por sortear"}
+                    className="max-w-none"
+                  />
+                </TiltCard>
+              ))}
             </div>
           )}
         </TabsContent>
