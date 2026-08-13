@@ -115,6 +115,10 @@
   }
   html {
     @apply font-sans;
+    /* Scrollbar oscura y con espacio siempre reservado:
+       evita el salto de layout al navegar entre páginas cortas y largas. */
+    color-scheme: dark;
+    scrollbar-gutter: stable;
   }
   ::selection {
     background: var(--volt);
