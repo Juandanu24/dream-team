@@ -25,8 +25,7 @@ Pasos que solo tú puedes hacer para dejar el sitio funcionando. Son ~10 minutos
    ```
 2. En el dashboard: **Project Settings → API Keys**.
    - `NEXT_PUBLIC_SUPABASE_URL` → la **Project URL**.
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` → la key **publishable** (`sb_publishable_…`;
-     en proyectos viejos se llama `anon`).
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → la key **publishable** (`sb_publishable_…`).
    - `SUPABASE_SERVICE_ROLE_KEY` → la key **secret** (`sb_secret_…` o `service_role`).
      Esta es la peligrosa: nunca sale del servidor ni se commitea.
 
