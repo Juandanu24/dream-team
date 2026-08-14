@@ -72,6 +72,7 @@ export function MemberSinceField({
         <Input
           id={`${idPrefix}-amount`}
           type="number"
+          inputMode="numeric"
           min={1}
           max={99}
           value={amount}

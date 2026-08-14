@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const CYCLE = ["system", "light", "dark"] as const;
 
@@ -14,7 +15,8 @@ const LABELS: Record<(typeof CYCLE)[number], string> = {
 };
 
 // Cicla sistema → claro → oscuro. Por defecto sigue al OS.
-export function ThemeToggle() {
+// withLabel: fila completa clickeable con el nombre del tema (menú mobile).
+export function ThemeToggle({ withLabel = false }: { withLabel?: boolean }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -35,16 +37,23 @@ export function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size={withLabel ? "default" : "sm"}
       title={mounted ? LABELS[current] : "Tema"}
-      className="text-muted-foreground hover:text-foreground"
+      className={cn(
+        "text-muted-foreground hover:text-foreground",
+        withLabel && "w-full justify-start",
+      )}
       onClick={() => {
         const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
         setTheme(next);
       }}
     >
       <Icon aria-hidden />
-      <span className="sr-only">Cambiar tema</span>
+      {withLabel ? (
+        <span>{mounted ? LABELS[current] : "Tema"}</span>
+      ) : (
+        <span className="sr-only">Cambiar tema</span>
+      )}
     </Button>
   );
 }

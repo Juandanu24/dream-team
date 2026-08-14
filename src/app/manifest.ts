@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Dream Team — Torneo Relámpago",
+    name: "Dream Team — 1er Torneo Amistoso",
     short_name: "Dream Team",
     description:
-      "El torneo relámpago del Dream Team: fixture, tabla de posiciones, goleadores y equipos.",
+      "El 1er Torneo Amistoso del Dream Team: fixture, tabla de posiciones, goleadores y equipos.",
     start_url: "/",
     display: "standalone",
     background_color: "#0a0a0a",

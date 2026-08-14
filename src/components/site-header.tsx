@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShieldCheck } from "lucide-react";
+import { Home, Menu, ShieldCheck, Trophy, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -16,8 +16,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/", label: "Inicio" },
-  { href: "/torneo", label: "Torneo" },
+  { href: "/", label: "Inicio", icon: Home },
+  { href: "/torneo", label: "Torneo", icon: Trophy },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -107,16 +107,24 @@ export function SiteHeader() {
                     asChild
                     onClick={() => setOpen(false)}
                   >
-                    <Link href={link.href}>{link.label}</Link>
+                    <Link href={link.href}>
+                      <link.icon aria-hidden /> {link.label}
+                    </Link>
                   </Button>
                 ))}
                 <Button
                   variant="ghost"
-                  className="justify-start text-muted-foreground"
+                  className={cn(
+                    "justify-start text-muted-foreground",
+                    pathname.startsWith("/inscripcion") &&
+                      "bg-secondary text-foreground",
+                  )}
                   asChild
                   onClick={() => setOpen(false)}
                 >
-                  <Link href="/inscripcion">Inscripción</Link>
+                  <Link href="/inscripcion">
+                    <UserPlus aria-hidden /> Inscripción
+                  </Link>
                 </Button>
                 <Button
                   variant="ghost"
@@ -132,9 +140,8 @@ export function SiteHeader() {
                     <ShieldCheck aria-hidden /> Admin
                   </Link>
                 </Button>
-                <div className="mt-2 flex items-center gap-2 border-t border-border/60 pt-3">
-                  <ThemeToggle />
-                  <span className="text-xs text-muted-foreground">Tema</span>
+                <div className="mt-2 border-t border-border/60 pt-2">
+                  <ThemeToggle withLabel />
                 </div>
               </nav>
             </SheetContent>

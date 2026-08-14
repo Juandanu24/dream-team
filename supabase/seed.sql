@@ -1,4 +1,4 @@
--- Torneo inicial: Torneo Relámpago Dream Team
+-- Torneo inicial: 1er Torneo Amistoso Dream Team
 insert into tournaments (slug, name, status)
-values ('relampago-2026', 'Torneo Relámpago Dream Team', 'registration')
+values ('relampago-2026', '1er Torneo Amistoso Dream Team', 'registration')
 on conflict (slug) do nothing;

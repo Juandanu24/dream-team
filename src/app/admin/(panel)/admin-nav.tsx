@@ -2,23 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ExternalLink } from "lucide-react";
+import {
+  CalendarDays,
+  ClipboardList,
+  ExternalLink,
+  LayoutDashboard,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const nav = [
-  { href: "/admin", label: "Panel" },
-  { href: "/admin/inscripciones", label: "Inscripciones" },
-  { href: "/admin/equipos", label: "Equipos" },
-  { href: "/admin/partidos", label: "Partidos" },
+export const ADMIN_NAV = [
+  { href: "/admin", label: "Panel", icon: LayoutDashboard },
+  { href: "/admin/inscripciones", label: "Inscripciones", icon: ClipboardList },
+  { href: "/admin/equipos", label: "Equipos", icon: Users },
+  { href: "/admin/partidos", label: "Partidos", icon: CalendarDays },
 ];
 
+// Nav de escritorio del admin; en mobile se usa AdminMobileMenu.
 export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="scrollbar-none flex flex-1 items-center gap-1 overflow-x-auto">
-      {nav.map((item) => {
+    <nav className="scrollbar-none hidden flex-1 items-center gap-1 overflow-x-auto sm:flex">
+      {ADMIN_NAV.map((item) => {
         const active =
           item.href === "/admin"
             ? pathname === "/admin"
@@ -34,7 +41,9 @@ export function AdminNav() {
             )}
             asChild
           >
-            <Link href={item.href}>{item.label}</Link>
+            <Link href={item.href}>
+              <item.icon aria-hidden /> {item.label}
+            </Link>
           </Button>
         );
       })}

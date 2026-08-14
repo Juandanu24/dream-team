@@ -165,6 +165,7 @@ export function RegistrationForm() {
             <Input
               id="age"
               type="number"
+              inputMode="numeric"
               min={10}
               max={80}
               value={age}

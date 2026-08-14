@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getAdminUser } from "@/lib/supabase/server";
 import { logout } from "../actions";
+import { AdminMobileMenu } from "./admin-mobile-menu";
 import { AdminNav } from "./admin-nav";
 
 export default async function AdminLayout({
@@ -24,18 +25,23 @@ export default async function AdminLayout({
             ADMIN <span className="text-volt">DT</span>
           </Link>
           <AdminNav />
-          <ThemeToggle />
-          <form action={logout} className="shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              type="submit"
-              className="text-muted-foreground hover:text-destructive"
-              title="Cerrar sesión"
-            >
-              <LogOut aria-hidden />
-            </Button>
-          </form>
+          <div className="ml-auto hidden items-center gap-1 sm:flex">
+            <ThemeToggle />
+            <form action={logout}>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="submit"
+                className="text-muted-foreground hover:text-destructive"
+                title="Cerrar sesión"
+              >
+                <LogOut aria-hidden />
+              </Button>
+            </form>
+          </div>
+          <div className="ml-auto sm:hidden">
+            <AdminMobileMenu />
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>

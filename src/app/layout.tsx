@@ -18,11 +18,11 @@ const bebas = Bebas_Neue({
 
 export const metadata: Metadata = {
   title: {
-    default: "Dream Team — Torneo Relámpago",
+    default: "Dream Team — 1er Torneo Amistoso",
     template: "%s | Dream Team",
   },
   description:
-    "Un torneo. Un equipo. Un sueño. El torneo relámpago de fútbol del Dream Team: 4 equipos, fase de grupos, semifinales y gran final.",
+    "Un torneo. Un equipo. Un sueño. El 1er Torneo Amistoso de fútbol del Dream Team: 4 equipos, fase de grupos, semifinales y gran final.",
   appleWebApp: {
     capable: true,
     title: "Dream Team",

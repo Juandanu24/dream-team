@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # AGENTS.md — Dream Team
 
-Web del torneo relámpago del Dream Team (grupo de fútbol de Montería, +80 personas):
+Web del 1er Torneo Amistoso del Dream Team (grupo de fútbol de Montería, +80 personas):
 inscripción de jugadores con carta estilo FIFA, panel admin para aprobar inscritos,
 armar equipos y cargar resultados, y vista pública del torneo. **Comunicarse en español;
 todo el copy de cara al usuario va en español colombiano (tuteo, nunca voseo).**

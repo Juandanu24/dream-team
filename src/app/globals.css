@@ -150,6 +150,21 @@
   }
 }
 
+/* Flotar suave, para el balón del hero. */
+@utility animate-float {
+  animation: dt-float 5s ease-in-out infinite;
+}
+
+@keyframes dt-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
