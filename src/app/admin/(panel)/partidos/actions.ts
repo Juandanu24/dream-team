@@ -164,14 +164,76 @@ export async function generateFixture(formData: FormData) {
   const { error } = await supabase.from("matches").insert(matches);
   if (error) throw error;
 
-  await sendPushToAll({
+  revalidateMatches();
+}
+
+const newMatchSchema = z.object({
+  stage: z.enum(["group", "semifinal", "third_place", "final"]),
+  week: z.coerce.number().int().min(1).max(10),
+  kickoff_at: z.string().min(1),
+  home_team_id: z.uuid().nullable(),
+  away_team_id: z.uuid().nullable(),
+});
+
+// Alta manual de un partido, para armar el calendario a mano.
+export async function addMatch(formData: FormData) {
+  await requireAdmin();
+
+  const home = String(formData.get("home_team_id") ?? "") || null;
+  const away = String(formData.get("away_team_id") ?? "") || null;
+  if (home && away && home === away) {
+    throw new Error("Un equipo no puede jugar contra sí mismo");
+  }
+
+  const parsed = newMatchSchema.parse({
+    stage: formData.get("stage"),
+    week: formData.get("week"),
+    kickoff_at: formData.get("kickoff_at"),
+    home_team_id: home,
+    away_team_id: away,
+  });
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("matches").insert({
+    ...parsed,
+    tournament_id: await activeTournamentId(),
+    kickoff_at: bogotaToIso(parsed.kickoff_at),
+  });
+  if (error) throw error;
+
+  revalidateMatches();
+}
+
+export async function deleteMatch(matchId: string) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("matches").delete().eq("id", matchId);
+  if (error) throw error;
+
+  revalidateMatches();
+}
+
+// Avisa a todos que el calendario ya está listo. Es un paso aparte de
+// crear los partidos: así se arma y se corrige con calma, y el aviso
+// sale una sola vez, cuando el calendario está confirmado.
+export async function publishFixture(): Promise<number> {
+  await requireAdmin();
+
+  const supabase = createAdminClient();
+  const tournamentId = await activeTournamentId();
+  const { count } = await supabase
+    .from("matches")
+    .select("id", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId);
+
+  if (!count) throw new Error("No hay partidos que anunciar");
+
+  return sendPushToAll({
     title: "📅 ¡Ya hay calendario!",
-    body: "Se publicó el fixture del torneo. Mira cuándo juega tu equipo.",
+    body: "Ya está el fixture del torneo. Mira cuándo juega tu equipo.",
     url: "/torneo",
     tag: "fixture",
   });
-
-  revalidateMatches();
 }
 
 // Borra todos los partidos del torneo, incluidos resultados y eventos

@@ -1,4 +1,4 @@
-import { Check, RotateCcw, Save, Share2, X } from "lucide-react";
+import { Check, Plus, RotateCcw, Save, Share2, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,14 +26,19 @@ import {
   type TeamPlayer,
 } from "@/lib/types";
 import {
+  addMatch,
   deleteEvent,
   deleteFixture,
+  deleteMatch,
   generateFixture,
   reopenMatch,
   saveResult,
   updateMatch,
 } from "./actions";
 import { MatchEventForm } from "./match-event-form";
+import { PublishFixtureButton } from "./publish-fixture-button";
+
+const MATCH_STAGES = ["group", "semifinal", "third_place", "final"] as const;
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +123,40 @@ function toBogotaInput(ts: string | null): string {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
+// Revisa que en la semana jueguen todos los equipos, exactamente una
+// vez. Con 4 equipos y 2 partidos por semana, cualquier otra cosa deja
+// a alguien por fuera o hace que alguien juegue doble.
+function weekIssues(weekMatches: Match[], teams: Team[]): string[] {
+  const issues: string[] = [];
+  const sinCruce = weekMatches.filter(
+    (m) => !m.home_team_id || !m.away_team_id,
+  ).length;
+  if (sinCruce > 0) {
+    issues.push(
+      `${sinCruce} partido${sinCruce > 1 ? "s" : ""} sin cruce definido`,
+    );
+  }
+
+  const counts = new Map<string, number>();
+  for (const match of weekMatches) {
+    for (const id of [match.home_team_id, match.away_team_id]) {
+      if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+  }
+
+  const repetidos = teams.filter((t) => (counts.get(t.id) ?? 0) > 1);
+  const ausentes = teams.filter((t) => !counts.has(t.id));
+
+  if (repetidos.length > 0) {
+    issues.push(`juegan dos veces: ${repetidos.map((t) => t.name).join(", ")}`);
+  }
+  if (ausentes.length > 0 && sinCruce === 0) {
+    issues.push(`no juegan: ${ausentes.map((t) => t.name).join(", ")}`);
+  }
+
+  return issues;
+}
+
 // Agrupa los eventos por jugador y tipo: "Andrés Pertuz ×3" en vez de
 // tres filas iguales. Borrar quita una unidad del grupo.
 function groupEvents(events: EventWithPlayer[]) {
@@ -154,7 +193,6 @@ function MatchAdmin({
 }) {
   const home = teams.find((t) => t.id === match.home_team_id);
   const away = teams.find((t) => t.id === match.away_team_id);
-  const isKnockout = match.stage !== "group";
   const matchEvents = events.filter((e) => e.match_id === match.id);
   const matchRoster = roster.filter(
     (r) => r.team_id === match.home_team_id || r.team_id === match.away_team_id,
@@ -180,38 +218,45 @@ function MatchAdmin({
           defaultValue={toBogotaInput(match.kickoff_at)}
           className="w-fit"
         />
-        {isKnockout ? (
-          <>
-            <select
-              name="home_team_id"
-              defaultValue={match.home_team_id ?? ""}
-              className={selectClass}
-            >
-              <option value="">Local por definir</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-muted-foreground">vs</span>
-            <select
-              name="away_team_id"
-              defaultValue={match.away_team_id ?? ""}
-              className={selectClass}
-            >
-              <option value="">Visitante por definir</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-          </>
-        ) : null}
+        <select
+          name="home_team_id"
+          defaultValue={match.home_team_id ?? ""}
+          className={selectClass}
+        >
+          <option value="">Local por definir</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-muted-foreground">vs</span>
+        <select
+          name="away_team_id"
+          defaultValue={match.away_team_id ?? ""}
+          className={selectClass}
+        >
+          <option value="">Visitante por definir</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
         <Button variant="ghost" size="sm" type="submit" title="Guardar programación">
           <Save aria-hidden />
         </Button>
+        {match.status !== "finished" ? (
+          <ConfirmButton
+            action={deleteMatch.bind(null, match.id)}
+            message="¿Borrar este partido del calendario?"
+            variant="ghost"
+            title="Borrar partido"
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 aria-hidden />
+          </ConfirmButton>
+        ) : null}
       </form>
 
       {/* Resultado */}
@@ -449,17 +494,29 @@ export default async function AdminMatchesPage() {
       ) : (
         <>
           <div className="mt-6 space-y-4">
-            {weeks.map((week) => (
+            {weeks.map((week) => {
+              const weekMatches = matches.filter((m) => m.week === week);
+              const issues = weekIssues(weekMatches, teams);
+              return (
               <Card key={week} className="border-border/60 bg-card/70">
                 <CardHeader>
-                  <CardTitle className="font-display text-2xl tracking-wide text-volt">
+                  <CardTitle className="flex flex-wrap items-center gap-2 font-display text-2xl tracking-wide text-volt">
                     SEMANA {week}
+                    {teams.length > 0 ? (
+                      issues.length === 0 ? (
+                        <span className="text-xs font-normal text-volt/80">
+                          ✓ Juegan los {teams.length}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-normal text-yellow-500">
+                          ⚠️ {issues.join(" · ")}
+                        </span>
+                      )
+                    ) : null}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {matches
-                    .filter((m) => m.week === week)
-                    .map((match) => (
+                  {weekMatches.map((match) => (
                       <MatchAdmin
                         key={match.id}
                         match={match}
@@ -470,7 +527,103 @@ export default async function AdminMatchesPage() {
                     ))}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
+          </div>
+
+          {/* Alta manual de partidos */}
+          <Card className="mt-4 border-border/60 bg-card/70">
+            <CardHeader>
+              <CardTitle className="font-display text-xl tracking-wide">
+                AGREGAR PARTIDO
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                action={addMatch}
+                className="flex flex-wrap items-end gap-2"
+              >
+                <div className="space-y-1">
+                  <Label htmlFor="nm-week" className="text-xs">
+                    Semana
+                  </Label>
+                  <Input
+                    id="nm-week"
+                    type="number"
+                    inputMode="numeric"
+                    name="week"
+                    min={1}
+                    max={10}
+                    defaultValue={1}
+                    required
+                    className="w-20"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="nm-stage" className="text-xs">
+                    Fase
+                  </Label>
+                  <select
+                    id="nm-stage"
+                    name="stage"
+                    defaultValue="group"
+                    className={selectClass}
+                  >
+                    {MATCH_STAGES.map((stage) => (
+                      <option key={stage} value={stage}>
+                        {STAGE_LABELS[stage]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="nm-date" className="text-xs">
+                    Fecha y hora
+                  </Label>
+                  <Input
+                    id="nm-date"
+                    type="datetime-local"
+                    name="kickoff_at"
+                    required
+                    className="w-fit"
+                  />
+                </div>
+                <select
+                  name="home_team_id"
+                  defaultValue=""
+                  className={selectClass}
+                  aria-label="Equipo local"
+                >
+                  <option value="">Local por definir</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="pb-2 text-xs text-muted-foreground">vs</span>
+                <select
+                  name="away_team_id"
+                  defaultValue=""
+                  className={selectClass}
+                  aria-label="Equipo visitante"
+                >
+                  <option value="">Visitante por definir</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit">
+                  <Plus aria-hidden /> Agregar
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="mt-6 flex flex-wrap gap-2">
+            <PublishFixtureButton />
           </div>
 
           <div className="mt-6">
