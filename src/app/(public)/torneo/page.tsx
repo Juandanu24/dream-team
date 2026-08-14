@@ -158,20 +158,21 @@ export default async function TournamentPage() {
       </div>
 
       <Tabs defaultValue="posiciones" className="mt-8">
-        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto">
-          <TabsTrigger value="posiciones" className="flex-none px-3 py-1.5">
+        {/* Mobile: cuadrícula 3+2 a todo el ancho; desktop: una fila repartida */}
+        <TabsList className="grid h-auto w-full grid-cols-6 gap-1 group-data-horizontal/tabs:h-auto sm:flex">
+          <TabsTrigger value="posiciones" className="col-span-2 py-1.5">
             Posiciones
           </TabsTrigger>
-          <TabsTrigger value="calendario" className="flex-none px-3 py-1.5">
+          <TabsTrigger value="calendario" className="col-span-2 py-1.5">
             Calendario
           </TabsTrigger>
-          <TabsTrigger value="equipos" className="flex-none px-3 py-1.5">
+          <TabsTrigger value="equipos" className="col-span-2 py-1.5">
             Equipos
           </TabsTrigger>
-          <TabsTrigger value="jugadores" className="flex-none px-3 py-1.5">
+          <TabsTrigger value="jugadores" className="col-span-3 py-1.5">
             Jugadores
           </TabsTrigger>
-          <TabsTrigger value="goleadores" className="flex-none px-3 py-1.5">
+          <TabsTrigger value="goleadores" className="col-span-3 py-1.5">
             Goleadores
           </TabsTrigger>
         </TabsList>
