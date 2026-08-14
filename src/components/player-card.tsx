@@ -9,6 +9,8 @@ interface PlayerCardProps {
   memberSince: string;
   photoUrl?: string | null;
   teamName?: string | null;
+  /** Capitán: banda en la foto y marca junto al equipo. */
+  isCaptain?: boolean;
   /** Versión mini para grillas con muchos jugadores. */
   compact?: boolean;
   className?: string;
@@ -26,6 +28,7 @@ export function PlayerCard({
   memberSince,
   photoUrl,
   teamName,
+  isCaptain = false,
   compact = false,
   className,
 }: PlayerCardProps) {
@@ -72,7 +75,25 @@ export function PlayerCard({
           </p>
         </div>
 
-        <div className={cn("flex justify-center", compact ? "mt-1" : "mt-3")}>
+        <div
+          className={cn(
+            "relative flex justify-center",
+            compact ? "mt-1" : "mt-3",
+          )}
+        >
+          {isCaptain ? (
+            <span
+              className={cn(
+                "absolute z-10 flex items-center justify-center rounded-full border-2 border-[#0a0b02] bg-volt font-display text-primary-foreground",
+                compact
+                  ? "right-[26%] bottom-0 size-5 text-[10px]"
+                  : "right-[22%] bottom-0 size-8 text-base",
+              )}
+              title="Capitán"
+            >
+              C
+            </span>
+          ) : null}
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img

@@ -18,6 +18,7 @@ export interface GalleryPlayer {
   memberSince: string;
   photoUrl: string | null;
   teamName: string;
+  isCaptain: boolean;
 }
 
 // Galería pública de cartas: carrusel (una grande al centro) o
@@ -35,6 +36,7 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
         memberSince={player.memberSince}
         photoUrl={player.photoUrl}
         teamName={player.teamName}
+        isCaptain={player.isCaptain}
         compact={compact}
         className="max-w-none"
       />

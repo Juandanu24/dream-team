@@ -156,6 +156,9 @@ export default async function TournamentPage() {
       teams.find((t) => t.id === entry.team_id)?.name ?? null,
     ]),
   );
+  const captains = new Set(
+    roster.filter((entry) => entry.is_captain).map((entry) => entry.player_id),
+  );
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
 
   return (
@@ -319,7 +322,11 @@ export default async function TournamentPage() {
               {teams.map((team) => {
                 const players = roster
                   .filter((r) => r.team_id === team.id)
-                  .sort((a, b) => Number(b.is_goalkeeper) - Number(a.is_goalkeeper));
+                  .sort(
+                    (a, b) =>
+                      Number(b.is_captain) - Number(a.is_captain) ||
+                      Number(b.is_goalkeeper) - Number(a.is_goalkeeper),
+                  );
                 return (
                   <Card key={team.id} className="border-border/60 bg-card/70">
                     <CardHeader>
@@ -352,6 +359,14 @@ export default async function TournamentPage() {
                             </Avatar>
                             <span className="flex-1 truncate text-sm">
                               {entry.players.full_name}
+                              {entry.is_captain ? (
+                                <span
+                                  className="ml-1.5 rounded-sm bg-volt px-1 font-display text-[10px] text-primary-foreground"
+                                  title="Capitán"
+                                >
+                                  C
+                                </span>
+                              ) : null}
                             </span>
                             {entry.jersey_number ? (
                               <span className="font-display text-sm text-muted-foreground">
@@ -391,6 +406,7 @@ export default async function TournamentPage() {
                 memberSince: player.member_since,
                 photoUrl: player.photo_url,
                 teamName: teamOfPlayer.get(player.id) ?? "Por sortear",
+                isCaptain: captains.has(player.id),
               }))}
             />
           )}

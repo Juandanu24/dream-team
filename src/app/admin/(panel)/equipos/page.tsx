@@ -19,7 +19,12 @@ import {
   type Team,
   type TeamPlayer,
 } from "@/lib/types";
-import { assignPlayer, createTeam, removePlayer } from "./actions";
+import {
+  assignPlayer,
+  createTeam,
+  removePlayer,
+  toggleCaptain,
+} from "./actions";
 import { ColorSwatches } from "./color-swatches";
 import { DeleteTeamButton, EditTeamDialog } from "./team-dialogs";
 
@@ -155,6 +160,7 @@ export default async function AdminTeamsPage() {
               .filter((r) => r.team_id === team.id)
               .sort(
                 (a, b) =>
+                  Number(b.is_captain) - Number(a.is_captain) ||
                   Number(b.is_goalkeeper) - Number(a.is_goalkeeper) ||
                   a.players.full_name.localeCompare(b.players.full_name),
               );
@@ -197,6 +203,25 @@ export default async function AdminTeamsPage() {
                       <span className="flex-1 truncate text-sm">
                         {entry.players.full_name}
                       </span>
+                      <form action={toggleCaptain.bind(null, entry.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="submit"
+                          title={
+                            entry.is_captain
+                              ? "Quitar la banda de capitán"
+                              : "Hacer capitán"
+                          }
+                          className={
+                            entry.is_captain
+                              ? "font-display text-base text-volt"
+                              : "font-display text-base text-muted-foreground/40 hover:text-foreground"
+                          }
+                        >
+                          C
+                        </Button>
+                      </form>
                       <PlayerBadge
                         player={entry.players}
                         isGk={entry.is_goalkeeper}

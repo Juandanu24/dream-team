@@ -56,6 +56,8 @@ export interface TeamPlayer {
   tournament_id: string;
   player_id: string;
   is_goalkeeper: boolean;
+  /** Un solo capitán por equipo (garantizado por índice único). */
+  is_captain?: boolean;
   jersey_number: number | null;
   created_at: string;
 }

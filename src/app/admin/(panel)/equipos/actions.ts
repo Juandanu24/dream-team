@@ -151,6 +151,46 @@ export async function assignPlayer(teamId: string, formData: FormData) {
   revalidateTeams();
 }
 
+// Marca al jugador como capitán de su equipo. Como solo puede haber
+// uno, primero se le quita la banda al anterior (y volver a tocar al
+// mismo capitán lo desmarca).
+export async function toggleCaptain(teamPlayerId: string) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+
+  const { data: entry } = await supabase
+    .from("team_players")
+    .select("id, team_id, is_captain")
+    .eq("id", teamPlayerId)
+    .maybeSingle();
+  if (!entry) throw new Error("Jugador no encontrado en el equipo");
+
+  if (entry.is_captain) {
+    const { error } = await supabase
+      .from("team_players")
+      .update({ is_captain: false })
+      .eq("id", entry.id);
+    if (error) throw error;
+  } else {
+    // El índice único es parcial (solo filas con is_captain), así que
+    // hay que liberar la banda antes de asignarla.
+    const { error: clearError } = await supabase
+      .from("team_players")
+      .update({ is_captain: false })
+      .eq("team_id", entry.team_id)
+      .eq("is_captain", true);
+    if (clearError) throw clearError;
+
+    const { error } = await supabase
+      .from("team_players")
+      .update({ is_captain: true })
+      .eq("id", entry.id);
+    if (error) throw error;
+  }
+
+  revalidateTeams();
+}
+
 export async function removePlayer(teamPlayerId: string) {
   await requireAdmin();
   const supabase = createAdminClient();
