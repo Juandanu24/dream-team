@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MemberSinceField } from "@/components/member-since-field";
 import { FOOT_LABELS, POSITION_LABELS, type Player } from "@/lib/types";
 import { updatePlayer } from "./actions";
 
@@ -72,13 +73,10 @@ export function PlayerEditDialog({ player }: { player: Player }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`pl-since-${player.id}`}>Tiempo en el DT</Label>
-              <Input
-                id={`pl-since-${player.id}`}
-                name="member_since"
+              <Label htmlFor={`ms-${player.id}-kind`}>Tiempo en el DT</Label>
+              <MemberSinceField
                 defaultValue={player.member_since}
-                maxLength={40}
-                required
+                idPrefix={`ms-${player.id}`}
               />
             </div>
             <div className="space-y-2">

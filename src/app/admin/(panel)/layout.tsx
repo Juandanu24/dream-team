@@ -1,16 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ExternalLink, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getAdminUser } from "@/lib/supabase/server";
 import { logout } from "../actions";
-
-const nav = [
-  { href: "/admin", label: "Panel" },
-  { href: "/admin/inscripciones", label: "Inscripciones" },
-  { href: "/admin/equipos", label: "Equipos" },
-  { href: "/admin/partidos", label: "Partidos" },
-];
+import { AdminNav } from "./admin-nav";
 
 export default async function AdminLayout({
   children,
@@ -28,29 +23,8 @@ export default async function AdminLayout({
           >
             ADMIN <span className="text-volt">DT</span>
           </Link>
-          <nav className="scrollbar-none flex flex-1 items-center gap-1 overflow-x-auto">
-            {nav.map((item) => (
-              <Button
-                key={item.href}
-                variant="ghost"
-                size="sm"
-                className="shrink-0 text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <Link href={item.href}>{item.label}</Link>
-              </Button>
-            ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0 text-muted-foreground hover:text-foreground"
-              asChild
-            >
-              <Link href="/">
-                <ExternalLink aria-hidden /> Ver sitio
-              </Link>
-            </Button>
-          </nav>
+          <AdminNav />
+          <ThemeToggle />
           <form action={logout} className="shrink-0">
             <Button
               variant="ghost"

@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import {
+  MOTION_GRANTED_EVENT,
+  motionGranted,
+  motionSupported,
+} from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 // Misma forma de la carta (player-card.tsx) para que el brillo no se salga.
@@ -12,9 +17,8 @@ function clamp(value: number, min: number, max: number) {
 }
 
 // Tilt 3D estilo FIFA Ultimate Team.
-// Desktop: la carta sigue el cursor. Mobile: sigue el giroscopio
-// (en iOS se activa con el primer toque, que es cuando el sistema
-// permite pedir el permiso de movimiento).
+// Desktop: la carta sigue el cursor. Táctil: sigue el giroscopio —
+// se activa con el botón "movimiento" (MotionButton) por el permiso de iOS.
 export function TiltCard({
   children,
   className,
@@ -72,13 +76,13 @@ export function TiltCard({
     );
     observer.observe(el);
 
-    // Giroscopio solo en dispositivos táctiles (sin hover real).
-    if (window.matchMedia("(hover: hover)").matches) {
+    if (!motionSupported()) {
       return () => observer.disconnect();
     }
 
     let baseline: { beta: number; gamma: number } | null = null;
     let raf = 0;
+    let listening = false;
 
     const onOrientation = (event: DeviceOrientationEvent) => {
       if (event.beta == null || event.gamma == null || !visible.current) return;
@@ -89,32 +93,18 @@ export function TiltCard({
       raf = requestAnimationFrame(() => apply(x, y));
     };
 
-    const start = () =>
+    const start = () => {
+      if (listening) return;
+      listening = true;
       window.addEventListener("deviceorientation", onOrientation);
-
-    type DOEWithPermission = typeof DeviceOrientationEvent & {
-      requestPermission?: () => Promise<string>;
     };
-    const DOE = window.DeviceOrientationEvent as DOEWithPermission | undefined;
-    let removeGesture: (() => void) | undefined;
 
-    if (DOE && typeof DOE.requestPermission === "function") {
-      const onGesture = () => {
-        DOE.requestPermission!()
-          .then((result) => {
-            if (result === "granted") start();
-          })
-          .catch(() => {});
-      };
-      el.addEventListener("pointerdown", onGesture, { once: true });
-      removeGesture = () => el.removeEventListener("pointerdown", onGesture);
-    } else if (DOE) {
-      start();
-    }
+    if (motionGranted()) start();
+    window.addEventListener(MOTION_GRANTED_EVENT, start);
 
     return () => {
       observer.disconnect();
-      removeGesture?.();
+      window.removeEventListener(MOTION_GRANTED_EVENT, start);
       window.removeEventListener("deviceorientation", onOrientation);
       cancelAnimationFrame(raf);
     };

@@ -15,6 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MemberSinceField } from "@/components/member-since-field";
+import { MotionButton } from "@/components/motion-button";
+import { PhotoAdjustDialog } from "@/components/photo-adjust-dialog";
 import { PlayerCard } from "@/components/player-card";
 import { TiltCard } from "@/components/tilt-card";
 import {
@@ -32,37 +35,37 @@ export function RegistrationForm() {
   const [age, setAge] = useState("");
   const [foot, setFoot] = useState<DominantFoot | "">("");
   const [position, setPosition] = useState<PlayerPosition | "">("");
-  const [memberSince, setMemberSince] = useState("");
+  const [memberSince, setMemberSince] = useState("6 meses");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [compressing, setCompressing] = useState(false);
+  const [rawPhoto, setRawPhoto] = useState<string | null>(null);
+  const [adjustOpen, setAdjustOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    setCompressing(true);
-    try {
-      const imageCompression = (await import("browser-image-compression")).default;
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 0.25,
-        maxWidthOrHeight: 800,
-        useWebWorker: true,
-        fileType: "image/webp",
-      });
-      setPhoto(compressed);
-      setPhotoPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return URL.createObjectURL(compressed);
-      });
-    } catch {
-      toast.error("No pudimos procesar esa foto, intenta con otra");
-    } finally {
-      setCompressing(false);
+    if (!file.type.startsWith("image/")) {
+      toast.error("Eso no parece una imagen");
+      return;
     }
+    setRawPhoto((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+    setAdjustOpen(true);
+    // Permite volver a elegir el mismo archivo.
+    event.target.value = "";
+  }
+
+  function handleAdjusted(file: File, previewUrl: string) {
+    setPhoto(file);
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return previewUrl;
+    });
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -83,7 +86,7 @@ export function RegistrationForm() {
     formData.set("dominant_foot", foot);
     formData.set("position", position);
     formData.set("member_since", memberSince);
-    formData.set("photo", photo, "foto.webp");
+    formData.set("photo", photo, photo.name);
 
     startTransition(async () => {
       const result = await submitRegistration(formData);
@@ -123,6 +126,7 @@ export function RegistrationForm() {
           </p>
         </div>
         {card}
+        <MotionButton />
         <Button variant="outline" asChild>
           <Link href="/torneo">Ver el torneo</Link>
         </Button>
@@ -169,14 +173,10 @@ export function RegistrationForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="member_since">Tiempo en el Dream Team</Label>
-            <Input
-              id="member_since"
-              value={memberSince}
-              onChange={(e) => setMemberSince(e.target.value)}
-              placeholder='"2 años", "6 meses", "fundador"…'
-              maxLength={40}
-              required
+            <Label htmlFor="ms-kind">Tiempo en el Dream Team</Label>
+            <MemberSinceField
+              defaultValue={memberSince}
+              onValueChange={setMemberSince}
             />
           </div>
           <div className="space-y-2">
@@ -224,23 +224,28 @@ export function RegistrationForm() {
             className="hidden"
             onChange={handlePhotoChange}
           />
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full sm:w-auto"
-            disabled={compressing}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {compressing ? (
-              <Loader2 className="animate-spin" aria-hidden />
-            ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Camera aria-hidden />
-            )}
-            {photo ? "Cambiar foto" : "Subir foto"}
-          </Button>
+              {photo ? "Cambiar foto" : "Subir foto"}
+            </Button>
+            {photo && rawPhoto ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setAdjustOpen(true)}
+              >
+                Reajustar encuadre
+              </Button>
+            ) : null}
+          </div>
           <p className="text-xs text-muted-foreground">
-            De frente y bien iluminada, tipo carné pero con flow. La comprimimos
-            automáticamente antes de subirla.
+            De frente y bien iluminada, tipo carné pero con flow. Después de
+            elegirla puedes centrarla y hacerle zoom.
           </p>
         </div>
 
@@ -248,7 +253,7 @@ export function RegistrationForm() {
           type="submit"
           size="lg"
           className="w-full font-display text-xl tracking-wide sm:w-auto"
-          disabled={pending || compressing}
+          disabled={pending}
         >
           {pending ? (
             <>
@@ -270,6 +275,13 @@ export function RegistrationForm() {
           </CardContent>
         </Card>
       </aside>
+
+      <PhotoAdjustDialog
+        src={rawPhoto}
+        open={adjustOpen}
+        onOpenChange={setAdjustOpen}
+        onConfirm={handleAdjusted}
+      />
     </div>
   );
 }

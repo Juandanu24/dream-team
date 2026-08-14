@@ -12,9 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlayerCard } from "@/components/player-card";
-import { PlayerCarousel } from "@/components/player-carousel";
-import { TiltCard } from "@/components/tilt-card";
+import { PlayersGallery } from "@/components/players-gallery";
 import {
   formatKickoff,
   getTournamentData,
@@ -160,12 +158,22 @@ export default async function TournamentPage() {
       </div>
 
       <Tabs defaultValue="posiciones" className="mt-8">
-        <TabsList className="scrollbar-none w-full justify-start overflow-x-auto">
-          <TabsTrigger value="posiciones">Posiciones</TabsTrigger>
-          <TabsTrigger value="calendario">Calendario</TabsTrigger>
-          <TabsTrigger value="equipos">Equipos</TabsTrigger>
-          <TabsTrigger value="jugadores">Jugadores</TabsTrigger>
-          <TabsTrigger value="goleadores">Goleadores</TabsTrigger>
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto">
+          <TabsTrigger value="posiciones" className="flex-none px-3 py-1.5">
+            Posiciones
+          </TabsTrigger>
+          <TabsTrigger value="calendario" className="flex-none px-3 py-1.5">
+            Calendario
+          </TabsTrigger>
+          <TabsTrigger value="equipos" className="flex-none px-3 py-1.5">
+            Equipos
+          </TabsTrigger>
+          <TabsTrigger value="jugadores" className="flex-none px-3 py-1.5">
+            Jugadores
+          </TabsTrigger>
+          <TabsTrigger value="goleadores" className="flex-none px-3 py-1.5">
+            Goleadores
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="posiciones" className="mt-6">
@@ -332,44 +340,18 @@ export default async function TournamentPage() {
               inscripciones. ¿Ya sumaste tu nombre?
             </EmptyNote>
           ) : (
-            <>
-              {/* Mobile/tablet: carrusel con la carta grande al centro */}
-              <div className="lg:hidden">
-                <PlayerCarousel>
-                  {approvedPlayers.map((player) => (
-                    <TiltCard key={player.id} className="w-full">
-                      <PlayerCard
-                        name={player.full_name}
-                        age={player.age}
-                        positionShort={POSITION_SHORT[player.position]}
-                        footLabel={FOOT_LABELS[player.dominant_foot]}
-                        memberSince={player.member_since}
-                        photoUrl={player.photo_url}
-                        teamName={teamOfPlayer.get(player.id) ?? "Por sortear"}
-                        className="max-w-none"
-                      />
-                    </TiltCard>
-                  ))}
-                </PlayerCarousel>
-              </div>
-              {/* Desktop: grilla completa */}
-              <div className="hidden grid-cols-3 justify-items-center gap-4 lg:grid xl:grid-cols-4">
-                {approvedPlayers.map((player) => (
-                  <TiltCard key={player.id} className="w-full max-w-[280px]">
-                    <PlayerCard
-                      name={player.full_name}
-                      age={player.age}
-                      positionShort={POSITION_SHORT[player.position]}
-                      footLabel={FOOT_LABELS[player.dominant_foot]}
-                      memberSince={player.member_since}
-                      photoUrl={player.photo_url}
-                      teamName={teamOfPlayer.get(player.id) ?? "Por sortear"}
-                      className="max-w-none"
-                    />
-                  </TiltCard>
-                ))}
-              </div>
-            </>
+            <PlayersGallery
+              players={approvedPlayers.map((player) => ({
+                id: player.id,
+                name: player.full_name,
+                age: player.age,
+                positionShort: POSITION_SHORT[player.position],
+                footLabel: FOOT_LABELS[player.dominant_foot],
+                memberSince: player.member_since,
+                photoUrl: player.photo_url,
+                teamName: teamOfPlayer.get(player.id) ?? "Por sortear",
+              }))}
+            />
           )}
         </TabsContent>
 
