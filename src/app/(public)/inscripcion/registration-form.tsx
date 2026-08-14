@@ -20,6 +20,7 @@ import { MotionButton } from "@/components/motion-button";
 import { PhotoAdjustDialog } from "@/components/photo-adjust-dialog";
 import { PlayerCard } from "@/components/player-card";
 import { TiltCard } from "@/components/tilt-card";
+import { celebrate } from "@/lib/confetti";
 import {
   FOOT_LABELS,
   POSITION_LABELS,
@@ -92,6 +93,7 @@ export function RegistrationForm() {
       const result = await submitRegistration(formData);
       if (result.ok) {
         setDone(true);
+        celebrate();
       } else {
         toast.error(result.error);
       }
