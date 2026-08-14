@@ -12,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { NotificationsButton } from "@/components/notifications-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -75,6 +76,7 @@ export function SiteHeader() {
               <ShieldCheck aria-hidden /> Admin
             </Link>
           </Button>
+          <NotificationsButton />
           <ThemeToggle />
         </nav>
 
@@ -141,8 +143,9 @@ export function SiteHeader() {
                     <ShieldCheck aria-hidden /> Admin
                   </Link>
                 </Button>
-                <div className="mt-2 border-t border-border/60 pt-2">
+                <div className="mt-2 space-y-2 border-t border-border/60 pt-2">
                   <ThemeToggle withLabel />
+                  <NotificationsButton withLabel fullWidth />
                 </div>
               </nav>
             </SheetContent>

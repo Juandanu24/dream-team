@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/supabase/server";
+import { sendPushToAll } from "@/lib/push";
 import { ACTIVE_TOURNAMENT_SLUG, type MatchStage } from "@/lib/types";
 
 async function requireAdmin() {
@@ -163,6 +164,13 @@ export async function generateFixture(formData: FormData) {
   const { error } = await supabase.from("matches").insert(matches);
   if (error) throw error;
 
+  await sendPushToAll({
+    title: "📅 ¡Ya hay calendario!",
+    body: "Se publicó el fixture del torneo. Mira cuándo juega tu equipo.",
+    url: "/torneo",
+    tag: "fixture",
+  });
+
   revalidateMatches();
 }
 
@@ -222,11 +230,40 @@ export async function saveResult(matchId: string, formData: FormData) {
   });
 
   const supabase = createAdminClient();
+  const { data: before } = await supabase
+    .from("matches")
+    .select("status, home_team_id, away_team_id")
+    .eq("id", matchId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("matches")
     .update({ ...parsed, status: "finished" })
     .eq("id", matchId);
   if (error) throw error;
+
+  // Solo avisamos la primera vez que se marca como jugado, para no
+  // notificar cada corrección del marcador.
+  if (before && before.status !== "finished") {
+    const { data: teams } = await supabase
+      .from("teams")
+      .select("id, name")
+      .in(
+        "id",
+        [before.home_team_id, before.away_team_id].filter(
+          (id): id is string => Boolean(id),
+        ),
+      );
+    const nameOf = (id: string | null) =>
+      teams?.find((t) => t.id === id)?.name ?? "Por definir";
+
+    await sendPushToAll({
+      title: "⚽ Resultado del Dream Team",
+      body: `${nameOf(before.home_team_id)} ${parsed.home_score} - ${parsed.away_score} ${nameOf(before.away_team_id)}`,
+      url: "/torneo",
+      tag: "resultado",
+    });
+  }
 
   revalidateMatches();
 }

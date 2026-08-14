@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InteractiveBall } from "@/components/interactive-ball";
+import { NotificationsButton } from "@/components/notifications-button";
 import { PenaltyLeaderboard } from "@/components/penalty-leaderboard";
 import { PlayersGallery } from "@/components/players-gallery";
 import { TeamCrest } from "@/components/team-crest";
@@ -173,6 +174,7 @@ export default async function TournamentPage() {
               ? "En juego"
               : "Finalizado"}
         </Badge>
+        <NotificationsButton className="ml-auto" withLabel />
       </div>
 
       <Tabs defaultValue="posiciones" className="mt-8">

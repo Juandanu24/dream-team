@@ -1,4 +1,4 @@
-import { Check, RotateCcw, Save, X } from "lucide-react";
+import { Check, RotateCcw, Save, Share2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmButton } from "@/components/confirm-button";
+import {
+  buildWhatsAppMessage,
+  whatsAppShareUrl,
+} from "@/lib/match-summary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ACTIVE_TOURNAMENT_SLUG,
@@ -260,6 +264,32 @@ function MatchAdmin({
           {match.status === "finished" ? (
             <>
               <Badge>Jugado</Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[#25D366]/50 text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366]"
+                asChild
+              >
+                <a
+                  href={whatsAppShareUrl(
+                    buildWhatsAppMessage(
+                      match,
+                      teams,
+                      matchEvents.map((e) => ({
+                        player_id: e.player_id,
+                        team_id: e.team_id,
+                        type: e.type,
+                        name: e.players.full_name,
+                      })),
+                    ),
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Compartir el resultado en WhatsApp"
+                >
+                  <Share2 aria-hidden /> WhatsApp
+                </a>
+              </Button>
               <form action={reopenMatch.bind(null, match.id)}>
                 <Button
                   variant="ghost"
