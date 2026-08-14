@@ -6,6 +6,7 @@ import {
   type GroupStandingRow,
   type Match,
   type MatchEvent,
+  type PenaltyLeaderboardRow,
   type Player,
   type PlayerCardsRow,
   type RegistrationStatus,
@@ -38,6 +39,7 @@ export interface TournamentData {
   scorers: TopScorerRow[];
   assists: TopAssistRow[];
   cards: PlayerCardsRow[];
+  penaltyLeaderboard: PenaltyLeaderboardRow[];
 }
 
 // Todo lo que necesita la página pública del torneo, en un solo viaje.
@@ -54,8 +56,17 @@ export async function getTournamentData(): Promise<TournamentData | null> {
 
     if (!tournament) return null;
 
-    const [standings, teams, roster, approved, matches, scorers, assists, cards] =
-      await Promise.all([
+    const [
+      standings,
+      teams,
+      roster,
+      approved,
+      matches,
+      scorers,
+      assists,
+      cards,
+      penalties,
+    ] = await Promise.all([
         supabase
           .from("group_standings")
           .select("*")
@@ -95,6 +106,10 @@ export async function getTournamentData(): Promise<TournamentData | null> {
           .eq("tournament_id", tournament.id)
           .order("red_cards", { ascending: false })
           .order("yellow_cards", { ascending: false }),
+        supabase
+          .from("penalty_leaderboard")
+          .select("*")
+          .eq("tournament_id", tournament.id),
       ]);
 
     // Desempate estilo FIFA: puntos → diferencia de gol → goles a favor →
@@ -147,11 +162,76 @@ export async function getTournamentData(): Promise<TournamentData | null> {
       scorers: (scorers.data as TopScorerRow[]) ?? [],
       assists: (assists.data as TopAssistRow[]) ?? [],
       cards: (cards.data as PlayerCardsRow[]) ?? [],
+      penaltyLeaderboard: sortLeaderboard(
+        (penalties.data as PenaltyLeaderboardRow[]) ?? [],
+      ),
     };
   } catch (error) {
     console.error("Error cargando datos del torneo:", error);
     return null;
   }
+}
+
+// Datos del reto de penales: quiénes pueden patear y cómo va el ranking.
+// Si la migración de penales aún no corrió, devuelve el ranking vacío.
+export async function getPenaltyData(): Promise<{
+  players: { id: string; name: string; photoUrl: string | null }[];
+  leaderboard: PenaltyLeaderboardRow[];
+}> {
+  try {
+    const supabase = createAdminClient();
+
+    const { data: tournament } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("slug", ACTIVE_TOURNAMENT_SLUG)
+      .maybeSingle();
+    if (!tournament) return { players: [], leaderboard: [] };
+
+    const [registrations, leaderboard] = await Promise.all([
+      supabase
+        .from("registrations")
+        .select("players(id, full_name, photo_url)")
+        .eq("tournament_id", tournament.id)
+        .eq("status", "approved"),
+      supabase
+        .from("penalty_leaderboard")
+        .select("*")
+        .eq("tournament_id", tournament.id),
+    ]);
+
+    const players = (
+      (registrations.data as unknown as
+        | { players: Pick<Player, "id" | "full_name" | "photo_url"> }[]
+        | null) ?? []
+    )
+      .map((row) => ({
+        id: row.players.id,
+        name: row.players.full_name,
+        photoUrl: row.players.photo_url,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      players,
+      leaderboard: sortLeaderboard(
+        (leaderboard.data as PenaltyLeaderboardRow[]) ?? [],
+      ),
+    };
+  } catch (error) {
+    console.error("Error cargando datos de penales:", error);
+    return { players: [], leaderboard: [] };
+  }
+}
+
+// Mejor puntaje primero; a igual puntaje, gana quien lo logró en menos intentos.
+export function sortLeaderboard(rows: PenaltyLeaderboardRow[]) {
+  return [...rows].sort(
+    (a, b) =>
+      b.best_score - a.best_score ||
+      a.attempts - b.attempts ||
+      a.full_name.localeCompare(b.full_name),
+  );
 }
 
 export function formatKickoff(kickoffAt: string | null): string | null {

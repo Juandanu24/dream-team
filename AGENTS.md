@@ -61,10 +61,13 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
 ## Estado del proyecto
 
 Construido: landing, inscripción, `/torneo`, login admin, cola de aprobación,
-equipos (CRUD + asignación de aprobados), partidos (fixture generado desde el
-martes de la semana 1, marcadores, goles/tarjetas por jugador, cruces de finales),
-PWA (`src/app/manifest.ts`, `public/sw.js` registrado solo en producción).
-Pendiente: deploy en Vercel (pasos en `SETUP.md`).
+equipos (CRUD + escudos + asignación de aprobados), partidos (fixture, marcadores,
+goles/asistencias/tarjetas por jugador), PWA, y `/penales` (reto arcade con
+ranking). Desplegado en Vercel: dreamteamcolombia.vercel.app.
+
+El reto de penales tiene la lógica pura en `src/lib/penalty-game.ts` (zonas,
+arquero adaptativo, resolución del disparo) separada de la UI: se puede simular
+con `node --experimental-strip-types` para rebalancear sin abrir el navegador.
 
 El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migración,
 `.env.local`, usuario admin). Sin `.env.local` el sitio compila y muestra estados vacíos.

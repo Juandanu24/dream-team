@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Goal, Handshake, RectangleVertical } from "lucide-react";
+import Link from "next/link";
+import { Goal, Handshake, RectangleVertical, Target } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InteractiveBall } from "@/components/interactive-ball";
+import { PenaltyLeaderboard } from "@/components/penalty-leaderboard";
 import { PlayersGallery } from "@/components/players-gallery";
 import { TeamCrest } from "@/components/team-crest";
 import {
@@ -145,6 +147,7 @@ export default async function TournamentPage() {
     scorers,
     assists,
     cards,
+    penaltyLeaderboard,
   } = data;
   const teamOfPlayer = new Map(
     roster.map((entry) => [
@@ -184,11 +187,14 @@ export default async function TournamentPage() {
           <TabsTrigger value="equipos" className="col-span-2 py-1.5">
             Equipos
           </TabsTrigger>
-          <TabsTrigger value="jugadores" className="col-span-3 py-1.5">
+          <TabsTrigger value="jugadores" className="col-span-2 py-1.5">
             Jugadores
           </TabsTrigger>
-          <TabsTrigger value="goleadores" className="col-span-3 py-1.5">
+          <TabsTrigger value="goleadores" className="col-span-2 py-1.5">
             Goleadores
+          </TabsTrigger>
+          <TabsTrigger value="penales" className="col-span-2 py-1.5">
+            Penales
           </TabsTrigger>
         </TabsList>
 
@@ -386,6 +392,26 @@ export default async function TournamentPage() {
               }))}
             />
           )}
+        </TabsContent>
+
+        <TabsContent value="penales" className="mt-6">
+          <Card className="border-border/60 bg-card/70">
+            <CardHeader>
+              <CardTitle className="flex flex-wrap items-center gap-2 font-display text-2xl tracking-wide">
+                <Target className="size-5 text-volt" aria-hidden />
+                RETO DE PENALES
+                <Link
+                  href="/penales"
+                  className="ml-auto text-sm font-normal text-volt underline-offset-4 hover:underline"
+                >
+                  Jugar →
+                </Link>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PenaltyLeaderboard rows={penaltyLeaderboard} limit={15} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="goleadores" className="mt-6 grid gap-4 lg:grid-cols-2">

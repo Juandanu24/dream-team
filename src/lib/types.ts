@@ -125,6 +125,16 @@ export interface TopAssistRow {
   assists: number;
 }
 
+export interface PenaltyLeaderboardRow {
+  tournament_id: string;
+  player_id: string;
+  full_name: string;
+  photo_url: string | null;
+  best_score: number;
+  attempts: number;
+  last_played_at: string;
+}
+
 export interface PlayerCardsRow {
   tournament_id: string;
   player_id: string;

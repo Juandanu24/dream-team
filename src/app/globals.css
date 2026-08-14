@@ -165,6 +165,57 @@
   }
 }
 
+/* Red del arco: cuadrícula fina sobre el fondo del arco. */
+@utility bg-net {
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      rgb(255 255 255 / 22%) 0 1px,
+      transparent 1px 13px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 22%) 0 1px,
+      transparent 1px 13px
+    );
+}
+
+/* Sacudida de la red cuando entra el gol. */
+@utility animate-net-shake {
+  animation: dt-net-shake 0.45s ease-out;
+}
+
+@keyframes dt-net-shake {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.02, 1.05);
+  }
+  60% {
+    transform: scale(0.995, 0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Cartel del resultado del penal. */
+@utility animate-pop {
+  animation: dt-pop 0.35s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+@keyframes dt-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* Patada: el balón salta girando rápido y vuelve.
    La rotación va aquí (no en el SVG) para no interrumpir su giro lento. */
 @utility animate-kick {
