@@ -1,7 +1,8 @@
 import { UserRound } from "lucide-react";
+import { readableAccent } from "@/lib/team-color";
 import { cn } from "@/lib/utils";
 
-interface PlayerCardProps {
+export interface PlayerCardProps {
   name: string;
   age: number | string;
   positionShort: string;
@@ -9,7 +10,10 @@ interface PlayerCardProps {
   memberSince: string;
   photoUrl?: string | null;
   teamName?: string | null;
-  /** Capitán: banda en la foto y marca junto al equipo. */
+  /** Color del equipo; si es muy oscuro se aclara para que se vea. */
+  teamColor?: string | null;
+  crestUrl?: string | null;
+  /** Capitán: banda en la foto. */
   isCaptain?: boolean;
   /** Versión mini para grillas con muchos jugadores. */
   compact?: boolean;
@@ -19,7 +23,8 @@ interface PlayerCardProps {
 // Carta de jugador estilo FIFA. Componente puramente presentacional:
 // sirve igual para el preview en vivo de la inscripción (data URL)
 // que para los planteles (URL de Supabase Storage).
-// Respeta el tema: dorada-clara en light, neón nocturna en dark.
+// Respeta el tema (clara en light, neón en dark) y toma el color del
+// equipo como acento cuando el jugador ya tiene uno.
 export function PlayerCard({
   name,
   age,
@@ -28,16 +33,22 @@ export function PlayerCard({
   memberSince,
   photoUrl,
   teamName,
+  teamColor,
+  crestUrl,
   isCaptain = false,
   compact = false,
   className,
 }: PlayerCardProps) {
+  const accent = readableAccent(teamColor);
+
   return (
     <div
+      style={{ "--accent": accent } as React.CSSProperties}
       className={cn(
-        "w-full max-w-[280px] bg-gradient-to-b from-volt via-volt/35 to-volt/10 p-[2px]",
+        "w-full max-w-[280px] p-[2px]",
+        "bg-[linear-gradient(to_bottom,var(--accent),color-mix(in_srgb,var(--accent)_35%,transparent),color-mix(in_srgb,var(--accent)_10%,transparent))]",
         "[clip-path:polygon(0_3%,50%_0,100%_3%,100%_90%,50%_100%,0_90%)]",
-        "drop-shadow-[0_8px_18px_rgba(60,80,0,0.25)] dark:drop-shadow-[0_0_25px_rgba(204,255,0,0.2)]",
+        "drop-shadow-[0_8px_18px_rgba(60,80,0,0.25)] dark:drop-shadow-[0_0_25px_color-mix(in_srgb,var(--accent)_20%,transparent)]",
         className,
       )}
     >
@@ -51,28 +62,37 @@ export function PlayerCard({
           <div className="text-center">
             <p
               className={cn(
-                "font-display leading-none text-volt",
+                "font-display leading-none text-[var(--accent)]",
                 compact ? "text-lg" : "text-4xl",
               )}
             >
               {positionShort || "—"}
             </p>
             {compact ? null : (
-              <p className="mt-1 text-[10px] tracking-widest text-volt/70 uppercase">
+              <p className="mt-1 text-[10px] tracking-widest text-[var(--accent)]/70 uppercase">
                 {footLabel || "Pie"}
               </p>
             )}
           </div>
-          <p
-            className={cn(
-              "font-display leading-tight tracking-widest text-foreground/40",
-              compact ? "text-[8px]" : "text-sm",
-            )}
-          >
-            DREAM
-            <br />
-            TEAM
-          </p>
+          {crestUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={crestUrl}
+              alt=""
+              className={cn("object-contain", compact ? "size-6" : "size-11")}
+            />
+          ) : (
+            <p
+              className={cn(
+                "font-display leading-tight tracking-widest text-foreground/40",
+                compact ? "text-[8px]" : "text-sm",
+              )}
+            >
+              DREAM
+              <br />
+              TEAM
+            </p>
+          )}
         </div>
 
         <div
@@ -84,7 +104,7 @@ export function PlayerCard({
           {isCaptain ? (
             <span
               className={cn(
-                "absolute z-10 flex items-center justify-center rounded-full border-2 border-[#0a0b02] bg-volt font-display text-primary-foreground",
+                "absolute z-10 flex items-center justify-center rounded-full border-2 border-[#0a0b02] bg-[var(--accent)] font-display text-[#0a0b02]",
                 compact
                   ? "right-[26%] bottom-0 size-5 text-[10px]"
                   : "right-[22%] bottom-0 size-8 text-base",
@@ -100,14 +120,14 @@ export function PlayerCard({
               src={photoUrl}
               alt={`Foto de ${name || "jugador"}`}
               className={cn(
-                "rounded-full border-2 border-volt/40 object-cover",
+                "rounded-full border-2 border-[var(--accent)]/40 object-cover",
                 compact ? "size-14" : "size-28",
               )}
             />
           ) : (
             <div
               className={cn(
-                "flex items-center justify-center rounded-full border-2 border-dashed border-volt/40 bg-secondary/60",
+                "flex items-center justify-center rounded-full border-2 border-dashed border-[var(--accent)]/40 bg-secondary/60",
                 compact ? "size-14" : "size-28",
               )}
             >
@@ -133,7 +153,7 @@ export function PlayerCard({
 
         <div
           className={cn(
-            "mx-auto h-px w-3/4 bg-volt/40",
+            "mx-auto h-px w-3/4 bg-[var(--accent)]/40",
             compact ? "mt-1" : "mt-2",
           )}
         />
@@ -185,7 +205,7 @@ export function PlayerCard({
         {teamName ? (
           <p
             className={cn(
-              "mt-auto truncate text-center font-display tracking-widest text-volt uppercase",
+              "mt-auto truncate text-center font-display tracking-widest text-[var(--accent)] uppercase",
               compact ? "pt-1.5 text-[8px]" : "pt-3 text-sm",
             )}
           >

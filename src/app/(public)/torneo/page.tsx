@@ -17,6 +17,7 @@ import { InteractiveBall } from "@/components/interactive-ball";
 import { NotificationsButton } from "@/components/notifications-button";
 import { PenaltyLeaderboard } from "@/components/penalty-leaderboard";
 import { PlayersGallery } from "@/components/players-gallery";
+import { TeamShowcase } from "@/components/team-showcase";
 import { TeamCrest } from "@/components/team-crest";
 import {
   formatKickoff,
@@ -150,15 +151,47 @@ export default async function TournamentPage() {
     cards,
     penaltyLeaderboard,
   } = data;
-  const teamOfPlayer = new Map(
-    roster.map((entry) => [
-      entry.player_id,
-      teams.find((t) => t.id === entry.team_id)?.name ?? null,
-    ]),
-  );
   const captains = new Set(
     roster.filter((entry) => entry.is_captain).map((entry) => entry.player_id),
   );
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+  const rosterEntryOf = new Map(roster.map((e) => [e.player_id, e]));
+
+  // Vista unificada de jugador, usada por la galería y por los planteles.
+  const toGalleryPlayer = (player: (typeof approvedPlayers)[number]) => {
+    const entry = rosterEntryOf.get(player.id);
+    const team = entry ? teamById.get(entry.team_id) : undefined;
+    return {
+      id: player.id,
+      name: player.full_name,
+      age: player.age,
+      positionShort: entry?.is_goalkeeper
+        ? "ARQ"
+        : POSITION_SHORT[player.position],
+      footLabel: FOOT_LABELS[player.dominant_foot],
+      memberSince: player.member_since,
+      photoUrl: player.photo_url,
+      teamName: team?.name ?? "Por sortear",
+      teamColor: team?.color ?? null,
+      crestUrl: team?.crest_url ?? null,
+      isCaptain: captains.has(player.id),
+    };
+  };
+
+  const galleryPlayers = approvedPlayers.map(toGalleryPlayer);
+  const showcaseTeams = teams.map((team) => ({
+    id: team.id,
+    name: team.name,
+    color: team.color,
+    crestUrl: team.crest_url ?? null,
+    players: galleryPlayers
+      .filter((p) => rosterEntryOf.get(p.id)?.team_id === team.id)
+      .sort(
+        (a, b) =>
+          Number(b.isCaptain) - Number(a.isCaptain) ||
+          a.name.localeCompare(b.name),
+      ),
+  }));
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
 
   return (
@@ -311,81 +344,16 @@ export default async function TournamentPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="equipos" className="mt-6">
-          {teams.length === 0 ? (
+        <TabsContent value="equipos" className="mt-6 space-y-4">
+          {showcaseTeams.length === 0 ? (
             <EmptyNote>
               Los equipos se anuncian cuando cierre la inscripción. ¿Ya sumaste
               tu nombre?
             </EmptyNote>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {teams.map((team) => {
-                const players = roster
-                  .filter((r) => r.team_id === team.id)
-                  .sort(
-                    (a, b) =>
-                      Number(b.is_captain) - Number(a.is_captain) ||
-                      Number(b.is_goalkeeper) - Number(a.is_goalkeeper),
-                  );
-                return (
-                  <Card key={team.id} className="border-border/60 bg-card/70">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
-                        <TeamCrest
-                          name={team.name}
-                          color={team.color}
-                          crestUrl={team.crest_url}
-                          className="size-7"
-                        />
-                        {team.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {players.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          Plantilla por definir.
-                        </p>
-                      ) : (
-                        players.map((entry) => (
-                          <div key={entry.id} className="flex items-center gap-3">
-                            <Avatar className="size-8">
-                              <AvatarImage
-                                src={entry.players.photo_url ?? undefined}
-                                alt=""
-                              />
-                              <AvatarFallback>
-                                {entry.players.full_name.slice(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="flex-1 truncate text-sm">
-                              {entry.players.full_name}
-                              {entry.is_captain ? (
-                                <span
-                                  className="ml-1.5 rounded-sm bg-volt px-1 font-display text-[10px] text-primary-foreground"
-                                  title="Capitán"
-                                >
-                                  C
-                                </span>
-                              ) : null}
-                            </span>
-                            {entry.jersey_number ? (
-                              <span className="font-display text-sm text-muted-foreground">
-                                #{entry.jersey_number}
-                              </span>
-                            ) : null}
-                            <Badge variant="secondary" className="text-[10px]">
-                              {entry.is_goalkeeper
-                                ? "ARQ"
-                                : POSITION_SHORT[entry.players.position]}
-                            </Badge>
-                          </div>
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            showcaseTeams.map((team) => (
+              <TeamShowcase key={team.id} team={team} />
+            ))
           )}
         </TabsContent>
 
@@ -396,19 +364,7 @@ export default async function TournamentPage() {
               inscripciones. ¿Ya sumaste tu nombre?
             </EmptyNote>
           ) : (
-            <PlayersGallery
-              players={approvedPlayers.map((player) => ({
-                id: player.id,
-                name: player.full_name,
-                age: player.age,
-                positionShort: POSITION_SHORT[player.position],
-                footLabel: FOOT_LABELS[player.dominant_foot],
-                memberSince: player.member_since,
-                photoUrl: player.photo_url,
-                teamName: teamOfPlayer.get(player.id) ?? "Por sortear",
-                isCaptain: captains.has(player.id),
-              }))}
-            />
+            <PlayersGallery players={galleryPlayers} />
           )}
         </TabsContent>
 
