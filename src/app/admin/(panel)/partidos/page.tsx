@@ -1,4 +1,5 @@
-import { Check, Plus, RotateCcw, Save, Share2, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import { Save, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,120 +9,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ConfirmButton } from "@/components/confirm-button";
-import {
-  buildWhatsAppMessage,
-  whatsAppShareUrl,
-} from "@/lib/match-summary";
-import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  ACTIVE_TOURNAMENT_SLUG,
-  EVENT_ICONS,
-  STAGE_LABELS,
-  type Match,
-  type MatchEvent,
-  type Player,
-  type Team,
-  type TeamPlayer,
-} from "@/lib/types";
-import {
-  addMatch,
-  deleteEvent,
-  deleteFixture,
-  deleteMatch,
-  generateFixture,
-  reopenMatch,
-  saveResult,
-  updateMatch,
-} from "./actions";
-import { MatchEventForm } from "./match-event-form";
+import { getAdminMatchesData, toBogotaInput } from "@/lib/admin-matches";
+import { STAGE_LABELS, type Match, type Team } from "@/lib/types";
+import { deleteFixture, deleteMatch, updateMatch } from "./actions";
+import { AddWeekForm } from "./add-week-form";
 import { PublishFixtureButton } from "./publish-fixture-button";
-
-const MATCH_STAGES = ["group", "semifinal", "third_place", "final"] as const;
 
 export const dynamic = "force-dynamic";
 
 const selectClass =
-  "border-input h-9 rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover [&>optgroup]:bg-popover";
-
-interface RosterEntry extends TeamPlayer {
-  players: Player;
-}
-
-interface EventWithPlayer extends MatchEvent {
-  players: Pick<Player, "full_name">;
-}
-
-interface MatchesData {
-  teams: Team[];
-  matches: Match[];
-  roster: RosterEntry[];
-  events: EventWithPlayer[];
-}
-
-async function getMatchesData(): Promise<MatchesData | null> {
-  try {
-    const supabase = createAdminClient();
-    const { data: tournament } = await supabase
-      .from("tournaments")
-      .select("id")
-      .eq("slug", ACTIVE_TOURNAMENT_SLUG)
-      .maybeSingle();
-    if (!tournament) return null;
-
-    const [teams, matches, roster, events] = await Promise.all([
-      supabase
-        .from("teams")
-        .select("*")
-        .eq("tournament_id", tournament.id)
-        .order("created_at"),
-      supabase
-        .from("matches")
-        .select("*")
-        .eq("tournament_id", tournament.id)
-        .order("week")
-        .order("kickoff_at", { nullsFirst: false }),
-      supabase
-        .from("team_players")
-        .select("*, players(*)")
-        .eq("tournament_id", tournament.id),
-      supabase
-        .from("match_events")
-        .select("*, players(full_name)")
-        .order("created_at"),
-    ]);
-
-    return {
-      teams: (teams.data as Team[]) ?? [],
-      matches: (matches.data as Match[]) ?? [],
-      roster: (roster.data as unknown as RosterEntry[]) ?? [],
-      events: (events.data as unknown as EventWithPlayer[]) ?? [],
-    };
-  } catch (error) {
-    console.error("Error cargando partidos:", error);
-    return null;
-  }
-}
-
-// timestamptz → valor de <input type="datetime-local"> en hora de Colombia.
-function toBogotaInput(ts: string | null): string {
-  if (!ts) return "";
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Bogota",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(new Date(ts))
-      .map((p) => [p.type, p.value]),
-  );
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
-}
+  "border-input h-9 rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover";
 
 // Revisa que en la semana jueguen todos los equipos, exactamente una
 // vez. Con 4 equipos y 2 partidos por semana, cualquier otra cosa deja
@@ -132,9 +30,7 @@ function weekIssues(weekMatches: Match[], teams: Team[]): string[] {
     (m) => !m.home_team_id || !m.away_team_id,
   ).length;
   if (sinCruce > 0) {
-    issues.push(
-      `${sinCruce} partido${sinCruce > 1 ? "s" : ""} sin cruce definido`,
-    );
+    issues.push(`${sinCruce} partido${sinCruce > 1 ? "s" : ""} sin cruce`);
   }
 
   const counts = new Map<string, number>();
@@ -153,286 +49,80 @@ function weekIssues(weekMatches: Match[], teams: Team[]): string[] {
   if (ausentes.length > 0 && sinCruce === 0) {
     issues.push(`no juegan: ${ausentes.map((t) => t.name).join(", ")}`);
   }
-
   return issues;
 }
 
-// Agrupa los eventos por jugador y tipo: "Andrés Pertuz ×3" en vez de
-// tres filas iguales. Borrar quita una unidad del grupo.
-function groupEvents(events: EventWithPlayer[]) {
-  const groups = new Map<
-    string,
-    { ids: string[]; type: MatchEvent["type"]; name: string }
-  >();
-  for (const event of events) {
-    const key = `${event.player_id}:${event.type}`;
-    const group = groups.get(key);
-    if (group) {
-      group.ids.push(event.id);
-    } else {
-      groups.set(key, {
-        ids: [event.id],
-        type: event.type,
-        name: event.players.full_name,
-      });
-    }
-  }
-  return [...groups.values()];
-}
-
-function MatchAdmin({
-  match,
-  teams,
-  roster,
-  events,
-}: {
-  match: Match;
-  teams: Team[];
-  roster: RosterEntry[];
-  events: EventWithPlayer[];
-}) {
-  const home = teams.find((t) => t.id === match.home_team_id);
-  const away = teams.find((t) => t.id === match.away_team_id);
-  const matchEvents = events.filter((e) => e.match_id === match.id);
-  const matchRoster = roster.filter(
-    (r) => r.team_id === match.home_team_id || r.team_id === match.away_team_id,
-  );
-  const rosterByTeam = (teamId: string | null) =>
-    matchRoster
-      .filter((r) => r.team_id === teamId)
-      .sort((a, b) => a.players.full_name.localeCompare(b.players.full_name));
-
+// Fila de programación: fecha, hora y cruce. Los resultados viven en
+// su propio módulo.
+function MatchSchedule({ match, teams }: { match: Match; teams: Team[] }) {
   return (
-    <div className="space-y-3 border-b border-border/40 py-4 last:border-b-0">
-      {/* Programación: fecha y (en finales) cruce */}
-      <form
-        action={updateMatch.bind(null, match.id)}
-        className="flex flex-wrap items-center gap-2"
+    <form
+      action={updateMatch.bind(null, match.id)}
+      className="flex flex-wrap items-center gap-2 border-b border-border/40 py-3 last:border-b-0"
+    >
+      <Badge variant="outline" className="border-volt/50 text-volt">
+        {STAGE_LABELS[match.stage]}
+      </Badge>
+      <Input
+        type="datetime-local"
+        name="kickoff_at"
+        defaultValue={toBogotaInput(match.kickoff_at)}
+        className="w-fit"
+      />
+      <select
+        name="home_team_id"
+        defaultValue={match.home_team_id ?? ""}
+        className={selectClass}
+        aria-label="Equipo local"
       >
-        <Badge variant="outline" className="border-volt/50 text-volt">
-          {STAGE_LABELS[match.stage]}
-        </Badge>
-        <Input
-          type="datetime-local"
-          name="kickoff_at"
-          defaultValue={toBogotaInput(match.kickoff_at)}
-          className="w-fit"
-        />
-        <select
-          name="home_team_id"
-          defaultValue={match.home_team_id ?? ""}
-          className={selectClass}
-        >
-          <option value="">Local por definir</option>
-          {teams.map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-muted-foreground">vs</span>
-        <select
-          name="away_team_id"
-          defaultValue={match.away_team_id ?? ""}
-          className={selectClass}
-        >
-          <option value="">Visitante por definir</option>
-          {teams.map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name}
-            </option>
-          ))}
-        </select>
-        <Button variant="ghost" size="sm" type="submit" title="Guardar programación">
-          <Save aria-hidden />
-        </Button>
-        {match.status !== "finished" ? (
-          <ConfirmButton
-            action={deleteMatch.bind(null, match.id)}
-            message="¿Borrar este partido del calendario?"
-            variant="ghost"
-            title="Borrar partido"
-            className="text-muted-foreground hover:text-destructive"
-          >
-            <Trash2 aria-hidden />
-          </ConfirmButton>
-        ) : null}
-      </form>
-
-      {/* Resultado */}
-      {home && away ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Mobile: una fila por equipo. Desktop: marcador en línea. */}
-          <form
-            action={saveResult.bind(null, match.id)}
-            className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 sm:flex sm:flex-wrap sm:gap-2"
-          >
-            <span className="truncate text-right text-sm font-medium sm:order-1 sm:w-40">
-              {home.name}
-            </span>
-            <Input
-              type="number"
-              inputMode="numeric"
-              name="home_score"
-              min={0}
-              max={99}
-              defaultValue={match.home_score ?? ""}
-              required
-              className="w-14 text-center sm:order-2"
-            />
-            <span className="hidden text-muted-foreground sm:order-3 sm:inline">
-              -
-            </span>
-            <span className="truncate text-right text-sm font-medium sm:order-5 sm:w-40 sm:text-left">
-              {away.name}
-            </span>
-            <Input
-              type="number"
-              inputMode="numeric"
-              name="away_score"
-              min={0}
-              max={99}
-              defaultValue={match.away_score ?? ""}
-              required
-              className="w-14 text-center sm:order-4"
-            />
-            <Button
-              size="sm"
-              type="submit"
-              title="Guardar y marcar como jugado"
-              className="col-span-2 justify-self-start sm:order-6 sm:col-span-1"
-            >
-              <Check aria-hidden />
-              {match.status === "finished" ? "Actualizar" : "Finalizar"}
-            </Button>
-          </form>
-          {match.status === "finished" ? (
-            <>
-              <Badge>Jugado</Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-[#25D366]/50 text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366]"
-                asChild
-              >
-                <a
-                  href={whatsAppShareUrl(
-                    buildWhatsAppMessage(
-                      match,
-                      teams,
-                      matchEvents.map((e) => ({
-                        player_id: e.player_id,
-                        team_id: e.team_id,
-                        type: e.type,
-                        name: e.players.full_name,
-                      })),
-                    ),
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Compartir el resultado en WhatsApp"
-                >
-                  <Share2 aria-hidden /> WhatsApp
-                </a>
-              </Button>
-              <form action={reopenMatch.bind(null, match.id)}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="submit"
-                  title="Volver a programado"
-                >
-                  <RotateCcw aria-hidden />
-                </Button>
-              </form>
-            </>
-          ) : null}
-        </div>
+        <option value="">Local por definir</option>
+        {teams.map((team) => (
+          <option key={team.id} value={team.id}>
+            {team.name}
+          </option>
+        ))}
+      </select>
+      <span className="text-xs text-muted-foreground">vs</span>
+      <select
+        name="away_team_id"
+        defaultValue={match.away_team_id ?? ""}
+        className={selectClass}
+        aria-label="Equipo visitante"
+      >
+        <option value="">Visitante por definir</option>
+        {teams.map((team) => (
+          <option key={team.id} value={team.id}>
+            {team.name}
+          </option>
+        ))}
+      </select>
+      <Button variant="ghost" size="sm" type="submit" title="Guardar cambios">
+        <Save aria-hidden />
+      </Button>
+      {match.status === "finished" ? (
+        <Badge>Jugado</Badge>
       ) : (
-        <p className="text-xs text-muted-foreground">
-          Define el cruce para poder cargar el resultado.
-        </p>
+        <ConfirmButton
+          action={deleteMatch.bind(null, match.id)}
+          message="¿Borrar este partido del calendario?"
+          variant="ghost"
+          title="Borrar partido"
+          className="text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 aria-hidden />
+        </ConfirmButton>
       )}
-
-      {/* Eventos */}
-      {home && away ? (
-        <div className="space-y-2 pl-1">
-          {(() => {
-            // El marcador "pregunta" por los goleadores: avisa si los goles
-            // asignados a jugadores no cuadran con el resultado.
-            if (match.status !== "finished") return null;
-            const totalScore = (match.home_score ?? 0) + (match.away_score ?? 0);
-            // Los autogoles también suman al marcador (para el rival).
-            const assignedGoals = matchEvents.filter(
-              (e) => e.type === "goal" || e.type === "own_goal",
-            ).length;
-            if (assignedGoals === totalScore) return null;
-            return (
-              <p className="text-xs text-yellow-500">
-                {assignedGoals < totalScore
-                  ? `⚠️ Faltan ${totalScore - assignedGoals} de ${totalScore} goles por asignar — agrégalos abajo (gol o autogol).`
-                  : `⚠️ Hay ${assignedGoals} goles asignados pero el marcador suma ${totalScore} — sobra alguno.`}
-              </p>
-            );
-          })()}
-          {groupEvents(matchEvents).map((group) => (
-            <div
-              key={`${group.type}-${group.ids[0]}`}
-              className="flex items-center gap-2 text-sm"
-            >
-              <span aria-hidden>{EVENT_ICONS[group.type]}</span>
-              <span className="flex-1 truncate">
-                {group.name}
-                {group.ids.length > 1 ? (
-                  <span className="font-display text-volt"> ×{group.ids.length}</span>
-                ) : null}
-              </span>
-              <form action={deleteEvent.bind(null, group.ids.at(-1)!)}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="submit"
-                  title={group.ids.length > 1 ? "Quitar uno" : "Borrar evento"}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <X aria-hidden />
-                </Button>
-              </form>
-            </div>
-          ))}
-
-          <MatchEventForm
-            matchId={match.id}
-            home={{
-              id: home.id,
-              name: home.name,
-              players: rosterByTeam(home.id).map((entry) => ({
-                id: entry.player_id,
-                name: entry.players.full_name,
-              })),
-            }}
-            away={{
-              id: away.id,
-              name: away.name,
-              players: rosterByTeam(away.id).map((entry) => ({
-                id: entry.player_id,
-                name: entry.players.full_name,
-              })),
-            }}
-          />
-        </div>
-      ) : null}
-    </div>
+    </form>
   );
 }
 
-export default async function AdminMatchesPage() {
-  const data = await getMatchesData();
+export default async function AdminFixturePage() {
+  const data = await getAdminMatchesData();
 
   if (!data) {
     return (
       <div>
-        <h1 className="font-display text-4xl tracking-wide">PARTIDOS</h1>
+        <h1 className="font-display text-4xl tracking-wide">CALENDARIO</h1>
         <p className="mt-4 text-sm text-muted-foreground">
           No se pudo leer la base de datos. Revisa la configuración de Supabase.
         </p>
@@ -440,206 +130,102 @@ export default async function AdminMatchesPage() {
     );
   }
 
-  const { teams, matches, roster, events } = data;
+  const { teams, matches } = data;
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
+  const nextWeek = weeks.length > 0 ? Math.max(...weeks) + 1 : 1;
   const anyFinished = matches.some((m) => m.status === "finished");
 
   return (
     <div>
-      <h1 className="font-display text-4xl tracking-wide">PARTIDOS</h1>
-
-      {matches.length === 0 ? (
-        teams.length === 4 ? (
-          <Card className="mt-6 border-border/60 bg-card/70">
-            <CardHeader>
-              <CardTitle className="font-display text-xl tracking-wide">
-                GENERAR FIXTURE
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form
-                action={generateFixture}
-                className="flex flex-col gap-4 sm:flex-row sm:items-end"
-              >
-                <div className="space-y-2">
-                  <Label htmlFor="first_tuesday">Martes de la semana 1</Label>
-                  <Input
-                    id="first_tuesday"
-                    type="date"
-                    name="first_tuesday"
-                    required
-                    className="w-fit"
-                  />
-                </div>
-                <Button type="submit">Generar las 5 semanas</Button>
-              </form>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Crea los 10 partidos: grupos según el orden de creación de los
-                equipos (semana 1: 1 vs 2 y 3 vs 4…), martes 8:00 PM y jueves
-                9:00 PM. Las semis y finales quedan &quot;por definir&quot; hasta
-                que termine la fase de grupos. Luego puedes ajustar cualquier
-                fecha u hora partido por partido.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <p className="mt-6 text-sm text-muted-foreground">
-            Para generar el fixture primero crea los 4 equipos en{" "}
-            <a href="/admin/equipos" className="text-volt underline-offset-4 hover:underline">
-              Equipos
-            </a>
-            . Van {teams.length} de 4.
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="font-display text-4xl tracking-wide">CALENDARIO</h1>
+        {matches.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {weeks.length} semana{weeks.length > 1 ? "s" : ""} ·{" "}
+            {matches.length} partidos
           </p>
-        )
+        ) : null}
+      </div>
+
+      {teams.length < 2 ? (
+        <p className="mt-6 text-sm text-muted-foreground">
+          Primero crea los equipos en{" "}
+          <Link
+            href="/admin/equipos"
+            className="text-volt underline-offset-4 hover:underline"
+          >
+            Equipos
+          </Link>
+          .
+        </p>
       ) : (
         <>
-          <div className="mt-6 space-y-4">
-            {weeks.map((week) => {
-              const weekMatches = matches.filter((m) => m.week === week);
-              const issues = weekIssues(weekMatches, teams);
-              return (
-              <Card key={week} className="border-border/60 bg-card/70">
-                <CardHeader>
-                  <CardTitle className="flex flex-wrap items-center gap-2 font-display text-2xl tracking-wide text-volt">
-                    SEMANA {week}
-                    {teams.length > 0 ? (
-                      issues.length === 0 ? (
-                        <span className="text-xs font-normal text-volt/80">
-                          ✓ Juegan los {teams.length}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-normal text-yellow-500">
-                          ⚠️ {issues.join(" · ")}
-                        </span>
-                      )
-                    ) : null}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {weekMatches.map((match) => (
-                      <MatchAdmin
-                        key={match.id}
-                        match={match}
-                        teams={teams}
-                        roster={roster}
-                        events={events}
-                      />
-                    ))}
-                </CardContent>
-              </Card>
-              );
-            })}
-          </div>
-
-          {/* Alta manual de partidos */}
-          <Card className="mt-4 border-border/60 bg-card/70">
+          {/* Programar la próxima semana */}
+          <Card className="mt-6 border-volt/40 bg-card/70">
             <CardHeader>
-              <CardTitle className="font-display text-xl tracking-wide">
-                AGREGAR PARTIDO
+              <CardTitle className="font-display text-2xl tracking-wide">
+                PROGRAMAR SEMANA {nextWeek}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form
-                action={addMatch}
-                className="flex flex-wrap items-end gap-2"
-              >
-                <div className="space-y-1">
-                  <Label htmlFor="nm-week" className="text-xs">
-                    Semana
-                  </Label>
-                  <Input
-                    id="nm-week"
-                    type="number"
-                    inputMode="numeric"
-                    name="week"
-                    min={1}
-                    max={10}
-                    defaultValue={1}
-                    required
-                    className="w-20"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="nm-stage" className="text-xs">
-                    Fase
-                  </Label>
-                  <select
-                    id="nm-stage"
-                    name="stage"
-                    defaultValue="group"
-                    className={selectClass}
-                  >
-                    {MATCH_STAGES.map((stage) => (
-                      <option key={stage} value={stage}>
-                        {STAGE_LABELS[stage]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="nm-date" className="text-xs">
-                    Fecha y hora
-                  </Label>
-                  <Input
-                    id="nm-date"
-                    type="datetime-local"
-                    name="kickoff_at"
-                    required
-                    className="w-fit"
-                  />
-                </div>
-                <select
-                  name="home_team_id"
-                  defaultValue=""
-                  className={selectClass}
-                  aria-label="Equipo local"
-                >
-                  <option value="">Local por definir</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="pb-2 text-xs text-muted-foreground">vs</span>
-                <select
-                  name="away_team_id"
-                  defaultValue=""
-                  className={selectClass}
-                  aria-label="Equipo visitante"
-                >
-                  <option value="">Visitante por definir</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-                <Button type="submit">
-                  <Plus aria-hidden /> Agregar
-                </Button>
-              </form>
+              <AddWeekForm teams={teams} nextWeek={nextWeek} />
             </CardContent>
           </Card>
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            <PublishFixtureButton />
-          </div>
+          {/* Semanas ya programadas */}
+          {weeks.length > 0 ? (
+            <>
+              <div className="mt-8 space-y-4">
+                {weeks.map((week) => {
+                  const weekMatches = matches.filter((m) => m.week === week);
+                  const issues = weekIssues(weekMatches, teams);
+                  return (
+                    <Card key={week} className="border-border/60 bg-card/70">
+                      <CardHeader>
+                        <CardTitle className="flex flex-wrap items-center gap-2 font-display text-2xl tracking-wide text-volt">
+                          SEMANA {week}
+                          {issues.length === 0 ? (
+                            <span className="text-xs font-normal text-volt/80">
+                              ✓ Juegan los {teams.length}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-normal text-yellow-500">
+                              ⚠️ {issues.join(" · ")}
+                            </span>
+                          )}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {weekMatches.map((match) => (
+                          <MatchSchedule
+                            key={match.id}
+                            match={match}
+                            teams={teams}
+                          />
+                        ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
-          <div className="mt-6">
-            <ConfirmButton
-              action={deleteFixture}
-              message={
-                anyFinished
-                  ? "¿Borrar TODO el fixture? Se eliminan los partidos Y sus resultados, goles, asistencias y tarjetas. Esto no se puede deshacer."
-                  : "¿Borrar todo el fixture? Se eliminan todos los partidos."
-              }
-              variant="outline"
-              className="text-muted-foreground hover:text-destructive"
-            >
-              Borrar fixture completo
-            </ConfirmButton>
-          </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <PublishFixtureButton />
+                <ConfirmButton
+                  action={deleteFixture}
+                  message={
+                    anyFinished
+                      ? "¿Borrar TODO el calendario? Se eliminan los partidos Y sus resultados, goles y tarjetas. Esto no se puede deshacer."
+                      : "¿Borrar todo el calendario? Se eliminan todos los partidos."
+                  }
+                  variant="outline"
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  Borrar calendario completo
+                </ConfirmButton>
+              </div>
+            </>
+          ) : null}
         </>
       )}
     </div>

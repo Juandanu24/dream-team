@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/supabase/server";
 import { sendPushToAll } from "@/lib/push";
-import { ACTIVE_TOURNAMENT_SLUG, type MatchStage } from "@/lib/types";
+import { ACTIVE_TOURNAMENT_SLUG } from "@/lib/types";
 
 async function requireAdmin() {
   const user = await getAdminUser();
@@ -33,172 +33,92 @@ function bogotaToIso(local: string): string {
   return new Date(`${local}:00-05:00`).toISOString();
 }
 
-const HOURS = 60 * 60 * 1000;
-const DAYS = 24 * HOURS;
+const weekSchema = z.object({
+  week: z.coerce.number().int().min(1).max(10),
+  // group: dos partidos de grupos · semifinal: las dos semis
+  // finals: martes 3º y 4º puesto, jueves la final
+  mode: z.enum(["group", "semifinal", "finals"]),
+  tuesday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
+  tuesday_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
+  thursday_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
+});
 
-// Genera las 5 semanas del torneo a partir del martes de la semana 1.
-// Cruces de grupos según el orden de creación de los equipos (1-4, como el flyer);
-// semis y finales quedan sin equipos hasta que termine la fase de grupos.
-export async function generateFixture(formData: FormData) {
+const STAGES_BY_MODE = {
+  group: ["group", "group"],
+  semifinal: ["semifinal", "semifinal"],
+  finals: ["third_place", "final"],
+} as const;
+
+// Programa una semana completa: el partido del martes y el del jueves.
+// Valida que los cuatro equipos sean distintos, que es lo que garantiza
+// que todos jueguen una vez en la semana.
+export async function addWeek(formData: FormData) {
   await requireAdmin();
 
-  const firstTuesday = z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida")
-    .parse(formData.get("first_tuesday"));
+  const parsed = weekSchema.parse({
+    week: formData.get("week"),
+    mode: formData.get("mode"),
+    tuesday: formData.get("tuesday"),
+    tuesday_time: formData.get("tuesday_time"),
+    thursday_time: formData.get("thursday_time"),
+  });
+
+  const ids = ["tue_home", "tue_away", "thu_home", "thu_away"].map(
+    (field) => String(formData.get(field) ?? "") || null,
+  );
+
+  const elegidos = ids.filter((id): id is string => Boolean(id));
+  if (new Set(elegidos).size !== elegidos.length) {
+    throw new Error("Hay un equipo repetido: cada equipo juega una vez por semana");
+  }
+  if (parsed.mode === "group" && elegidos.length !== 4) {
+    throw new Error("En fase de grupos hay que asignar los cuatro equipos");
+  }
 
   const supabase = createAdminClient();
   const tournamentId = await activeTournamentId();
 
-  const [{ data: teams }, { count: existing }] = await Promise.all([
-    supabase
-      .from("teams")
-      .select("id")
-      .eq("tournament_id", tournamentId)
-      .order("created_at"),
-    supabase
-      .from("matches")
-      .select("id", { count: "exact", head: true })
-      .eq("tournament_id", tournamentId),
-  ]);
-
-  if ((teams?.length ?? 0) !== 4) {
-    throw new Error("Se necesitan exactamente 4 equipos para generar el fixture");
-  }
-  if ((existing ?? 0) > 0) {
-    throw new Error("Ya hay partidos creados; borra el fixture primero");
+  const { count } = await supabase
+    .from("matches")
+    .select("id", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId)
+    .eq("week", parsed.week);
+  if (count) {
+    throw new Error(`La semana ${parsed.week} ya tiene partidos`);
   }
 
-  const t = teams!.map((team) => team.id);
-  const groupPairings: [number, number][][] = [
-    [
-      [0, 1],
-      [2, 3],
-    ],
-    [
-      [0, 2],
-      [1, 3],
-    ],
-    [
-      [0, 3],
-      [1, 2],
-    ],
-  ];
+  // El jueves es siempre dos días después del martes. La suma se hace
+  // sobre la fecha calendario, no sobre el instante: a las 8 PM de
+  // Colombia el martes ya es miércoles en UTC y daría un día corrido.
+  const [year, month, day] = parsed.tuesday.split("-").map(Number);
+  const anchor = new Date(Date.UTC(year, month - 1, day));
+  anchor.setUTCDate(anchor.getUTCDate() + 2);
+  const thursdayDate = anchor.toISOString().slice(0, 10);
 
-  // Martes 8:00 PM; jueves = martes + 2 días + 1 hora (9:00 PM).
-  const week1Tuesday = new Date(`${firstTuesday}T20:00:00-05:00`).getTime();
-  const tuesdayOf = (week: number) =>
-    new Date(week1Tuesday + (week - 1) * 7 * DAYS);
-  const thursdayOf = (week: number) =>
-    new Date(week1Tuesday + (week - 1) * 7 * DAYS + 2 * DAYS + 1 * HOURS);
-
-  type NewMatch = {
-    tournament_id: string;
-    stage: MatchStage;
-    week: number;
-    kickoff_at: string;
-    home_team_id: string | null;
-    away_team_id: string | null;
-  };
-
-  const matches: NewMatch[] = [];
-
-  groupPairings.forEach((pairings, i) => {
-    const week = i + 1;
-    const [tue, thu] = pairings;
-    matches.push(
-      {
-        tournament_id: tournamentId,
-        stage: "group",
-        week,
-        kickoff_at: tuesdayOf(week).toISOString(),
-        home_team_id: t[tue[0]],
-        away_team_id: t[tue[1]],
-      },
-      {
-        tournament_id: tournamentId,
-        stage: "group",
-        week,
-        kickoff_at: thursdayOf(week).toISOString(),
-        home_team_id: t[thu[0]],
-        away_team_id: t[thu[1]],
-      },
-    );
-  });
-
-  matches.push(
-    {
-      tournament_id: tournamentId,
-      stage: "semifinal",
-      week: 4,
-      kickoff_at: tuesdayOf(4).toISOString(),
-      home_team_id: null,
-      away_team_id: null,
-    },
-    {
-      tournament_id: tournamentId,
-      stage: "semifinal",
-      week: 4,
-      kickoff_at: thursdayOf(4).toISOString(),
-      home_team_id: null,
-      away_team_id: null,
-    },
-    {
-      tournament_id: tournamentId,
-      stage: "third_place",
-      week: 5,
-      kickoff_at: tuesdayOf(5).toISOString(),
-      home_team_id: null,
-      away_team_id: null,
-    },
-    {
-      tournament_id: tournamentId,
-      stage: "final",
-      week: 5,
-      kickoff_at: thursdayOf(5).toISOString(),
-      home_team_id: null,
-      away_team_id: null,
-    },
+  const tuesday = new Date(`${parsed.tuesday}T${parsed.tuesday_time}:00-05:00`);
+  const thursday = new Date(
+    `${thursdayDate}T${parsed.thursday_time}:00-05:00`,
   );
 
-  const { error } = await supabase.from("matches").insert(matches);
-  if (error) throw error;
-
-  revalidateMatches();
-}
-
-const newMatchSchema = z.object({
-  stage: z.enum(["group", "semifinal", "third_place", "final"]),
-  week: z.coerce.number().int().min(1).max(10),
-  kickoff_at: z.string().min(1),
-  home_team_id: z.uuid().nullable(),
-  away_team_id: z.uuid().nullable(),
-});
-
-// Alta manual de un partido, para armar el calendario a mano.
-export async function addMatch(formData: FormData) {
-  await requireAdmin();
-
-  const home = String(formData.get("home_team_id") ?? "") || null;
-  const away = String(formData.get("away_team_id") ?? "") || null;
-  if (home && away && home === away) {
-    throw new Error("Un equipo no puede jugar contra sí mismo");
-  }
-
-  const parsed = newMatchSchema.parse({
-    stage: formData.get("stage"),
-    week: formData.get("week"),
-    kickoff_at: formData.get("kickoff_at"),
-    home_team_id: home,
-    away_team_id: away,
-  });
-
-  const supabase = createAdminClient();
-  const { error } = await supabase.from("matches").insert({
-    ...parsed,
-    tournament_id: await activeTournamentId(),
-    kickoff_at: bogotaToIso(parsed.kickoff_at),
-  });
+  const [tueStage, thuStage] = STAGES_BY_MODE[parsed.mode];
+  const { error } = await supabase.from("matches").insert([
+    {
+      tournament_id: tournamentId,
+      stage: tueStage,
+      week: parsed.week,
+      kickoff_at: tuesday.toISOString(),
+      home_team_id: ids[0],
+      away_team_id: ids[1],
+    },
+    {
+      tournament_id: tournamentId,
+      stage: thuStage,
+      week: parsed.week,
+      kickoff_at: thursday.toISOString(),
+      home_team_id: ids[2],
+      away_team_id: ids[3],
+    },
+  ]);
   if (error) throw error;
 
   revalidateMatches();
@@ -274,132 +194,6 @@ export async function updateMatch(matchId: string, formData: FormData) {
     .from("matches")
     .update(update)
     .eq("id", matchId);
-  if (error) throw error;
-
-  revalidateMatches();
-}
-
-const scoreSchema = z.object({
-  home_score: z.coerce.number().int().min(0).max(99),
-  away_score: z.coerce.number().int().min(0).max(99),
-});
-
-export async function saveResult(matchId: string, formData: FormData) {
-  await requireAdmin();
-  const parsed = scoreSchema.parse({
-    home_score: formData.get("home_score"),
-    away_score: formData.get("away_score"),
-  });
-
-  const supabase = createAdminClient();
-  const { data: before } = await supabase
-    .from("matches")
-    .select("status, home_team_id, away_team_id")
-    .eq("id", matchId)
-    .maybeSingle();
-
-  const { error } = await supabase
-    .from("matches")
-    .update({ ...parsed, status: "finished" })
-    .eq("id", matchId);
-  if (error) throw error;
-
-  // Solo avisamos la primera vez que se marca como jugado, para no
-  // notificar cada corrección del marcador.
-  if (before && before.status !== "finished") {
-    const { data: teams } = await supabase
-      .from("teams")
-      .select("id, name")
-      .in(
-        "id",
-        [before.home_team_id, before.away_team_id].filter(
-          (id): id is string => Boolean(id),
-        ),
-      );
-    const nameOf = (id: string | null) =>
-      teams?.find((t) => t.id === id)?.name ?? "Por definir";
-
-    await sendPushToAll({
-      title: "⚽ Resultado del Dream Team",
-      body: `${nameOf(before.home_team_id)} ${parsed.home_score} - ${parsed.away_score} ${nameOf(before.away_team_id)}`,
-      url: "/torneo",
-      tag: "resultado",
-    });
-  }
-
-  revalidateMatches();
-}
-
-export async function reopenMatch(matchId: string) {
-  await requireAdmin();
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("matches")
-    .update({ status: "scheduled" })
-    .eq("id", matchId);
-  if (error) throw error;
-
-  revalidateMatches();
-}
-
-const eventSchema = z.object({
-  type: z.enum(["goal", "own_goal", "assist", "yellow_card", "red_card"]),
-  player_id: z.uuid(),
-  // Cuántas veces registrar el evento (p. ej. un jugador que marcó 3).
-  count: z.coerce.number().int().min(1).max(20),
-});
-
-export async function addEvent(matchId: string, formData: FormData) {
-  await requireAdmin();
-  const parsed = eventSchema.parse({
-    type: formData.get("type"),
-    player_id: formData.get("player_id"),
-    count: formData.get("count") || 1,
-  });
-
-  const supabase = createAdminClient();
-
-  const { data: match } = await supabase
-    .from("matches")
-    .select("id, tournament_id, home_team_id, away_team_id")
-    .eq("id", matchId)
-    .maybeSingle();
-  if (!match) throw new Error("Partido no encontrado");
-
-  // El equipo del evento se deriva de la plantilla del jugador en este torneo.
-  const { data: membership } = await supabase
-    .from("team_players")
-    .select("team_id")
-    .eq("tournament_id", match.tournament_id)
-    .eq("player_id", parsed.player_id)
-    .maybeSingle();
-  if (
-    !membership ||
-    ![match.home_team_id, match.away_team_id].includes(membership.team_id)
-  ) {
-    throw new Error("El jugador no pertenece a los equipos de este partido");
-  }
-
-  const { error } = await supabase.from("match_events").insert(
-    Array.from({ length: parsed.count }, () => ({
-      match_id: match.id,
-      player_id: parsed.player_id,
-      team_id: membership.team_id,
-      type: parsed.type,
-    })),
-  );
-  if (error) throw error;
-
-  revalidateMatches();
-}
-
-export async function deleteEvent(eventId: string) {
-  await requireAdmin();
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("match_events")
-    .delete()
-    .eq("id", eventId);
   if (error) throw error;
 
   revalidateMatches();

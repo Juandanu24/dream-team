@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   ClipboardList,
+  ListChecks,
   ExternalLink,
   LayoutDashboard,
   Users,
@@ -16,7 +17,8 @@ export const ADMIN_NAV = [
   { href: "/admin", label: "Panel", icon: LayoutDashboard },
   { href: "/admin/inscripciones", label: "Inscripciones", icon: ClipboardList },
   { href: "/admin/equipos", label: "Equipos", icon: Users },
-  { href: "/admin/partidos", label: "Partidos", icon: CalendarDays },
+  { href: "/admin/partidos", label: "Calendario", icon: CalendarDays },
+  { href: "/admin/resultados", label: "Resultados", icon: ListChecks },
 ];
 
 // Nav de escritorio del admin; en mobile se usa AdminMobileMenu.

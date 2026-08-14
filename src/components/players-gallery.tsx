@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { GalleryHorizontal, LayoutGrid } from "lucide-react";
+import { GalleryHorizontal, LayoutGrid, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CardShareButton } from "@/components/card-share-button";
 import { MotionButton } from "@/components/motion-button";
 import { PlayerCard } from "@/components/player-card";
@@ -28,6 +29,17 @@ export interface GalleryPlayer {
 // grilla compacta para ver todos de un vistazo.
 export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
   const [view, setView] = useState<"carousel" | "grid">("carousel");
+  const [query, setQuery] = useState("");
+
+  const q = query.trim().toLowerCase();
+  const visible = q
+    ? players.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.teamName.toLowerCase().includes(q) ||
+          p.positionShort.toLowerCase().includes(q),
+      )
+    : players;
 
   const card = (player: GalleryPlayer, compact = false) => (
     <PlayerCard
@@ -57,6 +69,20 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
 
   return (
     <div>
+      <div className="relative mb-3">
+        <Search
+          className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por nombre, equipo o posición…"
+          className="pl-9"
+          aria-label="Buscar jugadores"
+        />
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         {/* Toggle de vista: solo aplica en pantallas chicas */}
         <div className="flex gap-1 lg:hidden">
@@ -74,17 +100,23 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
             onClick={() => setView("grid")}
             className={cn(view === "grid" && "text-foreground")}
           >
-            <LayoutGrid aria-hidden /> Todos ({players.length})
+            <LayoutGrid aria-hidden /> Todos ({visible.length})
           </Button>
         </div>
         <MotionButton />
       </div>
 
+      {visible.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">
+          Ningún jugador coincide con «{query}».
+        </p>
+      ) : (
+        <>
       {/* Mobile/tablet */}
       <div className="mt-4 lg:hidden">
         {view === "carousel" ? (
           <PlayerCarousel>
-            {players.map((player) => (
+            {visible.map((player) => (
               <div key={player.id} className="flex flex-col items-center gap-2">
                 <TiltCard className="w-full">{card(player)}</TiltCard>
                 <CardShareButton card={player} />
@@ -93,20 +125,22 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
           </PlayerCarousel>
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {players.map((player) => tilted(player, true))}
+            {visible.map((player) => tilted(player, true))}
           </div>
         )}
       </div>
 
       {/* Desktop */}
       <div className="mt-4 hidden grid-cols-3 justify-items-center gap-6 lg:grid xl:grid-cols-4">
-        {players.map((player) => (
+        {visible.map((player) => (
           <div key={player.id} className="flex flex-col items-center gap-2">
             <TiltCard className="w-full max-w-[280px]">{card(player)}</TiltCard>
             <CardShareButton card={player} />
           </div>
         ))}
       </div>
+        </>
+      )}
     </div>
   );
 }
