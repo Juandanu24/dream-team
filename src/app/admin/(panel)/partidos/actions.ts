@@ -252,7 +252,7 @@ export async function reopenMatch(matchId: string) {
 }
 
 const eventSchema = z.object({
-  type: z.enum(["goal", "yellow_card", "red_card"]),
+  type: z.enum(["goal", "assist", "yellow_card", "red_card"]),
   player_id: z.uuid(),
   minute: z.coerce.number().int().min(0).max(130).nullable(),
 });

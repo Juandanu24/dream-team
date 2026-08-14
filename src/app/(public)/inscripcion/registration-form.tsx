@@ -273,6 +273,7 @@ export function RegistrationForm() {
               Así va tu carta
             </p>
             {card}
+            <MotionButton />
           </CardContent>
         </Card>
       </aside>

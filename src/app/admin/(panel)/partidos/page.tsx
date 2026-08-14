@@ -115,6 +115,10 @@ function toBogotaInput(ts: string | null): string {
 
 function EventIcon({ type }: { type: MatchEvent["type"] }) {
   if (type === "goal") return <Goal className="size-4 text-volt" aria-hidden />;
+  if (type === "assist")
+    return (
+      <span className="font-display text-sm leading-none text-volt/80">A</span>
+    );
   return (
     <span
       className={`inline-block h-4 w-3 rounded-[2px] ${
@@ -259,6 +263,23 @@ function MatchAdmin({
       {/* Eventos */}
       {home && away ? (
         <div className="space-y-2 pl-1">
+          {(() => {
+            // El marcador "pregunta" por los goleadores: avisa si los goles
+            // asignados a jugadores no cuadran con el resultado.
+            if (match.status !== "finished") return null;
+            const totalScore = (match.home_score ?? 0) + (match.away_score ?? 0);
+            const assignedGoals = matchEvents.filter(
+              (e) => e.type === "goal",
+            ).length;
+            if (assignedGoals === totalScore) return null;
+            return (
+              <p className="text-xs text-yellow-500">
+                {assignedGoals < totalScore
+                  ? `⚠️ Faltan ${totalScore - assignedGoals} de ${totalScore} goles por asignar a jugadores — agrégalos abajo con "⚽ Gol".`
+                  : `⚠️ Hay ${assignedGoals} goles asignados pero el marcador suma ${totalScore} — sobra alguno.`}
+              </p>
+            );
+          })()}
           {matchEvents.map((event) => (
             <div key={event.id} className="flex items-center gap-2 text-sm">
               <EventIcon type={event.type} />
@@ -288,6 +309,7 @@ function MatchAdmin({
           >
             <select name="type" required defaultValue="goal" className={selectClass}>
               <option value="goal">⚽ Gol</option>
+              <option value="assist">🅰️ Asistencia</option>
               <option value="yellow_card">🟨 Amarilla</option>
               <option value="red_card">🟥 Roja</option>
             </select>

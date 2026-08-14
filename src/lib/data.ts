@@ -10,6 +10,7 @@ import {
   type PlayerCardsRow,
   type Team,
   type TeamPlayer,
+  type TopAssistRow,
   type TopScorerRow,
   type Tournament,
 } from "@/lib/types";
@@ -32,6 +33,7 @@ export interface TournamentData {
   matches: Match[];
   events: EventWithPlayer[];
   scorers: TopScorerRow[];
+  assists: TopAssistRow[];
   cards: PlayerCardsRow[];
 }
 
@@ -49,7 +51,7 @@ export async function getTournamentData(): Promise<TournamentData | null> {
 
     if (!tournament) return null;
 
-    const [standings, teams, roster, approved, matches, scorers, cards] =
+    const [standings, teams, roster, approved, matches, scorers, assists, cards] =
       await Promise.all([
         supabase
           .from("group_standings")
@@ -81,6 +83,11 @@ export async function getTournamentData(): Promise<TournamentData | null> {
           .eq("tournament_id", tournament.id)
           .order("goals", { ascending: false }),
         supabase
+          .from("top_assists")
+          .select("*")
+          .eq("tournament_id", tournament.id)
+          .order("assists", { ascending: false }),
+        supabase
           .from("player_cards")
           .select("*")
           .eq("tournament_id", tournament.id)
@@ -88,9 +95,17 @@ export async function getTournamentData(): Promise<TournamentData | null> {
           .order("yellow_cards", { ascending: false }),
       ]);
 
+    // Desempate estilo FIFA: puntos → diferencia de gol → goles a favor →
+    // fair play (amarilla 1, roja 3; menos es mejor) → orden alfabético.
+    const fairPlay = (row: GroupStandingRow) =>
+      (row.yellow_cards ?? 0) + (row.red_cards ?? 0) * 3;
     const sortedStandings = ((standings.data as GroupStandingRow[]) ?? []).sort(
       (a, b) =>
-        b.points - a.points || b.goal_diff - a.goal_diff || b.goals_for - a.goals_for,
+        b.points - a.points ||
+        b.goal_diff - a.goal_diff ||
+        b.goals_for - a.goals_for ||
+        fairPlay(a) - fairPlay(b) ||
+        a.team_name.localeCompare(b.team_name),
     );
 
     const matchRows = (matches.data as Match[]) ?? [];
@@ -120,6 +135,7 @@ export async function getTournamentData(): Promise<TournamentData | null> {
       matches: matchRows,
       events,
       scorers: (scorers.data as TopScorerRow[]) ?? [],
+      assists: (assists.data as TopAssistRow[]) ?? [],
       cards: (cards.data as PlayerCardsRow[]) ?? [],
     };
   } catch (error) {

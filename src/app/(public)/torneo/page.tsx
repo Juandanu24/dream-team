@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Goal, RectangleVertical, Shield } from "lucide-react";
+import { Goal, Handshake, RectangleVertical, Shield } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +48,13 @@ function teamName(teams: Team[], id: string | null): string {
 }
 
 function eventLabel(type: MatchEvent["type"]): string {
-  return type === "goal" ? "⚽" : type === "yellow_card" ? "🟨" : "🟥";
+  return type === "goal"
+    ? "⚽"
+    : type === "assist"
+      ? "🅰️"
+      : type === "yellow_card"
+        ? "🟨"
+        : "🟥";
 }
 
 function MatchRow({
@@ -132,6 +138,7 @@ export default async function TournamentPage() {
     matches,
     events,
     scorers,
+    assists,
     cards,
   } = data;
   const teamOfPlayer = new Map(
@@ -197,6 +204,8 @@ export default async function TournamentPage() {
                       <TableHead className="hidden text-center sm:table-cell">GF</TableHead>
                       <TableHead className="hidden text-center sm:table-cell">GC</TableHead>
                       <TableHead className="text-center">DG</TableHead>
+                      <TableHead className="hidden text-center sm:table-cell">🟨</TableHead>
+                      <TableHead className="hidden text-center sm:table-cell">🟥</TableHead>
                       <TableHead className="text-center text-volt">PTS</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -226,6 +235,12 @@ export default async function TournamentPage() {
                           {row.goals_against}
                         </TableCell>
                         <TableCell className="text-center">{row.goal_diff}</TableCell>
+                        <TableCell className="hidden text-center sm:table-cell">
+                          {row.yellow_cards ?? 0}
+                        </TableCell>
+                        <TableCell className="hidden text-center sm:table-cell">
+                          {row.red_cards ?? 0}
+                        </TableCell>
                         <TableCell className="text-center font-display text-lg text-volt">
                           {row.points}
                         </TableCell>
@@ -233,6 +248,10 @@ export default async function TournamentPage() {
                     ))}
                   </TableBody>
                 </Table>
+                <p className="mt-3 px-2 text-xs text-muted-foreground">
+                  Desempate: puntos → diferencia de gol → goles a favor → fair
+                  play (🟨 = 1, 🟥 = 3; gana el que menos tenga).
+                </p>
               </CardContent>
             </Card>
           )}
@@ -389,6 +408,46 @@ export default async function TournamentPage() {
                     </span>
                     <span className="font-display text-2xl text-volt">
                       {scorer.goals}
+                    </span>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 bg-card/70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
+                <Handshake className="size-5 text-volt" aria-hidden />
+                ASISTENCIAS
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {assists.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Todavía no hay asistencias registradas. El que sirva el primer
+                  gol abre la lista.
+                </p>
+              ) : (
+                assists.map((assist, i) => (
+                  <div key={assist.player_id} className="flex items-center gap-3">
+                    <span className="w-6 font-display text-lg text-volt">
+                      {i + 1}
+                    </span>
+                    <Avatar className="size-8">
+                      <AvatarImage src={assist.photo_url ?? undefined} alt="" />
+                      <AvatarFallback>
+                        {assist.full_name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="flex-1 truncate text-sm">
+                      {assist.full_name}
+                      <span className="block text-xs text-muted-foreground">
+                        {assist.team_name}
+                      </span>
+                    </span>
+                    <span className="font-display text-2xl text-volt">
+                      {assist.assists}
                     </span>
                   </div>
                 ))

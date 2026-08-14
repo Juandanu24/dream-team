@@ -12,8 +12,9 @@ Pasos que solo tú puedes hacer para dejar el sitio funcionando. Son ~10 minutos
 ## 2. Correr la migración y el seed
 
 1. En el dashboard: **SQL Editor** → **New query**.
-2. Pega el contenido completo de `supabase/migrations/00001_esquema_inicial.sql` → **Run**.
-   Debe terminar sin errores (crea tablas, vistas, bucket de fotos y RLS).
+2. Pega el contenido de cada archivo de `supabase/migrations/` **en orden**
+   (00001, 00002, …) → **Run**. Deben terminar sin errores (crean tablas,
+   vistas, bucket de fotos y RLS).
 3. Nueva query: pega `supabase/seed.sql` → **Run**. Eso crea el torneo
    `relampago-2026`, que es el slug que usa la app (`ACTIVE_TOURNAMENT_SLUG`).
 

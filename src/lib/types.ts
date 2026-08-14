@@ -6,7 +6,7 @@ export type RegistrationStatus = "pending" | "approved" | "rejected";
 export type TournamentStatus = "registration" | "in_progress" | "finished";
 export type MatchStage = "group" | "semifinal" | "third_place" | "final";
 export type MatchStatus = "scheduled" | "finished";
-export type MatchEventType = "goal" | "yellow_card" | "red_card";
+export type MatchEventType = "goal" | "assist" | "yellow_card" | "red_card";
 
 export interface Tournament {
   id: string;
@@ -92,6 +92,9 @@ export interface GroupStandingRow {
   goals_against: number;
   goal_diff: number;
   points: number;
+  /** Tarjetas de fase de grupos (fair play); 0 si la vista aún no migra. */
+  yellow_cards?: number;
+  red_cards?: number;
 }
 
 export interface TopScorerRow {
@@ -103,6 +106,17 @@ export interface TopScorerRow {
   team_name: string;
   team_color: string | null;
   goals: number;
+}
+
+export interface TopAssistRow {
+  tournament_id: string;
+  player_id: string;
+  full_name: string;
+  photo_url: string | null;
+  team_id: string;
+  team_name: string;
+  team_color: string | null;
+  assists: number;
 }
 
 export interface PlayerCardsRow {
