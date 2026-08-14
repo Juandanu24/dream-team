@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,6 +12,15 @@ const teamSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color inválido"),
 });
 
+const CREST_MAX_BYTES = 2 * 1024 * 1024;
+
+const CREST_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
+};
+
 async function requireAdmin() {
   const user = await getAdminUser();
   if (!user) throw new Error("No autorizado");
@@ -19,6 +29,7 @@ async function requireAdmin() {
 function revalidateTeams() {
   revalidatePath("/admin/equipos");
   revalidatePath("/admin");
+  revalidatePath("/torneo");
 }
 
 export async function createTeam(formData: FormData) {
@@ -53,6 +64,55 @@ export async function updateTeam(teamId: string, formData: FormData) {
 
   const supabase = createAdminClient();
   const { error } = await supabase.from("teams").update(parsed).eq("id", teamId);
+  if (error) throw error;
+
+  revalidateTeams();
+}
+
+// Sube el escudo que pasa cada equipo. Sin escudo se usa el ícono
+// por defecto (un escudo con el color del equipo).
+export async function updateTeamCrest(teamId: string, formData: FormData) {
+  await requireAdmin();
+  const crest = formData.get("crest");
+
+  if (!(crest instanceof File) || crest.size === 0) {
+    throw new Error("Elige una imagen");
+  }
+  if (crest.size > CREST_MAX_BYTES) {
+    throw new Error("La imagen pesa más de 2 MB");
+  }
+  const extension = CREST_EXTENSIONS[crest.type];
+  if (!extension) {
+    throw new Error("El escudo debe ser JPG, PNG, WebP o SVG");
+  }
+
+  const supabase = createAdminClient();
+  const path = `${teamId}/${randomUUID()}.${extension}`;
+  const { error: uploadError } = await supabase.storage
+    .from("team-crests")
+    .upload(path, await crest.arrayBuffer(), { contentType: crest.type });
+  if (uploadError) throw uploadError;
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("team-crests").getPublicUrl(path);
+
+  const { error } = await supabase
+    .from("teams")
+    .update({ crest_url: publicUrl })
+    .eq("id", teamId);
+  if (error) throw error;
+
+  revalidateTeams();
+}
+
+export async function removeTeamCrest(teamId: string) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("teams")
+    .update({ crest_url: null })
+    .eq("id", teamId);
   if (error) throw error;
 
   revalidateTeams();

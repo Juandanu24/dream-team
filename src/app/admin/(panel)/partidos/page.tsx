@@ -1,4 +1,4 @@
-import { Check, Goal, Plus, RotateCcw, Save, X } from "lucide-react";
+import { Check, RotateCcw, Save, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ACTIVE_TOURNAMENT_SLUG,
+  EVENT_ICONS,
   STAGE_LABELS,
   type Match,
   type MatchEvent,
@@ -21,7 +22,6 @@ import {
   type TeamPlayer,
 } from "@/lib/types";
 import {
-  addEvent,
   deleteEvent,
   deleteFixture,
   generateFixture,
@@ -29,6 +29,7 @@ import {
   saveResult,
   updateMatch,
 } from "./actions";
+import { MatchEventForm } from "./match-event-form";
 
 export const dynamic = "force-dynamic";
 
@@ -113,19 +114,27 @@ function toBogotaInput(ts: string | null): string {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
-function EventIcon({ type }: { type: MatchEvent["type"] }) {
-  if (type === "goal") return <Goal className="size-4 text-volt" aria-hidden />;
-  if (type === "assist")
-    return (
-      <span className="font-display text-sm leading-none text-volt/80">A</span>
-    );
-  return (
-    <span
-      className={`inline-block h-4 w-3 rounded-[2px] ${
-        type === "yellow_card" ? "bg-yellow-400" : "bg-red-500"
-      }`}
-    />
-  );
+// Agrupa los eventos por jugador y tipo: "Andrés Pertuz ×3" en vez de
+// tres filas iguales. Borrar quita una unidad del grupo.
+function groupEvents(events: EventWithPlayer[]) {
+  const groups = new Map<
+    string,
+    { ids: string[]; type: MatchEvent["type"]; name: string }
+  >();
+  for (const event of events) {
+    const key = `${event.player_id}:${event.type}`;
+    const group = groups.get(key);
+    if (group) {
+      group.ids.push(event.id);
+    } else {
+      groups.set(key, {
+        ids: [event.id],
+        type: event.type,
+        name: event.players.full_name,
+      });
+    }
+  }
+  return [...groups.values()];
 }
 
 function MatchAdmin({
@@ -278,33 +287,37 @@ function MatchAdmin({
             // asignados a jugadores no cuadran con el resultado.
             if (match.status !== "finished") return null;
             const totalScore = (match.home_score ?? 0) + (match.away_score ?? 0);
+            // Los autogoles también suman al marcador (para el rival).
             const assignedGoals = matchEvents.filter(
-              (e) => e.type === "goal",
+              (e) => e.type === "goal" || e.type === "own_goal",
             ).length;
             if (assignedGoals === totalScore) return null;
             return (
               <p className="text-xs text-yellow-500">
                 {assignedGoals < totalScore
-                  ? `⚠️ Faltan ${totalScore - assignedGoals} de ${totalScore} goles por asignar a jugadores — agrégalos abajo con "⚽ Gol".`
+                  ? `⚠️ Faltan ${totalScore - assignedGoals} de ${totalScore} goles por asignar — agrégalos abajo (gol o autogol).`
                   : `⚠️ Hay ${assignedGoals} goles asignados pero el marcador suma ${totalScore} — sobra alguno.`}
               </p>
             );
           })()}
-          {matchEvents.map((event) => (
-            <div key={event.id} className="flex items-center gap-2 text-sm">
-              <EventIcon type={event.type} />
+          {groupEvents(matchEvents).map((group) => (
+            <div
+              key={`${group.type}-${group.ids[0]}`}
+              className="flex items-center gap-2 text-sm"
+            >
+              <span aria-hidden>{EVENT_ICONS[group.type]}</span>
               <span className="flex-1 truncate">
-                {event.players.full_name}
-                {event.minute !== null ? (
-                  <span className="text-muted-foreground"> · {event.minute}&apos;</span>
+                {group.name}
+                {group.ids.length > 1 ? (
+                  <span className="font-display text-volt"> ×{group.ids.length}</span>
                 ) : null}
               </span>
-              <form action={deleteEvent.bind(null, event.id)}>
+              <form action={deleteEvent.bind(null, group.ids.at(-1)!)}>
                 <Button
                   variant="ghost"
                   size="sm"
                   type="submit"
-                  title="Borrar evento"
+                  title={group.ids.length > 1 ? "Quitar uno" : "Borrar evento"}
                   className="text-muted-foreground hover:text-destructive"
                 >
                   <X aria-hidden />
@@ -313,52 +326,25 @@ function MatchAdmin({
             </div>
           ))}
 
-          <form
-            action={addEvent.bind(null, match.id)}
-            className="flex flex-wrap items-center gap-2"
-          >
-            <select name="type" required defaultValue="goal" className={selectClass}>
-              <option value="goal">⚽ Gol</option>
-              <option value="assist">🅰️ Asistencia</option>
-              <option value="yellow_card">🟨 Amarilla</option>
-              <option value="red_card">🟥 Roja</option>
-            </select>
-            <select
-              name="player_id"
-              required
-              defaultValue=""
-              className={`${selectClass} min-w-44 flex-1 sm:flex-none`}
-            >
-              <option value="" disabled>
-                Jugador…
-              </option>
-              <optgroup label={home.name}>
-                {rosterByTeam(home.id).map((entry) => (
-                  <option key={entry.player_id} value={entry.player_id}>
-                    {entry.players.full_name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label={away.name}>
-                {rosterByTeam(away.id).map((entry) => (
-                  <option key={entry.player_id} value={entry.player_id}>
-                    {entry.players.full_name}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-            <Input
-              type="number"
-              name="minute"
-              min={0}
-              max={130}
-              placeholder="min"
-              className="w-18"
-            />
-            <Button variant="outline" size="sm" type="submit" title="Agregar evento">
-              <Plus aria-hidden />
-            </Button>
-          </form>
+          <MatchEventForm
+            matchId={match.id}
+            home={{
+              id: home.id,
+              name: home.name,
+              players: rosterByTeam(home.id).map((entry) => ({
+                id: entry.player_id,
+                name: entry.players.full_name,
+              })),
+            }}
+            away={{
+              id: away.id,
+              name: away.name,
+              players: rosterByTeam(away.id).map((entry) => ({
+                id: entry.player_id,
+                name: entry.players.full_name,
+              })),
+            }}
+          />
         </div>
       ) : null}
     </div>

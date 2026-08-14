@@ -1,4 +1,4 @@
-import { Plus, Shield, X } from "lucide-react";
+import { ChevronRight, Plus, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TeamCrest } from "@/components/team-crest";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ACTIVE_TOURNAMENT_SLUG,
@@ -158,25 +159,30 @@ export default async function AdminTeamsPage() {
                   a.players.full_name.localeCompare(b.players.full_name),
               );
             return (
-              <Card key={team.id} className="border-border/60 bg-card/70">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield
-                      className="size-5 shrink-0"
-                      style={{ color: team.color ?? "var(--volt)" }}
+              <Card key={team.id} className="border-border/60 bg-card/70 py-0">
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 p-5">
+                    <ChevronRight
+                      className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
                       aria-hidden
+                    />
+                    <TeamCrest
+                      name={team.name}
+                      color={team.color}
+                      crestUrl={team.crest_url}
                     />
                     <span className="flex-1 truncate font-display text-2xl tracking-wide">
                       {team.name}
                     </span>
-                    <span className="text-sm font-normal text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       {players.length} jug.
                     </span>
+                  </summary>
+                <CardContent className="space-y-2 px-5 pb-5">
+                  <div className="flex justify-end gap-1">
                     <EditTeamDialog team={team} />
                     <DeleteTeamButton team={team} />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
+                  </div>
                   {players.map((entry) => (
                     <div key={entry.id} className="flex items-center gap-3">
                       <Avatar className="size-8">
@@ -236,6 +242,7 @@ export default async function AdminTeamsPage() {
                     </form>
                   ) : null}
                 </CardContent>
+                </details>
               </Card>
             );
           })}

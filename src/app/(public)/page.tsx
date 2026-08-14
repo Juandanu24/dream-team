@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SoccerBall } from "@/components/soccer-ball";
+import { InteractiveBall } from "@/components/interactive-ball";
 
 const stats = [
   {
@@ -71,12 +71,12 @@ export default function HomePage() {
     <>
       {/* Hero */}
       <section className="relative overflow-hidden">
-        {/* Balones flotando, como en el flyer */}
-        <div className="animate-float absolute top-14 -right-8 text-volt/50 motion-reduce:animate-none sm:top-20 sm:right-6 lg:right-24">
-          <SoccerBall className="size-28 animate-[spin_26s_linear_infinite] drop-shadow-[0_0_18px_rgba(204,255,0,0.25)] motion-reduce:animate-none sm:size-44" />
+        {/* Balones flotando, como en el flyer. Se pueden patear 👟 */}
+        <div className="animate-float absolute top-14 -right-8 size-28 text-volt/50 drop-shadow-[0_0_18px_rgba(204,255,0,0.25)] motion-reduce:animate-none sm:top-20 sm:right-6 sm:size-44 lg:right-24">
+          <InteractiveBall className="size-full" spinSeconds={26} />
         </div>
-        <div className="animate-float absolute bottom-8 -left-10 text-volt/20 [animation-delay:-2.5s] motion-reduce:animate-none sm:left-4">
-          <SoccerBall className="size-24 animate-[spin_34s_linear_infinite_reverse] motion-reduce:animate-none sm:size-32" />
+        <div className="animate-float absolute bottom-8 -left-10 size-24 text-volt/20 [animation-delay:-2.5s] motion-reduce:animate-none sm:left-4 sm:size-32">
+          <InteractiveBall className="size-full" spinSeconds={34} reverse />
         </div>
         <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center sm:pt-28">
           <span className="clip-angled bg-primary px-4 py-1.5 font-display text-lg tracking-widest text-primary-foreground">

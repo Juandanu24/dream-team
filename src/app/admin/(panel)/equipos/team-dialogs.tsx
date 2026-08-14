@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { ImageUp, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,12 +13,20 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TeamCrest } from "@/components/team-crest";
 import type { Team } from "@/lib/types";
 import { ColorSwatches } from "./color-swatches";
-import { deleteTeam, updateTeam } from "./actions";
+import {
+  deleteTeam,
+  removeTeamCrest,
+  updateTeam,
+  updateTeamCrest,
+} from "./actions";
 
 export function EditTeamDialog({ team }: { team: Team }) {
   const [open, setOpen] = useState(false);
+  const [uploading, startUpload] = useTransition();
+  const crestInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -33,6 +41,7 @@ export function EditTeamDialog({ team }: { team: Team }) {
             EDITAR EQUIPO
           </DialogTitle>
         </DialogHeader>
+
         <form
           action={async (formData: FormData) => {
             try {
@@ -62,6 +71,81 @@ export function EditTeamDialog({ team }: { team: Team }) {
             Guardar
           </Button>
         </form>
+
+        {/* Escudo: va aparte del form de datos para no mezclar subidas */}
+        <div className="space-y-2 border-t border-border/60 pt-4">
+          <Label>Escudo</Label>
+          <div className="flex items-center gap-3">
+            <TeamCrest
+              name={team.name}
+              color={team.color}
+              crestUrl={team.crest_url}
+              className="size-10"
+            />
+            <input
+              ref={crestInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                const formData = new FormData();
+                formData.set("crest", file);
+                startUpload(async () => {
+                  try {
+                    await updateTeamCrest(team.id, formData);
+                    toast.success("Escudo actualizado");
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "No se pudo subir el escudo",
+                    );
+                  }
+                });
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => crestInputRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <ImageUp aria-hidden />
+              )}
+              {team.crest_url ? "Cambiar" : "Subir"}
+            </Button>
+            {team.crest_url ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() =>
+                  startUpload(async () => {
+                    try {
+                      await removeTeamCrest(team.id);
+                    } catch {
+                      toast.error("No se pudo quitar el escudo");
+                    }
+                  })
+                }
+              >
+                Quitar
+              </Button>
+            ) : null}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            PNG, JPG, WebP o SVG (máx. 2 MB). Sin escudo se usa el ícono con el
+            color del equipo.
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,25 +21,56 @@ interface PhotoAdjustDialogProps {
 
 // Ajuste de la foto antes de subirla: arrastrar para centrar + zoom.
 // Exporta un recorte cuadrado listo para la carta.
+// El estado vive en Adjuster, montado con key={src}: cada foto nueva
+// empieza de cero y reabrir la misma conserva el encuadre.
 export function PhotoAdjustDialog({
   src,
   open,
   onOpenChange,
   onConfirm,
 }: PhotoAdjustDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide">
+            AJUSTA TU FOTO
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Arrastra para centrarte y usa el zoom. El círculo es lo que se ve en
+          la carta.
+        </p>
+        {src ? (
+          <Adjuster
+            key={src}
+            src={src}
+            onConfirm={(file, previewUrl) => {
+              onConfirm(file, previewUrl);
+              onOpenChange(false);
+            }}
+            onCancel={() => onOpenChange(false)}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Adjuster({
+  src,
+  onConfirm,
+  onCancel,
+}: {
+  src: string;
+  onConfirm: (file: File, previewUrl: string) => void;
+  onCancel: () => void;
+}) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const dragging = useRef<{ x: number; y: number } | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setZoom(1);
-      setOffset({ x: 0, y: 0 });
-      setNatural(null);
-    }
-  }, [open, src]);
 
   const cover = natural ? VIEWPORT / Math.min(natural.w, natural.h) : 1;
   const scale = cover * zoom;
@@ -108,7 +139,6 @@ export function PhotoAdjustDialog({
         const finish = (blob: Blob, ext: string) => {
           const file = new File([blob], `foto.${ext}`, { type: blob.type });
           onConfirm(file, URL.createObjectURL(blob));
-          onOpenChange(false);
         };
         if (webp && webp.type === "image/webp") {
           finish(webp, "webp");
@@ -123,17 +153,6 @@ export function PhotoAdjustDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="font-display text-2xl tracking-wide">
-            AJUSTA TU FOTO
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Arrastra para centrarte y usa el zoom. El círculo es lo que se ve en
-          la carta.
-        </p>
         <div className="flex flex-col items-center gap-4">
           <div
             className="relative touch-none overflow-hidden rounded-lg bg-black/60 select-none"
@@ -194,7 +213,7 @@ export function PhotoAdjustDialog({
               type="button"
               variant="outline"
               className="flex-1"
-              onClick={() => onOpenChange(false)}
+              onClick={onCancel}
             >
               Cancelar
             </Button>
@@ -203,7 +222,5 @@ export function PhotoAdjustDialog({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
   );
 }

@@ -2,7 +2,13 @@ import { cn } from "@/lib/utils";
 
 // Balón de fútbol en line-art: pentágono central, radios y arcos.
 // Se anima desde el padre (spin/float); hereda el color con currentColor.
-export function SoccerBall({ className }: { className?: string }) {
+export function SoccerBall({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <svg
       viewBox="0 0 200 200"
@@ -10,6 +16,7 @@ export function SoccerBall({ className }: { className?: string }) {
       stroke="currentColor"
       strokeWidth="3"
       className={cn("size-32", className)}
+      style={style}
       aria-hidden
     >
       <circle cx="100" cy="100" r="94" />

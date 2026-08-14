@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,13 @@ const LABELS: Record<(typeof CYCLE)[number], string> = {
 // withLabel: fila completa clickeable con el nombre del tema (menú mobile).
 export function ThemeToggle({ withLabel = false }: { withLabel?: boolean }) {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  // El tema real solo se conoce en el cliente; en el server render
+  // mostramos el ícono neutro para no romper la hidratación.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const current = (CYCLE.includes(theme as (typeof CYCLE)[number])
     ? theme

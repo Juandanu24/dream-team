@@ -6,7 +6,12 @@ export type RegistrationStatus = "pending" | "approved" | "rejected";
 export type TournamentStatus = "registration" | "in_progress" | "finished";
 export type MatchStage = "group" | "semifinal" | "third_place" | "final";
 export type MatchStatus = "scheduled" | "finished";
-export type MatchEventType = "goal" | "assist" | "yellow_card" | "red_card";
+export type MatchEventType =
+  | "goal"
+  | "own_goal"
+  | "assist"
+  | "yellow_card"
+  | "red_card";
 
 export interface Tournament {
   id: string;
@@ -41,6 +46,7 @@ export interface Team {
   tournament_id: string;
   name: string;
   color: string | null;
+  crest_url?: string | null;
   created_at: string;
 }
 
@@ -158,6 +164,22 @@ export const STAGE_LABELS: Record<MatchStage, string> = {
   semifinal: "Semifinal",
   third_place: "3º y 4º puesto",
   final: "Gran Final",
+};
+
+export const EVENT_LABELS: Record<MatchEventType, string> = {
+  goal: "⚽ Gol",
+  own_goal: "🥅 Autogol",
+  assist: "🅰️ Asistencia",
+  yellow_card: "🟨 Amarilla",
+  red_card: "🟥 Roja",
+};
+
+export const EVENT_ICONS: Record<MatchEventType, string> = {
+  goal: "⚽",
+  own_goal: "🥅",
+  assist: "🅰️",
+  yellow_card: "🟨",
+  red_card: "🟥",
 };
 
 export const REGISTRATION_LABELS: Record<RegistrationStatus, string> = {

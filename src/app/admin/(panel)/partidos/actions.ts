@@ -244,18 +244,18 @@ export async function reopenMatch(matchId: string) {
 }
 
 const eventSchema = z.object({
-  type: z.enum(["goal", "assist", "yellow_card", "red_card"]),
+  type: z.enum(["goal", "own_goal", "assist", "yellow_card", "red_card"]),
   player_id: z.uuid(),
-  minute: z.coerce.number().int().min(0).max(130).nullable(),
+  // Cuántas veces registrar el evento (p. ej. un jugador que marcó 3).
+  count: z.coerce.number().int().min(1).max(20),
 });
 
 export async function addEvent(matchId: string, formData: FormData) {
   await requireAdmin();
-  const minuteRaw = String(formData.get("minute") ?? "").trim();
   const parsed = eventSchema.parse({
     type: formData.get("type"),
     player_id: formData.get("player_id"),
-    minute: minuteRaw === "" ? null : minuteRaw,
+    count: formData.get("count") || 1,
   });
 
   const supabase = createAdminClient();
@@ -281,13 +281,14 @@ export async function addEvent(matchId: string, formData: FormData) {
     throw new Error("El jugador no pertenece a los equipos de este partido");
   }
 
-  const { error } = await supabase.from("match_events").insert({
-    match_id: match.id,
-    player_id: parsed.player_id,
-    team_id: membership.team_id,
-    type: parsed.type,
-    minute: parsed.minute,
-  });
+  const { error } = await supabase.from("match_events").insert(
+    Array.from({ length: parsed.count }, () => ({
+      match_id: match.id,
+      player_id: parsed.player_id,
+      team_id: membership.team_id,
+      type: parsed.type,
+    })),
+  );
   if (error) throw error;
 
   revalidateMatches();

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { InteractiveBall } from "@/components/interactive-ball";
 import { RegistrationForm } from "./registration-form";
 
 export const metadata: Metadata = {
@@ -7,7 +8,10 @@ export const metadata: Metadata = {
 
 export default function RegistrationPage() {
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
+    <div className="relative mx-auto max-w-4xl overflow-hidden px-4 py-12">
+      <div className="animate-float pointer-events-none absolute -top-6 -right-10 size-32 text-volt/15 motion-reduce:animate-none sm:right-0 sm:size-40">
+        <InteractiveBall className="pointer-events-auto size-full" spinSeconds={30} />
+      </div>
       <h1 className="font-display text-5xl tracking-wide sm:text-6xl">
         SUMA TU <span className="text-volt">NOMBRE</span>
       </h1>

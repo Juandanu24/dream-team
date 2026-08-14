@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Goal, Handshake, RectangleVertical, Shield } from "lucide-react";
+import { Goal, Handshake, RectangleVertical } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,18 +12,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InteractiveBall } from "@/components/interactive-ball";
 import { PlayersGallery } from "@/components/players-gallery";
+import { TeamCrest } from "@/components/team-crest";
 import {
   formatKickoff,
   getTournamentData,
   type EventWithPlayer,
 } from "@/lib/data";
 import {
+  EVENT_ICONS,
   FOOT_LABELS,
   POSITION_SHORT,
   STAGE_LABELS,
   type Match,
-  type MatchEvent,
   type Team,
 } from "@/lib/types";
 
@@ -47,14 +49,24 @@ function teamName(teams: Team[], id: string | null): string {
   return teams.find((t) => t.id === id)?.name ?? "Por definir";
 }
 
-function eventLabel(type: MatchEvent["type"]): string {
-  return type === "goal"
-    ? "⚽"
-    : type === "assist"
-      ? "🅰️"
-      : type === "yellow_card"
-        ? "🟨"
-        : "🟥";
+// Agrupa por jugador y tipo: "⚽ Juan ×2" en vez de dos entradas.
+function summarizeEvents(events: EventWithPlayer[]): string {
+  const counts = new Map<string, { label: string; count: number }>();
+  for (const event of events) {
+    const key = `${event.player_id}:${event.type}`;
+    const entry = counts.get(key);
+    if (entry) {
+      entry.count += 1;
+    } else {
+      counts.set(key, {
+        label: `${EVENT_ICONS[event.type]} ${event.players.full_name}`,
+        count: 1,
+      });
+    }
+  }
+  return [...counts.values()]
+    .map((e) => (e.count > 1 ? `${e.label} ×${e.count}` : e.label))
+    .join(" · ");
 }
 
 function MatchRow({
@@ -97,14 +109,7 @@ function MatchRow({
       </div>
       {match.status === "finished" && matchEvents.length > 0 ? (
         <p className="mt-1 text-center text-xs text-muted-foreground sm:pl-44">
-          {matchEvents
-            .map(
-              (e) =>
-                `${eventLabel(e.type)} ${e.players.full_name}${
-                  e.minute !== null ? ` ${e.minute}'` : ""
-                }`,
-            )
-            .join(" · ")}
+          {summarizeEvents(matchEvents)}
         </p>
       ) : null}
     </div>
@@ -150,7 +155,10 @@ export default async function TournamentPage() {
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
+    <div className="relative mx-auto max-w-5xl overflow-hidden px-4 py-12">
+      <div className="animate-float pointer-events-none absolute -top-4 -right-12 size-32 text-volt/15 motion-reduce:animate-none sm:right-0 sm:size-40">
+        <InteractiveBall className="pointer-events-auto size-full" spinSeconds={32} />
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-display text-5xl tracking-wide">
           {tournament.name.toUpperCase()}
@@ -217,9 +225,13 @@ export default async function TournamentPage() {
                         </TableCell>
                         <TableCell className="font-medium">
                           <span className="flex items-center gap-2">
-                            <span
-                              className="size-2.5 rounded-full"
-                              style={{ background: row.team_color ?? "var(--volt)" }}
+                            <TeamCrest
+                              name={row.team_name}
+                              color={row.team_color}
+                              crestUrl={
+                                teams.find((t) => t.id === row.team_id)?.crest_url
+                              }
+                              className="size-4"
                             />
                             {row.team_name}
                           </span>
@@ -304,10 +316,11 @@ export default async function TournamentPage() {
                   <Card key={team.id} className="border-border/60 bg-card/70">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
-                        <Shield
-                          className="size-5"
-                          style={{ color: team.color ?? "var(--volt)" }}
-                          aria-hidden
+                        <TeamCrest
+                          name={team.name}
+                          color={team.color}
+                          crestUrl={team.crest_url}
+                          className="size-7"
                         />
                         {team.name}
                       </CardTitle>

@@ -8,6 +8,7 @@ import {
   type MatchEvent,
   type Player,
   type PlayerCardsRow,
+  type RegistrationStatus,
   type Team,
   type TeamPlayer,
   type TopAssistRow,
@@ -30,6 +31,8 @@ export interface TournamentData {
   roster: RosterEntry[];
   /** Jugadores con inscripción aprobada (tengan equipo o no). */
   approvedPlayers: Player[];
+  /** Conteo de inscripciones por estado (para el panel admin). */
+  registrations: { pending: number; approved: number; rejected: number };
   matches: Match[];
   events: EventWithPlayer[];
   scorers: TopScorerRow[];
@@ -68,9 +71,8 @@ export async function getTournamentData(): Promise<TournamentData | null> {
           .eq("tournament_id", tournament.id),
         supabase
           .from("registrations")
-          .select("players(*)")
-          .eq("tournament_id", tournament.id)
-          .eq("status", "approved"),
+          .select("status, players(*)")
+          .eq("tournament_id", tournament.id),
         supabase
           .from("matches")
           .select("*")
@@ -108,6 +110,10 @@ export async function getTournamentData(): Promise<TournamentData | null> {
         a.team_name.localeCompare(b.team_name),
     );
 
+    const registrationRows =
+      (approved.data as unknown as
+        | { status: RegistrationStatus; players: Player }[]
+        | null) ?? [];
     const matchRows = (matches.data as Match[]) ?? [];
     let events: EventWithPlayer[] = [];
     if (matchRows.length > 0) {
@@ -127,11 +133,15 @@ export async function getTournamentData(): Promise<TournamentData | null> {
       standings: sortedStandings,
       teams: (teams.data as Team[]) ?? [],
       roster: (roster.data as unknown as RosterEntry[]) ?? [],
-      approvedPlayers: (
-        (approved.data as unknown as { players: Player }[] | null) ?? []
-      )
+      approvedPlayers: registrationRows
+        .filter((r) => r.status === "approved")
         .map((r) => r.players)
         .sort((a, b) => a.full_name.localeCompare(b.full_name)),
+      registrations: {
+        pending: registrationRows.filter((r) => r.status === "pending").length,
+        approved: registrationRows.filter((r) => r.status === "approved").length,
+        rejected: registrationRows.filter((r) => r.status === "rejected").length,
+      },
       matches: matchRows,
       events,
       scorers: (scorers.data as TopScorerRow[]) ?? [],
