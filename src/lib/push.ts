@@ -12,12 +12,45 @@ export interface PushPayload {
   tag?: string;
 }
 
+export interface StoredSubscription {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
 function configured() {
   return Boolean(
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
       process.env.VAPID_PRIVATE_KEY &&
       process.env.VAPID_SUBJECT,
   );
+}
+
+// Envía a un solo dispositivo. Devuelve si se entregó.
+export async function sendPushToOne(
+  subscription: StoredSubscription,
+  payload: PushPayload,
+): Promise<boolean> {
+  if (!configured()) return false;
+
+  try {
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT!,
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+      process.env.VAPID_PRIVATE_KEY!,
+    );
+    await webpush.sendNotification(
+      {
+        endpoint: subscription.endpoint,
+        keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+      },
+      JSON.stringify(payload),
+    );
+    return true;
+  } catch (error) {
+    console.error("Error enviando notificación de prueba:", error);
+    return false;
+  }
 }
 
 // Envía el aviso a todos los dispositivos suscritos y limpia los que

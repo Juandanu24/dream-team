@@ -2,6 +2,7 @@ import { CheckCircle2, DoorClosed, DoorOpen, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TournamentStatus } from "@/lib/types";
+import { PushTestButton } from "./push-test-button";
 import { updateTournamentStatus } from "./tournament-actions";
 
 const OPTIONS: {
@@ -72,6 +73,15 @@ export function TournamentStatusCard({ status }: { status: TournamentStatus }) {
             </form>
           );
         })}
+
+        <div className="border-t border-border/60 pt-3">
+          <PushTestButton />
+          <p className="mt-2 text-xs text-muted-foreground">
+            La prueba llega solo a este dispositivo. Los avisos reales se
+            envían a todos al publicar el fixture y al marcar un partido como
+            jugado.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
