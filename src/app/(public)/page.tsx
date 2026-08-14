@@ -71,7 +71,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center sm:pt-28">
-          <span className="clip-angled bg-volt px-4 py-1.5 font-display text-lg tracking-widest text-primary-foreground">
+          <span className="clip-angled bg-primary px-4 py-1.5 font-display text-lg tracking-widest text-primary-foreground">
             TORNEO RELÁMPAGO
           </span>
           <h1 className="mt-6 font-display text-7xl leading-none tracking-wide sm:text-9xl">

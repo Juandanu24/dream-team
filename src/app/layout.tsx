@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Archivo, Bebas_Neue } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SwRegister } from "@/components/sw-register";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -30,7 +31,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f6f4" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({
@@ -39,13 +43,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="dark">
+    <html lang="es" suppressHydrationWarning>
       <body
         className={`${archivo.variable} ${bebas.variable} bg-stadium min-h-dvh font-sans antialiased`}
       >
-        {children}
-        <Toaster position="top-center" richColors />
-        <SwRegister />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster position="top-center" richColors />
+          <SwRegister />
+        </ThemeProvider>
       </body>
     </html>
   );

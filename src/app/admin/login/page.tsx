@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ export default function AdminLoginPage() {
   const [state, formAction, pending] = useActionState(login, initialState);
 
   return (
-    <div className="flex min-h-dvh items-center justify-center px-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4">
       <Card className="w-full max-w-sm border-border/60 bg-card/80">
         <CardHeader className="text-center">
           <ShieldCheck className="mx-auto size-8 text-volt" aria-hidden />
@@ -42,6 +43,16 @@ export default function AdminLoginPage() {
           </form>
         </CardContent>
       </Card>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground hover:text-foreground"
+        asChild
+      >
+        <Link href="/">
+          <ArrowLeft aria-hidden /> Volver al inicio
+        </Link>
+      </Button>
     </div>
   );
 }

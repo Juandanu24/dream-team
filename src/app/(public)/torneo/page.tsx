@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlayerCard } from "@/components/player-card";
+import { PlayerCarousel } from "@/components/player-carousel";
 import { TiltCard } from "@/components/tilt-card";
 import {
   formatKickoff,
@@ -159,7 +160,7 @@ export default async function TournamentPage() {
       </div>
 
       <Tabs defaultValue="posiciones" className="mt-8">
-        <TabsList className="flex w-full flex-wrap justify-start">
+        <TabsList className="scrollbar-none w-full justify-start overflow-x-auto">
           <TabsTrigger value="posiciones">Posiciones</TabsTrigger>
           <TabsTrigger value="calendario">Calendario</TabsTrigger>
           <TabsTrigger value="equipos">Equipos</TabsTrigger>
@@ -331,22 +332,44 @@ export default async function TournamentPage() {
               inscripciones. ¿Ya sumaste tu nombre?
             </EmptyNote>
           ) : (
-            <div className="grid grid-cols-2 justify-items-center gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {approvedPlayers.map((player) => (
-                <TiltCard key={player.id} className="w-full max-w-[280px]">
-                  <PlayerCard
-                    name={player.full_name}
-                    age={player.age}
-                    positionShort={POSITION_SHORT[player.position]}
-                    footLabel={FOOT_LABELS[player.dominant_foot]}
-                    memberSince={player.member_since}
-                    photoUrl={player.photo_url}
-                    teamName={teamOfPlayer.get(player.id) ?? "Por sortear"}
-                    className="max-w-none"
-                  />
-                </TiltCard>
-              ))}
-            </div>
+            <>
+              {/* Mobile/tablet: carrusel con la carta grande al centro */}
+              <div className="lg:hidden">
+                <PlayerCarousel>
+                  {approvedPlayers.map((player) => (
+                    <TiltCard key={player.id} className="w-full">
+                      <PlayerCard
+                        name={player.full_name}
+                        age={player.age}
+                        positionShort={POSITION_SHORT[player.position]}
+                        footLabel={FOOT_LABELS[player.dominant_foot]}
+                        memberSince={player.member_since}
+                        photoUrl={player.photo_url}
+                        teamName={teamOfPlayer.get(player.id) ?? "Por sortear"}
+                        className="max-w-none"
+                      />
+                    </TiltCard>
+                  ))}
+                </PlayerCarousel>
+              </div>
+              {/* Desktop: grilla completa */}
+              <div className="hidden grid-cols-3 justify-items-center gap-4 lg:grid xl:grid-cols-4">
+                {approvedPlayers.map((player) => (
+                  <TiltCard key={player.id} className="w-full max-w-[280px]">
+                    <PlayerCard
+                      name={player.full_name}
+                      age={player.age}
+                      positionShort={POSITION_SHORT[player.position]}
+                      footLabel={FOOT_LABELS[player.dominant_foot]}
+                      memberSince={player.member_since}
+                      photoUrl={player.photo_url}
+                      teamName={teamOfPlayer.get(player.id) ?? "Por sortear"}
+                      className="max-w-none"
+                    />
+                  </TiltCard>
+                ))}
+              </div>
+            </>
           )}
         </TabsContent>
 

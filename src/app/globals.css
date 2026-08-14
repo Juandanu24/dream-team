@@ -50,11 +50,52 @@
 }
 
 /*
- * Paleta del flyer: noche de estadio.
- * Sitio dark-only — :root y .dark comparten los mismos valores.
+ * Paleta del flyer, en dos temas anclados al OS (next-themes pone la clase):
+ * light = día de partido, dark = noche de estadio.
+ * --volt es el acento de marca: neón puro en dark, oliva legible en light.
  */
 :root {
+  --volt: #5c7a08;
+  --stadium-glow-1: rgb(140 180 0 / 12%);
+  --stadium-glow-2: rgb(140 180 0 / 6%);
+  --background: #f6f6f4;
+  --foreground: #141414;
+  --card: #ffffff;
+  --card-foreground: #141414;
+  --popover: #ffffff;
+  --popover-foreground: #141414;
+  --primary: #bfef00;
+  --primary-foreground: #0a0a0a;
+  --secondary: #e9e9e6;
+  --secondary-foreground: #141414;
+  --muted: #ececea;
+  --muted-foreground: #6b6b6b;
+  --accent: #edf6cf;
+  --accent-foreground: #465c00;
+  --destructive: #d92d20;
+  --border: rgb(0 0 0 / 12%);
+  --input: rgb(0 0 0 / 18%);
+  --ring: #5c7a08;
+  --chart-1: #5c7a08;
+  --chart-2: #8fb300;
+  --chart-3: #465c00;
+  --chart-4: #141414;
+  --chart-5: #6b6b6b;
+  --radius: 0.375rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #141414;
+  --sidebar-primary: #bfef00;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #e9e9e6;
+  --sidebar-accent-foreground: #141414;
+  --sidebar-border: rgb(0 0 0 / 12%);
+  --sidebar-ring: #5c7a08;
+}
+
+.dark {
   --volt: #ccff00;
+  --stadium-glow-1: rgb(204 255 0 / 14%);
+  --stadium-glow-2: rgb(204 255 0 / 7%);
   --background: #0a0a0a;
   --foreground: #f5f5f5;
   --card: #131313;
@@ -78,7 +119,6 @@
   --chart-3: #5c7300;
   --chart-4: #f5f5f5;
   --chart-5: #a1a1a1;
-  --radius: 0.375rem;
   --sidebar: #131313;
   --sidebar-foreground: #f5f5f5;
   --sidebar-primary: var(--volt);
@@ -89,15 +129,11 @@
   --sidebar-ring: var(--volt);
 }
 
-.dark {
-  --background: #0a0a0a;
-}
-
-/* Fondo tipo estadio de noche: resplandor verde neón arriba. */
+/* Fondo tipo estadio: resplandor volt arriba, según el tema. */
 @utility bg-stadium {
   background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgb(204 255 0 / 14%), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 95% 110%, rgb(204 255 0 / 7%), transparent 70%),
+    radial-gradient(ellipse 90% 55% at 50% -15%, var(--stadium-glow-1), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 95% 110%, var(--stadium-glow-2), transparent 70%),
     var(--background);
 }
 
@@ -123,9 +159,9 @@
   }
   html {
     @apply font-sans;
-    /* Scrollbar oscura y con espacio siempre reservado:
-       evita el salto de layout al navegar entre páginas cortas y largas. */
-    color-scheme: dark;
+    /* Espacio de scrollbar siempre reservado: evita el salto de layout
+       al navegar entre páginas cortas y largas. El color-scheme lo
+       gestiona next-themes según el tema activo. */
     scrollbar-gutter: stable;
   }
   ::selection {

@@ -1,8 +1,9 @@
-import { Check, RotateCcw, X } from "lucide-react";
+import { Check, RotateCcw, Trash2, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmButton } from "@/components/confirm-button";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   ACTIVE_TOURNAMENT_SLUG,
@@ -14,9 +15,11 @@ import {
 } from "@/lib/types";
 import {
   approveRegistration,
+  deleteRegistration,
   rejectRegistration,
   resetRegistration,
 } from "./actions";
+import { PlayerEditDialog } from "./player-edit-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +70,7 @@ export default async function AdminRegistrationsPage() {
           INSCRIPCIONES
         </h1>
         {pendingCount > 0 ? (
-          <Badge className="bg-volt text-primary-foreground">
+          <Badge className="bg-primary text-primary-foreground">
             {pendingCount} por revisar
           </Badge>
         ) : null}
@@ -141,6 +144,16 @@ export default async function AdminRegistrationsPage() {
                         </Button>
                       </form>
                     )}
+                    <PlayerEditDialog player={player} />
+                    <ConfirmButton
+                      action={deleteRegistration.bind(null, registration.id)}
+                      message={`¿Eliminar la solicitud de ${player.full_name}? Si estaba en un equipo, sale de la plantilla.`}
+                      variant="ghost"
+                      title="Eliminar solicitud"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 aria-hidden />
+                    </ConfirmButton>
                   </div>
                 </CardContent>
               </Card>
