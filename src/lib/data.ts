@@ -15,6 +15,7 @@ import {
   type TopAssistRow,
   type TopScorerRow,
   type Tournament,
+  type TournamentStatus,
 } from "@/lib/types";
 
 export interface RosterEntry extends TeamPlayer {
@@ -169,6 +170,22 @@ export async function getTournamentData(): Promise<TournamentData | null> {
   } catch (error) {
     console.error("Error cargando datos del torneo:", error);
     return null;
+  }
+}
+
+// Estado del torneo activo. Si Supabase no responde asumimos abierto,
+// para no bloquear inscripciones por un problema de red.
+export async function getTournamentStatus(): Promise<TournamentStatus> {
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("tournaments")
+      .select("status")
+      .eq("slug", ACTIVE_TOURNAMENT_SLUG)
+      .maybeSingle();
+    return (data?.status as TournamentStatus) ?? "registration";
+  } catch {
+    return "registration";
   }
 }
 

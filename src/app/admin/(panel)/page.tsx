@@ -18,6 +18,7 @@ import {
 import { TeamCrest } from "@/components/team-crest";
 import { formatKickoff, getTournamentData } from "@/lib/data";
 import { STAGE_LABELS } from "@/lib/types";
+import { TournamentStatusCard } from "./tournament-status";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +99,8 @@ export default async function AdminHomePage() {
           ))}
         </div>
       </div>
+
+      <TournamentStatusCard status={data.tournament.status} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         {/* Tabla de posiciones */}
