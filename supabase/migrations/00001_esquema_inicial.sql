@@ -86,7 +86,12 @@ create table matches (
   away_score int check (away_score >= 0),
   status match_status not null default 'scheduled',
   created_at timestamptz not null default now(),
-  check (home_team_id is distinct from away_team_id),
+  -- Ambos NULL está bien (cruce por definir); iguales no.
+  constraint matches_distinct_teams check (
+    home_team_id is null
+    or away_team_id is null
+    or home_team_id <> away_team_id
+  ),
   -- Un partido finalizado siempre tiene marcador.
   check (status <> 'finished' or (home_score is not null and away_score is not null))
 );

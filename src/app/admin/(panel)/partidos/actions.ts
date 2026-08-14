@@ -166,20 +166,12 @@ export async function generateFixture(formData: FormData) {
   revalidateMatches();
 }
 
-// Borra todos los partidos del torneo (solo si ninguno está finalizado).
+// Borra todos los partidos del torneo, incluidos resultados y eventos
+// (los match_events caen en cascada). Útil para regenerar el fixture.
 export async function deleteFixture() {
   await requireAdmin();
   const supabase = createAdminClient();
   const tournamentId = await activeTournamentId();
-
-  const { count } = await supabase
-    .from("matches")
-    .select("id", { count: "exact", head: true })
-    .eq("tournament_id", tournamentId)
-    .eq("status", "finished");
-  if ((count ?? 0) > 0) {
-    throw new Error("Hay partidos finalizados; no se puede borrar el fixture");
-  }
 
   const { error } = await supabase
     .from("matches")

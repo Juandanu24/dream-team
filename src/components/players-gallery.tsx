@@ -35,6 +35,7 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
         memberSince={player.memberSince}
         photoUrl={player.photoUrl}
         teamName={player.teamName}
+        compact={compact}
         className="max-w-none"
       />
     </TiltCard>
@@ -70,7 +71,7 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
         {view === "carousel" ? (
           <PlayerCarousel>{players.map((p) => card(p))}</PlayerCarousel>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
             {players.map((p) => card(p, true))}
           </div>
         )}

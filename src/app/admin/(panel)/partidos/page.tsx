@@ -447,18 +447,20 @@ export default async function AdminMatchesPage() {
             ))}
           </div>
 
-          {!anyFinished ? (
-            <div className="mt-6">
-              <ConfirmButton
-                action={deleteFixture}
-                message="¿Borrar todo el fixture? Se eliminan los 10 partidos."
-                variant="outline"
-                className="text-muted-foreground hover:text-destructive"
-              >
-                Borrar fixture completo
-              </ConfirmButton>
-            </div>
-          ) : null}
+          <div className="mt-6">
+            <ConfirmButton
+              action={deleteFixture}
+              message={
+                anyFinished
+                  ? "¿Borrar TODO el fixture? Se eliminan los partidos Y sus resultados, goles, asistencias y tarjetas. Esto no se puede deshacer."
+                  : "¿Borrar todo el fixture? Se eliminan todos los partidos."
+              }
+              variant="outline"
+              className="text-muted-foreground hover:text-destructive"
+            >
+              Borrar fixture completo
+            </ConfirmButton>
+          </div>
         </>
       )}
     </div>

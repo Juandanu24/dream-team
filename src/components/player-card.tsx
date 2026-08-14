@@ -9,6 +9,8 @@ interface PlayerCardProps {
   memberSince: string;
   photoUrl?: string | null;
   teamName?: string | null;
+  /** Versión mini para grillas con muchos jugadores. */
+  compact?: boolean;
   className?: string;
 }
 
@@ -24,6 +26,7 @@ export function PlayerCard({
   memberSince,
   photoUrl,
   teamName,
+  compact = false,
   className,
 }: PlayerCardProps) {
   return (
@@ -35,63 +38,136 @@ export function PlayerCard({
         className,
       )}
     >
-      <div className="flex h-full flex-col bg-gradient-to-b from-[#f3f7dd] via-[#fbfcf4] to-[#e9eecf] px-5 pt-6 pb-10 [clip-path:polygon(0_3%,50%_0,100%_3%,100%_90%,50%_100%,0_90%)] dark:from-[#1c2205] dark:via-[#111403] dark:to-[#0a0b02]">
+      <div
+        className={cn(
+          "flex h-full flex-col bg-gradient-to-b from-[#f3f7dd] via-[#fbfcf4] to-[#e9eecf] [clip-path:polygon(0_3%,50%_0,100%_3%,100%_90%,50%_100%,0_90%)] dark:from-[#1c2205] dark:via-[#111403] dark:to-[#0a0b02]",
+          compact ? "px-2.5 pt-3 pb-5" : "px-5 pt-6 pb-10",
+        )}
+      >
         <div className="flex items-start justify-between">
           <div className="text-center">
-            <p className="font-display text-4xl leading-none text-volt">
+            <p
+              className={cn(
+                "font-display leading-none text-volt",
+                compact ? "text-lg" : "text-4xl",
+              )}
+            >
               {positionShort || "—"}
             </p>
-            <p className="mt-1 text-[10px] tracking-widest text-volt/70 uppercase">
-              {footLabel || "Pie"}
-            </p>
+            {compact ? null : (
+              <p className="mt-1 text-[10px] tracking-widest text-volt/70 uppercase">
+                {footLabel || "Pie"}
+              </p>
+            )}
           </div>
-          <p className="font-display text-sm leading-tight tracking-widest text-foreground/40">
+          <p
+            className={cn(
+              "font-display leading-tight tracking-widest text-foreground/40",
+              compact ? "text-[8px]" : "text-sm",
+            )}
+          >
             DREAM
             <br />
             TEAM
           </p>
         </div>
 
-        <div className="mt-3 flex justify-center">
+        <div className={cn("flex justify-center", compact ? "mt-1" : "mt-3")}>
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={photoUrl}
               alt={`Foto de ${name || "jugador"}`}
-              className="size-28 rounded-full border-2 border-volt/40 object-cover"
+              className={cn(
+                "rounded-full border-2 border-volt/40 object-cover",
+                compact ? "size-14" : "size-28",
+              )}
             />
           ) : (
-            <div className="flex size-28 items-center justify-center rounded-full border-2 border-dashed border-volt/40 bg-secondary/60">
-              <UserRound className="size-12 text-muted-foreground/60" aria-hidden />
+            <div
+              className={cn(
+                "flex items-center justify-center rounded-full border-2 border-dashed border-volt/40 bg-secondary/60",
+                compact ? "size-14" : "size-28",
+              )}
+            >
+              <UserRound
+                className={cn(
+                  "text-muted-foreground/60",
+                  compact ? "size-6" : "size-12",
+                )}
+                aria-hidden
+              />
             </div>
           )}
         </div>
 
-        <p className="mt-4 truncate text-center font-display text-2xl tracking-wide text-foreground uppercase">
+        <p
+          className={cn(
+            "truncate text-center font-display tracking-wide text-foreground uppercase",
+            compact ? "mt-1.5 text-xs" : "mt-4 text-2xl",
+          )}
+        >
           {name || "Tu nombre"}
         </p>
 
-        <div className="mx-auto mt-2 h-px w-3/4 bg-volt/40" />
+        <div
+          className={cn(
+            "mx-auto h-px w-3/4 bg-volt/40",
+            compact ? "mt-1" : "mt-2",
+          )}
+        />
 
-        <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+        <div
+          className={cn(
+            "grid grid-cols-2 gap-2 text-center",
+            compact ? "mt-1.5" : "mt-3",
+          )}
+        >
           <div>
-            <p className="font-display text-xl text-foreground">{age || "—"}</p>
-            <p className="text-[10px] tracking-widest text-muted-foreground uppercase">
+            <p
+              className={cn(
+                "font-display text-foreground",
+                compact ? "text-sm" : "text-xl",
+              )}
+            >
+              {age || "—"}
+            </p>
+            <p
+              className={cn(
+                "tracking-widest text-muted-foreground uppercase",
+                compact ? "text-[7px]" : "text-[10px]",
+              )}
+            >
               Edad
             </p>
           </div>
           <div>
-            <p className="truncate font-display text-xl text-foreground">
+            <p
+              className={cn(
+                "truncate font-display text-foreground",
+                compact ? "text-sm" : "text-xl",
+              )}
+            >
               {memberSince || "—"}
             </p>
-            <p className="text-[10px] tracking-widest text-muted-foreground uppercase">
+            <p
+              className={cn(
+                "tracking-widest text-muted-foreground uppercase",
+                compact ? "text-[7px]" : "text-[10px]",
+              )}
+            >
               En el DT
             </p>
           </div>
         </div>
 
         {teamName ? (
-          <p className="mt-auto pt-3 text-center font-display text-sm tracking-widest text-volt uppercase">
+          <p
+            className={cn(
+              "mt-auto truncate text-center font-display tracking-widest text-volt uppercase",
+              compact ? "pt-1.5 text-[8px]" : "pt-3 text-sm",
+            )}
+          >
             {teamName}
           </p>
         ) : null}
