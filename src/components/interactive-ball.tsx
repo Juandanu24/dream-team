@@ -4,8 +4,12 @@ import { useState } from "react";
 import { SoccerBall } from "@/components/soccer-ball";
 import { cn } from "@/lib/utils";
 
-// Balón que responde al toque/click y al foco de teclado: le pega una
-// "patada" (gira rápido y rebota) y vuelve a su giro lento.
+// Balón que responde al click, al toque y al teclado: le pega una
+// "patada" (salta girando rápido) y vuelve a su giro lento.
+//
+// Cada patada remonta el <span> vía key, que es lo que reinicia la
+// animación CSS. No usamos animationend: ese evento también sube desde
+// el giro del SVG y cortaba la patada antes de verse.
 export function InteractiveBall({
   className,
   spinSeconds = 26,
@@ -15,29 +19,33 @@ export function InteractiveBall({
   spinSeconds?: number;
   reverse?: boolean;
 }) {
-  const [kicking, setKicking] = useState(false);
+  const [kicks, setKicks] = useState(0);
 
   return (
     <button
       type="button"
       aria-label="Patear el balón"
-      onPointerDown={() => setKicking(true)}
-      onFocus={() => setKicking(true)}
-      onAnimationEnd={() => setKicking(false)}
+      onClick={() => setKicks((n) => n + 1)}
       className={cn(
         "cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-volt/60",
-        kicking && "animate-kick",
         className,
       )}
     >
-      <SoccerBall
+      <span
+        key={kicks}
         className={cn(
-          "size-full motion-reduce:animate-none",
-          kicking ? "animate-[spin_0.6s_linear]" : "animate-[spin_var(--spin)_linear_infinite]",
-          reverse && !kicking && "[animation-direction:reverse]",
+          "block size-full",
+          kicks > 0 && "animate-kick motion-reduce:animate-none",
         )}
-        style={{ "--spin": `${spinSeconds}s` } as React.CSSProperties}
-      />
+      >
+        <SoccerBall
+          className={cn(
+            "size-full animate-[spin_var(--spin)_linear_infinite] motion-reduce:animate-none",
+            reverse && "[animation-direction:reverse]",
+          )}
+          style={{ "--spin": `${spinSeconds}s` } as React.CSSProperties}
+        />
+      </span>
     </button>
   );
 }
