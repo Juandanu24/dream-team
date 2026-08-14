@@ -204,36 +204,46 @@ function MatchAdmin({
       {/* Resultado */}
       {home && away ? (
         <div className="flex flex-wrap items-center gap-2">
+          {/* Mobile: una fila por equipo. Desktop: marcador en línea. */}
           <form
             action={saveResult.bind(null, match.id)}
-            className="flex flex-wrap items-center gap-2"
+            className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 sm:flex sm:flex-wrap sm:gap-2"
           >
-            <span className="w-32 truncate text-right text-sm font-medium sm:w-40">
+            <span className="truncate text-right text-sm font-medium sm:order-1 sm:w-40">
               {home.name}
             </span>
             <Input
               type="number"
+              inputMode="numeric"
               name="home_score"
               min={0}
               max={99}
               defaultValue={match.home_score ?? ""}
               required
-              className="w-14 text-center"
+              className="w-14 text-center sm:order-2"
             />
-            <span className="text-muted-foreground">-</span>
+            <span className="hidden text-muted-foreground sm:order-3 sm:inline">
+              -
+            </span>
+            <span className="truncate text-right text-sm font-medium sm:order-5 sm:w-40 sm:text-left">
+              {away.name}
+            </span>
             <Input
               type="number"
+              inputMode="numeric"
               name="away_score"
               min={0}
               max={99}
               defaultValue={match.away_score ?? ""}
               required
-              className="w-14 text-center"
+              className="w-14 text-center sm:order-4"
             />
-            <span className="w-32 truncate text-sm font-medium sm:w-40">
-              {away.name}
-            </span>
-            <Button size="sm" type="submit" title="Guardar y marcar como jugado">
+            <Button
+              size="sm"
+              type="submit"
+              title="Guardar y marcar como jugado"
+              className="col-span-2 justify-self-start sm:order-6 sm:col-span-1"
+            >
               <Check aria-hidden />
               {match.status === "finished" ? "Actualizar" : "Finalizar"}
             </Button>
