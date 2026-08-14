@@ -1,13 +1,9 @@
 -- ============================================================
--- Asistencias + fair play en la tabla de posiciones
--- 1. Nuevo tipo de evento: 'assist'
--- 2. group_standings ahora incluye tarjetas (criterio de desempate)
--- 3. Vista top_assists (tabla de asistidores)
+-- Vistas de asistencias y fair play.
+-- Correr DESPUÉS de 00002 (en una query aparte).
 -- ============================================================
 
-alter type match_event_type add value if not exists 'assist';
-
--- Tarjetas por equipo en fase de grupos, para fair play.
+-- Tarjetas por equipo en fase de grupos, para el desempate fair play.
 -- (create or replace permite anexar columnas al final de la vista)
 create or replace view group_standings with (security_invoker = on) as
 select
@@ -47,6 +43,7 @@ left join (
 group by t.tournament_id, t.id, t.name, t.color, tc.yellow_cards, tc.red_cards;
 
 -- Tabla de asistidores (todas las fases).
+drop view if exists top_assists;
 create view top_assists with (security_invoker = on) as
 select
   m.tournament_id,

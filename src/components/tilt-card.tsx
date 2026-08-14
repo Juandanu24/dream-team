@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import {
-  MOTION_GRANTED_EVENT,
-  motionGranted,
-  motionSupported,
-} from "@/lib/motion";
+import { MOTION_EVENT, motionActive, motionSupported } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 // Misma forma de la carta (player-card.tsx) para que el brillo no se salga.
@@ -32,7 +28,7 @@ export function TiltCard({
   function apply(x: number, y: number) {
     const el = ref.current;
     if (!el) return;
-    el.style.transform = `perspective(700px) rotateY(${x * 16}deg) rotateX(${-y * 16}deg) scale(1.04)`;
+    el.style.transform = `perspective(700px) rotateY(${x * 16}deg) rotateX(${-y * 16}deg) scale(1.05)`;
     el.style.setProperty("--glare-x", `${(x + 0.5) * 100}%`);
     el.style.setProperty("--glare-y", `${(y + 0.5) * 100}%`);
     el.style.setProperty("--glare-opacity", "1");
@@ -87,24 +83,34 @@ export function TiltCard({
     const onOrientation = (event: DeviceOrientationEvent) => {
       if (event.beta == null || event.gamma == null || !visible.current) return;
       baseline ??= { beta: event.beta, gamma: event.gamma };
-      const x = clamp((event.gamma - baseline.gamma) / 30, -1, 1) / 2;
-      const y = clamp((event.beta - baseline.beta) / 30, -1, 1) / 2;
+      // /18 y tope 0.75 → hasta ~12° de giro: se siente, sin marear.
+      const x = clamp((event.gamma - baseline.gamma) / 18, -0.75, 0.75);
+      const y = clamp((event.beta - baseline.beta) / 18, -0.75, 0.75);
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => apply(x, y));
     };
 
-    const start = () => {
-      if (listening) return;
-      listening = true;
-      window.addEventListener("deviceorientation", onOrientation);
+    // Prende/apaga según permiso + preferencia del usuario.
+    const sync = () => {
+      if (motionActive()) {
+        if (!listening) {
+          listening = true;
+          window.addEventListener("deviceorientation", onOrientation);
+        }
+      } else if (listening) {
+        listening = false;
+        baseline = null;
+        window.removeEventListener("deviceorientation", onOrientation);
+        reset();
+      }
     };
 
-    if (motionGranted()) start();
-    window.addEventListener(MOTION_GRANTED_EVENT, start);
+    sync();
+    window.addEventListener(MOTION_EVENT, sync);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener(MOTION_GRANTED_EVENT, start);
+      window.removeEventListener(MOTION_EVENT, sync);
       window.removeEventListener("deviceorientation", onOrientation);
       cancelAnimationFrame(raf);
     };
@@ -131,7 +137,7 @@ export function TiltCard({
         style={{
           opacity: "var(--glare-opacity, 0)",
           background:
-            "radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 50%), rgb(255 255 255 / 22%), transparent 55%)",
+            "radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 50%), rgb(255 255 255 / 30%), transparent 60%)",
         }}
       />
     </div>

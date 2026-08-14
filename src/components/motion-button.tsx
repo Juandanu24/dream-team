@@ -4,37 +4,64 @@ import { useEffect, useState } from "react";
 import { Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { motionNeedsPermission, requestMotion } from "@/lib/motion";
+import {
+  MOTION_EVENT,
+  motionEnabled,
+  motionNeedsPermission,
+  motionSupported,
+  requestMotion,
+  setMotionEnabled,
+} from "@/lib/motion";
 
-// Botón para activar el giroscopio en iOS (y navegadores que piden permiso).
-// Solo aparece donde hace falta; en Android el efecto anda solo.
+type State = "hidden" | "need-permission" | "on" | "off";
+
+// Prende/apaga el efecto de giroscopio. En iOS el primer toque además
+// dispara el permiso de movimiento del sistema.
 export function MotionButton() {
-  const [show, setShow] = useState(false);
+  const [state, setState] = useState<State>("hidden");
 
   useEffect(() => {
-    setShow(motionNeedsPermission());
+    const sync = () => {
+      if (!motionSupported()) return setState("hidden");
+      if (motionNeedsPermission()) return setState("need-permission");
+      setState(motionEnabled() ? "on" : "off");
+    };
+    sync();
+    window.addEventListener(MOTION_EVENT, sync);
+    return () => window.removeEventListener(MOTION_EVENT, sync);
   }, []);
 
-  if (!show) return null;
+  if (state === "hidden") return null;
+
+  async function handleClick() {
+    if (state === "need-permission") {
+      const result = await requestMotion();
+      if (result === "granted") {
+        setMotionEnabled(true);
+        toast.success("¡Listo! Mueve el teléfono y mira la carta");
+      } else {
+        toast.error(
+          "El navegador bloqueó el sensor. Revisa los permisos de movimiento y orientación del sitio.",
+        );
+      }
+      return;
+    }
+    setMotionEnabled(state !== "on");
+  }
 
   return (
     <Button
-      variant="outline"
+      variant={state === "on" ? "secondary" : "outline"}
       size="sm"
       className="gap-2"
-      onClick={async () => {
-        const result = await requestMotion();
-        if (result === "granted") {
-          setShow(false);
-          toast.success("¡Listo! Mueve el teléfono y mira la carta");
-        } else {
-          toast.error(
-            "El navegador bloqueó el sensor de movimiento. Revisa los permisos de movimiento y orientación del sitio.",
-          );
-        }
-      }}
+      onClick={handleClick}
     >
-      <Smartphone aria-hidden /> Activar efecto de movimiento
+      <Smartphone aria-hidden />
+      {state === "need-permission"
+        ? "Activar efecto de movimiento"
+        : state === "on"
+          ? "Movimiento: ON"
+          : "Movimiento: OFF"}
     </Button>
   );
 }
