@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -65,6 +66,53 @@ export async function deleteRegistration(id: string) {
   if (error) throw error;
 
   revalidateRegistrations();
+}
+
+const PHOTO_MAX_BYTES = 3 * 1024 * 1024;
+
+const PHOTO_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+// Cambia la foto de un jugador desde el admin, sin que tenga que
+// reinscribirse. La foto anterior se reemplaza por una ruta nueva.
+export async function updatePlayerPhoto(playerId: string, formData: FormData) {
+  await requireAdmin();
+
+  const photo = formData.get("photo");
+  if (!(photo instanceof File) || photo.size === 0) {
+    throw new Error("Elige una foto");
+  }
+  if (photo.size > PHOTO_MAX_BYTES) {
+    throw new Error("La foto quedó muy pesada");
+  }
+  const extension = PHOTO_EXTENSIONS[photo.type];
+  if (!extension) {
+    throw new Error("La foto debe ser JPG, PNG o WebP");
+  }
+
+  const supabase = createAdminClient();
+  const path = `${randomUUID()}.${extension}`;
+  const { error: uploadError } = await supabase.storage
+    .from("player-photos")
+    .upload(path, await photo.arrayBuffer(), { contentType: photo.type });
+  if (uploadError) throw uploadError;
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("player-photos").getPublicUrl(path);
+
+  const { error } = await supabase
+    .from("players")
+    .update({ photo_url: publicUrl })
+    .eq("id", playerId);
+  if (error) throw error;
+
+  revalidateRegistrations();
+  revalidatePath("/admin/equipos");
+  revalidatePath("/torneo");
 }
 
 const playerSchema = z.object({
