@@ -201,4 +201,7 @@ export const REGISTRATION_LABELS: Record<RegistrationStatus, string> = {
 };
 
 // Slug del torneo activo (el que muestran la landing y la inscripción).
-export const ACTIVE_TOURNAMENT_SLUG = "relampago-2026";
+// Se puede apuntar a otro torneo con NEXT_PUBLIC_TOURNAMENT_SLUG, que es
+// como se prueba en local sin tocar los datos del torneo real.
+export const ACTIVE_TOURNAMENT_SLUG =
+  process.env.NEXT_PUBLIC_TOURNAMENT_SLUG || "relampago-2026";

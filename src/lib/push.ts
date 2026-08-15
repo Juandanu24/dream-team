@@ -20,12 +20,23 @@ function configured() {
   );
 }
 
+// En local no se manda nada: probar el flujo no puede sonarle el
+// celular a todo el grupo. Para probar push en local: PUSH_EN_LOCAL=1
+function bloqueadoEnLocal() {
+  const local =
+    process.env.NODE_ENV !== "production" && process.env.PUSH_EN_LOCAL !== "1";
+  if (local) {
+    console.log("[push] omitido: estás en local (PUSH_EN_LOCAL=1 para enviar)");
+  }
+  return local;
+}
+
 // Envía el aviso a todos los dispositivos suscritos y limpia los que
 // ya no existen (desinstalaron la app o revocaron el permiso).
 // Nunca lanza: un fallo de notificaciones no debe tumbar la acción
 // del admin que la disparó.
 export async function sendPushToAll(payload: PushPayload): Promise<number> {
-  if (!configured()) return 0;
+  if (!configured() || bloqueadoEnLocal()) return 0;
 
   try {
     webpush.setVapidDetails(
