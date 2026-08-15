@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CrestEditorDialog } from "@/components/crest-editor-dialog";
 import { TeamCrest } from "@/components/team-crest";
 import type { Team } from "@/lib/types";
 import { ColorSwatches } from "./color-swatches";
@@ -26,6 +27,8 @@ import {
 export function EditTeamDialog({ team }: { team: Team }) {
   const [open, setOpen] = useState(false);
   const [uploading, startUpload] = useTransition();
+  const [rawCrest, setRawCrest] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const crestInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -85,26 +88,17 @@ export function EditTeamDialog({ team }: { team: Team }) {
             <input
               ref={crestInputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              accept="image/*"
               className="hidden"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = "";
-                if (!file) return;
-                const formData = new FormData();
-                formData.set("crest", file);
-                startUpload(async () => {
-                  try {
-                    await updateTeamCrest(team.id, formData);
-                    toast.success("Escudo actualizado");
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : "No se pudo subir el escudo",
-                    );
-                  }
+                if (!file?.type.startsWith("image/")) return;
+                setRawCrest((prev) => {
+                  if (prev) URL.revokeObjectURL(prev);
+                  return URL.createObjectURL(file);
                 });
+                setEditing(true);
               }}
             />
             <Button
@@ -142,10 +136,32 @@ export function EditTeamDialog({ team }: { team: Team }) {
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
-            PNG, JPG, WebP o SVG (máx. 2 MB). Sin escudo se usa el ícono con el
-            color del equipo.
+            Vas a poder encuadrarlo y quitarle el fondo antes de guardar. Sin
+            escudo se usa el ícono con el color del equipo.
           </p>
         </div>
+
+        <CrestEditorDialog
+          src={rawCrest}
+          open={editing}
+          onOpenChange={setEditing}
+          onConfirm={(file) => {
+            const formData = new FormData();
+            formData.set("crest", file, file.name);
+            startUpload(async () => {
+              try {
+                await updateTeamCrest(team.id, formData);
+                toast.success("Escudo actualizado");
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "No se pudo subir el escudo",
+                );
+              }
+            });
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
