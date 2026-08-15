@@ -3,11 +3,20 @@
 
 export const SHOTS_PER_ROUND = 5;
 
+// Geometría de la escena, en % del contenedor. El arco, las zonas, el
+// balón y el arquero se posicionan todos con estas constantes: así lo
+// que se toca y donde entra el balón coinciden exactamente. Antes las
+// zonas tenían coordenadas escritas a mano que no cuadraban con la
+// grilla, y el balón caía unos puntos más abajo del punto tocado.
+export const GOAL = { left: 8, top: 8, width: 84, height: 48 };
+export const CELL_W = GOAL.width / 3;
+export const CELL_H = GOAL.height / 2;
+
 export interface Zone {
   id: number;
   col: 0 | 1 | 2;
   row: 0 | 1;
-  /** Centro de la zona en % de la escena (para colocar balón y arquero). */
+  /** Centro de la zona en % de la escena. */
   x: number;
   y: number;
   /** Probabilidad de mandarla afuera: los ángulos altos son más golosos. */
@@ -20,14 +29,37 @@ export interface Zone {
 
 // El trade-off del juego: arriba es difícil de atajar pero fácil de
 // mandar afuera; abajo es seguro de embocar pero el arquero llega.
-export const ZONES: Zone[] = [
-  { id: 0, col: 0, row: 0, x: 22, y: 25, risk: 0.26, saveIfGuessed: 0.6, label: "Ángulo izquierdo" },
-  { id: 1, col: 1, row: 0, x: 50, y: 22, risk: 0.19, saveIfGuessed: 0.68, label: "Arriba al medio" },
-  { id: 2, col: 2, row: 0, x: 78, y: 25, risk: 0.26, saveIfGuessed: 0.6, label: "Ángulo derecho" },
-  { id: 3, col: 0, row: 1, x: 22, y: 49, risk: 0.05, saveIfGuessed: 0.9, label: "Abajo izquierda" },
-  { id: 4, col: 1, row: 1, x: 50, y: 51, risk: 0.02, saveIfGuessed: 0.96, label: "Abajo al medio" },
-  { id: 5, col: 2, row: 1, x: 78, y: 49, risk: 0.05, saveIfGuessed: 0.9, label: "Abajo derecha" },
+const ZONE_SPECS: {
+  col: 0 | 1 | 2;
+  row: 0 | 1;
+  risk: number;
+  saveIfGuessed: number;
+  label: string;
+}[] = [
+  { col: 0, row: 0, risk: 0.26, saveIfGuessed: 0.6, label: "Ángulo izquierdo" },
+  { col: 1, row: 0, risk: 0.19, saveIfGuessed: 0.68, label: "Arriba al medio" },
+  { col: 2, row: 0, risk: 0.26, saveIfGuessed: 0.6, label: "Ángulo derecho" },
+  { col: 0, row: 1, risk: 0.05, saveIfGuessed: 0.9, label: "Abajo izquierda" },
+  { col: 1, row: 1, risk: 0.02, saveIfGuessed: 0.96, label: "Abajo al medio" },
+  { col: 2, row: 1, risk: 0.05, saveIfGuessed: 0.9, label: "Abajo derecha" },
 ];
+
+export const ZONES: Zone[] = ZONE_SPECS.map((spec, id) => ({
+  ...spec,
+  id,
+  x: GOAL.left + CELL_W * (spec.col + 0.5),
+  y: GOAL.top + CELL_H * (spec.row + 0.5),
+}));
+
+/** Rectángulo de la zona, para dibujar el botón exactamente encima. */
+export function zoneRect(zone: Zone) {
+  return {
+    left: GOAL.left + CELL_W * zone.col,
+    top: GOAL.top + CELL_H * zone.row,
+    width: CELL_W,
+    height: CELL_H,
+  };
+}
 
 /** Distancia máxima entre el arquero y una zona, para normalizar. */
 const MAX_SPREAD = 56;
@@ -65,7 +97,7 @@ export function chooseKeeperZone(
     const habit = tendencies[zone.id] / totalShots;
     // Se tira más a ras de piso que a los ángulos, como un arquero real.
     const rowBias = zone.row === 1 ? 1.35 : 0.8;
-    return (0.5 + proximity * 2.4) * rowBias * (1 + 2 * habit);
+    return (0.35 + proximity * 3) * rowBias * (1 + 2 * habit);
   });
 
   const total = weights.reduce((a, b) => a + b, 0);

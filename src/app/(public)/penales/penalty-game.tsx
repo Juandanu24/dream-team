@@ -12,8 +12,10 @@ import { Goalkeeper } from "@/components/goalkeeper";
 import { SoccerBall } from "@/components/soccer-ball";
 import { celebrate } from "@/lib/confetti";
 import {
+  GOAL,
   SHOTS_PER_ROUND,
   ZONES,
+  zoneRect,
   chooseKeeperZone,
   emptyTendencies,
   outcomeLabel,
@@ -29,10 +31,20 @@ import { savePenaltyScore } from "./actions";
 
 // El arquero se mueve de lado a lado; el pateador puede aprovechar
 // el momento en que queda abierto de un palo.
-const SHUFFLE_PERIOD_MS = 2400;
-const SHUFFLE_RANGE = 17; // % de la escena a cada lado del centro
-const BALL_FLIGHT_MS = 620;
-const RESULT_MS = 950;
+const SHUFFLE_PERIOD_MS = 1650;
+const SHUFFLE_RANGE = 19; // % de la escena a cada lado del centro
+const BALL_FLIGHT_MS = 500;
+const RESULT_MS = 850;
+
+// El arquero se para sobre la línea de gol y se estira hacia arriba al
+// volar. Las posiciones salen de la geometría del arco para que su
+// vuelo termine justo sobre la zona a la que se lanza.
+const KEEPER_HOME_Y = GOAL.top + GOAL.height * 0.77;
+// Al volar arriba sube, pero no tanto que se salga del travesaño.
+const KEEPER_DIVE_Y = [
+  GOAL.top + GOAL.height * 0.58,
+  GOAL.top + GOAL.height * 0.87,
+];
 
 function keeperXAt(time: number) {
   const phase = (time % SHUFFLE_PERIOD_MS) / SHUFFLE_PERIOD_MS;
@@ -82,7 +94,7 @@ export function PenaltyGame({
       if (el) {
         el.style.transition = "none";
         el.style.left = `${keeperXAt(time)}%`;
-        el.style.top = "58%";
+        el.style.top = `${KEEPER_HOME_Y}%`;
         el.style.transform = "translate(-50%, -50%) rotate(0deg)";
       }
       frame = requestAnimationFrame(loop);
@@ -115,9 +127,9 @@ export function PenaltyGame({
     if (keeper) {
       const dive = keeperZone.col === 1 ? 0 : keeperZone.col === 0 ? -55 : 55;
       keeper.style.transition =
-        "left 420ms cubic-bezier(.2,.7,.3,1), top 420ms ease-out, transform 420ms ease-out";
+        "left 300ms cubic-bezier(.2,.9,.3,1), top 300ms ease-out, transform 300ms ease-out";
       keeper.style.left = `${keeperZone.x}%`;
-      keeper.style.top = keeperZone.row === 0 ? "42%" : "56%";
+      keeper.style.top = `${KEEPER_DIVE_Y[keeperZone.row]}%`;
       keeper.style.transform = `translate(-50%, -50%) rotate(${dive}deg)`;
     }
 
@@ -227,25 +239,38 @@ export function PenaltyGame({
         {/* Arquero */}
         <div
           ref={keeperRef}
-          className="absolute top-[58%] left-1/2 h-[30%] w-[16%] -translate-x-1/2 -translate-y-1/2 text-white/90"
+          style={{ top: `${KEEPER_HOME_Y}%` }}
+          className="absolute left-1/2 h-[42%] w-[21%] -translate-x-1/2 -translate-y-1/2 text-white/90"
         >
           <Goalkeeper />
         </div>
 
-        {/* Zonas para apuntar */}
-        {phase === "aiming" ? (
-          <div className="absolute top-[8%] left-1/2 grid h-[48%] w-[84%] -translate-x-1/2 grid-cols-3 grid-rows-2 gap-1 p-1">
-            {ZONES.map((zone) => (
-              <button
-                key={zone.id}
-                type="button"
-                onClick={() => shoot(zone)}
-                aria-label={`Patear: ${zone.label}`}
-                className="rounded border border-volt/0 transition hover:border-volt/70 hover:bg-volt/15 focus-visible:border-volt focus-visible:bg-volt/15 focus-visible:outline-none active:bg-volt/25"
-              />
-            ))}
-          </div>
-        ) : null}
+        {/* Zonas para apuntar: se dibujan sobre el rectángulo exacto de
+            cada celda y se ven siempre, para poder apuntar en el celular */}
+        {ZONES.map((zone) => {
+          const rect = zoneRect(zone);
+          return (
+            <button
+              key={zone.id}
+              type="button"
+              disabled={phase !== "aiming"}
+              onClick={() => shoot(zone)}
+              aria-label={`Patear: ${zone.label}`}
+              style={{
+                left: `${rect.left}%`,
+                top: `${rect.top}%`,
+                width: `${rect.width}%`,
+                height: `${rect.height}%`,
+              }}
+              className={cn(
+                "absolute rounded-sm border transition",
+                phase === "aiming"
+                  ? "border-white/25 hover:border-volt hover:bg-volt/20 focus-visible:border-volt focus-visible:bg-volt/20 focus-visible:outline-none active:bg-volt/35"
+                  : "pointer-events-none border-transparent",
+              )}
+            />
+          );
+        })}
 
         {/* Balón */}
         <div
