@@ -64,7 +64,7 @@ export async function saveResult(matchId: string, formData: FormData) {
     await sendPushToAll({
       title: "⚽ Resultado del Dream Team",
       body: `${nameOf(before.home_team_id)} ${parsed.home_score} - ${parsed.away_score} ${nameOf(before.away_team_id)}`,
-      url: "/torneo",
+      url: "/torneo?tab=posiciones",
       tag: "resultado",
     });
   }

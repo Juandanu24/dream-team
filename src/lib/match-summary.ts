@@ -1,10 +1,20 @@
 import {
-  EVENT_ICONS,
   STAGE_LABELS,
   type Match,
   type MatchEventType,
   type Team,
 } from "@/lib/types";
+
+// En WhatsApp solo usamos emoji de Unicode 6 (2010), que renderiza
+// cualquier teléfono. Los cuadrados de colores y la 🅰️ son de 2019 y
+// con selector de variación: en equipos viejos salen como "�".
+const WA_LABELS: Record<MatchEventType, string> = {
+  goal: "⚽ Goles:",
+  own_goal: "⚽ En propia:",
+  assist: "🎯 Asistencias:",
+  yellow_card: "Amarillas:",
+  red_card: "Rojas:",
+};
 
 export interface SummaryEvent {
   player_id: string;
@@ -61,19 +71,19 @@ export function buildWhatsAppMessage(
     if (!goals && !own && !assists) continue;
 
     lines.push(`_${label}_`);
-    if (goals) lines.push(`${EVENT_ICONS.goal} ${goals}`);
-    if (own) lines.push(`${EVENT_ICONS.own_goal} ${own} (en propia)`);
-    if (assists) lines.push(`${EVENT_ICONS.assist} ${assists}`);
+    if (goals) lines.push(`${WA_LABELS.goal} ${goals}`);
+    if (own) lines.push(`${WA_LABELS.own_goal} ${own}`);
+    if (assists) lines.push(`${WA_LABELS.assist} ${assists}`);
     lines.push("");
   }
 
   const yellows = summarize(events, "yellow_card");
   const reds = summarize(events, "red_card");
-  if (yellows) lines.push(`${EVENT_ICONS.yellow_card} ${yellows}`);
-  if (reds) lines.push(`${EVENT_ICONS.red_card} ${reds}`);
+  if (yellows) lines.push(`${WA_LABELS.yellow_card} ${yellows}`);
+  if (reds) lines.push(`${WA_LABELS.red_card} ${reds}`);
   if (yellows || reds) lines.push("");
 
-  lines.push(`🏆 Tabla y goleadores: ${SITE_URL}/torneo`);
+  lines.push(`🏆 Tabla y goleadores: ${SITE_URL}/torneo?tab=posiciones`);
 
   return lines.join("\n");
 }
@@ -113,7 +123,7 @@ export function buildWeekWhatsAppMessage(
   }
 
   lines.push("📍 Cancha F8, Montería");
-  lines.push(`⚽ Calendario completo: ${SITE_URL}/torneo`);
+  lines.push(`⚽ Calendario completo: ${SITE_URL}/torneo?tab=calendario`);
 
   return lines.join("\n");
 }

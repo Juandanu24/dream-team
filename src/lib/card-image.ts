@@ -248,7 +248,7 @@ export async function renderCardImage(data: CardImageData): Promise<Blob> {
     ctx.fillText(label, x, 1082);
   };
   stat("EDAD", String(data.age ?? ""), W * 0.29);
-  stat("EN EL DT", data.memberSince || "", W * 0.71);
+  stat("EN EL DT", (data.memberSince || "").toUpperCase(), W * 0.71);
 
   // Divisor vertical entre los dos datos.
   ctx.fillStyle = `${accent}44`;

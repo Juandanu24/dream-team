@@ -1,13 +1,8 @@
 import Link from "next/link";
-import { Check, RotateCcw, Share2, X } from "lucide-react";
+import { Check, ChevronRight, RotateCcw, Share2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   getAdminMatchesData,
@@ -15,6 +10,7 @@ import {
   type RosterEntry,
 } from "@/lib/admin-matches";
 import { buildWhatsAppMessage, whatsAppShareUrl } from "@/lib/match-summary";
+import { readableAccent } from "@/lib/team-color";
 import {
   EVENT_ICONS,
   STAGE_LABELS,
@@ -32,7 +28,12 @@ export const dynamic = "force-dynamic";
 function groupEvents(events: EventWithPlayer[]) {
   const groups = new Map<
     string,
-    { ids: string[]; type: MatchEvent["type"]; name: string }
+    {
+      ids: string[];
+      type: MatchEvent["type"];
+      name: string;
+      teamId: string;
+    }
   >();
   for (const event of events) {
     const key = `${event.player_id}:${event.type}`;
@@ -43,6 +44,7 @@ function groupEvents(events: EventWithPlayer[]) {
         ids: [event.id],
         type: event.type,
         name: event.players.full_name,
+        teamId: event.team_id,
       });
   }
   return [...groups.values()];
@@ -203,11 +205,23 @@ function MatchResult({
             className="flex items-center gap-2 text-sm"
           >
             <span aria-hidden>{EVENT_ICONS[group.type]}</span>
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{
+                background: readableAccent(
+                  teams.find((t) => t.id === group.teamId)?.color,
+                ),
+              }}
+              title={teams.find((t) => t.id === group.teamId)?.name}
+            />
             <span className="flex-1 truncate">
               {group.name}
               {group.ids.length > 1 ? (
                 <span className="font-display text-volt"> ×{group.ids.length}</span>
               ) : null}
+              <span className="ml-2 text-xs text-muted-foreground">
+                {teams.find((t) => t.id === group.teamId)?.name}
+              </span>
             </span>
             <form action={deleteEvent.bind(null, group.ids.at(-1)!)}>
               <Button
@@ -228,6 +242,7 @@ function MatchResult({
           home={{
             id: home.id,
             name: home.name,
+            color: home.color,
             players: rosterByTeam(home.id).map((entry) => ({
               id: entry.player_id,
               name: entry.players.full_name,
@@ -236,6 +251,7 @@ function MatchResult({
           away={{
             id: away.id,
             name: away.name,
+            color: away.color,
             players: rosterByTeam(away.id).map((entry) => ({
               id: entry.player_id,
               name: entry.players.full_name,
@@ -264,6 +280,12 @@ export default async function AdminResultsPage() {
   const { teams, matches, roster, events } = data;
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
   const played = matches.filter((m) => m.status === "finished").length;
+  // Se abre la primera semana con partidos sin cargar; si están todos
+  // jugados, la última.
+  const semanaAbierta =
+    weeks.find((w) =>
+      matches.some((m) => m.week === w && m.status !== "finished"),
+    ) ?? weeks.at(-1);
 
   return (
     <div>
@@ -290,13 +312,22 @@ export default async function AdminResultsPage() {
       ) : (
         <div className="mt-6 space-y-4">
           {weeks.map((week) => (
-            <Card key={week} className="border-border/60 bg-card/70">
-              <CardHeader>
-                <CardTitle className="font-display text-2xl tracking-wide text-volt">
-                  SEMANA {week}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <Card key={week} className="border-border/60 bg-card/70 py-0">
+              <details open={week === semanaAbierta} className="group">
+                <summary className="flex cursor-pointer list-none items-center gap-2 p-5">
+                  <ChevronRight
+                    className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+                    aria-hidden
+                  />
+                  <span className="font-display text-2xl tracking-wide text-volt">
+                    SEMANA {week}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {matches.filter((m) => m.week === week && m.status === "finished").length}
+                    /{matches.filter((m) => m.week === week).length} jugados
+                  </span>
+                </summary>
+              <CardContent className="px-5 pb-5">
                 {matches
                   .filter((m) => m.week === week)
                   .map((match) => (
@@ -309,6 +340,7 @@ export default async function AdminResultsPage() {
                     />
                   ))}
               </CardContent>
+              </details>
             </Card>
           ))}
         </div>

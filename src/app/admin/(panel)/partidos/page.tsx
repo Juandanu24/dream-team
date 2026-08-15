@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Save, Share2, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,22 +7,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { ConfirmButton } from "@/components/confirm-button";
 import { getAdminMatchesData, toBogotaInput } from "@/lib/admin-matches";
-import { STAGE_LABELS, type Match, type Team } from "@/lib/types";
+import { type Match, type Team } from "@/lib/types";
 import {
   buildWeekWhatsAppMessage,
   whatsAppShareUrl,
 } from "@/lib/match-summary";
-import { deleteFixture, deleteMatch, updateMatch } from "./actions";
+import { deleteFixture } from "./actions";
+import { MatchScheduleRow } from "./match-schedule-row";
 import { PublishWeekButton } from "./publish-week-button";
 import { WeekPlanner } from "./week-planner";
 
 export const dynamic = "force-dynamic";
-
-const selectClass =
-  "border-input h-9 rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover";
 
 // Revisa que en la semana jueguen todos los equipos, exactamente una
 // vez. Con 4 equipos y 2 partidos por semana, cualquier otra cosa deja
@@ -54,70 +50,6 @@ function weekIssues(weekMatches: Match[], teams: Team[]): string[] {
     issues.push(`no juegan: ${ausentes.map((t) => t.name).join(", ")}`);
   }
   return issues;
-}
-
-// Fila de programación: fecha, hora y cruce. Los resultados viven en
-// su propio módulo.
-function MatchSchedule({ match, teams }: { match: Match; teams: Team[] }) {
-  return (
-    <form
-      action={updateMatch.bind(null, match.id)}
-      className="flex flex-wrap items-center gap-2 border-b border-border/40 py-3 last:border-b-0"
-    >
-      <Badge variant="outline" className="border-volt/50 text-volt">
-        {STAGE_LABELS[match.stage]}
-      </Badge>
-      <Input
-        type="datetime-local"
-        name="kickoff_at"
-        defaultValue={toBogotaInput(match.kickoff_at)}
-        className="w-fit"
-      />
-      <select
-        name="home_team_id"
-        defaultValue={match.home_team_id ?? ""}
-        className={selectClass}
-        aria-label="Equipo local"
-      >
-        <option value="">Local por definir</option>
-        {teams.map((team) => (
-          <option key={team.id} value={team.id}>
-            {team.name}
-          </option>
-        ))}
-      </select>
-      <span className="text-xs text-muted-foreground">vs</span>
-      <select
-        name="away_team_id"
-        defaultValue={match.away_team_id ?? ""}
-        className={selectClass}
-        aria-label="Equipo visitante"
-      >
-        <option value="">Visitante por definir</option>
-        {teams.map((team) => (
-          <option key={team.id} value={team.id}>
-            {team.name}
-          </option>
-        ))}
-      </select>
-      <Button variant="ghost" size="sm" type="submit" title="Guardar cambios">
-        <Save aria-hidden />
-      </Button>
-      {match.status === "finished" ? (
-        <Badge>Jugado</Badge>
-      ) : (
-        <ConfirmButton
-          action={deleteMatch.bind(null, match.id)}
-          message="¿Borrar este partido del calendario?"
-          variant="ghost"
-          title="Borrar partido"
-          className="text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 aria-hidden />
-        </ConfirmButton>
-      )}
-    </form>
-  );
 }
 
 export default async function AdminFixturePage() {
@@ -191,10 +123,11 @@ export default async function AdminFixturePage() {
                       </CardHeader>
                       <CardContent>
                         {weekMatches.map((match) => (
-                          <MatchSchedule
+                          <MatchScheduleRow
                             key={match.id}
                             match={match}
                             teams={teams}
+                            kickoffValue={toBogotaInput(match.kickoff_at)}
                           />
                         ))}
                         <div className="mt-3 flex flex-wrap gap-2">

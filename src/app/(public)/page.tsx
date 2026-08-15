@@ -187,7 +187,7 @@ export default function HomePage() {
           <p className="mt-4 text-xs text-muted-foreground">
             Los cruces de la fase de grupos se definen cuando se sorteen los
             equipos. Resultados y tabla en vivo en{" "}
-            <Link href="/torneo" className="text-volt underline-offset-4 hover:underline">
+            <Link href="/torneo?tab=calendario" className="text-volt underline-offset-4 hover:underline">
               la página del torneo
             </Link>
             .

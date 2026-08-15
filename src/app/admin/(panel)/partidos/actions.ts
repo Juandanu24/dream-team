@@ -14,7 +14,9 @@ async function requireAdmin() {
 
 function revalidateMatches() {
   revalidatePath("/admin/partidos");
+  revalidatePath("/admin/resultados");
   revalidatePath("/admin");
+  revalidatePath("/torneo");
 }
 
 async function activeTournamentId() {
@@ -180,7 +182,7 @@ export async function publishWeek(week: number): Promise<number> {
   const enviados = await sendPushToAll({
     title: `📅 Semana ${week} programada`,
     body,
-    url: "/torneo",
+    url: "/torneo?tab=calendario",
     tag: `semana-${week}`,
   });
 

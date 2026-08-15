@@ -12,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SyncedTabs } from "@/components/synced-tabs";
 import { InteractiveBall } from "@/components/interactive-ball";
 import { NotificationsButton } from "@/components/notifications-button";
 import { PenaltyLeaderboard } from "@/components/penalty-leaderboard";
@@ -38,6 +39,17 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+// Pestañas de /torneo. El valor viaja en ?tab= para poder enlazar
+// directo, por ejemplo /torneo?tab=calendario.
+const TABS = [
+  "posiciones",
+  "calendario",
+  "equipos",
+  "jugadores",
+  "goleadores",
+  "penales",
+];
 
 function EmptyNote({ children }: { children: React.ReactNode }) {
   return (
@@ -213,7 +225,11 @@ export default async function TournamentPage() {
         <NotificationsButton className="ml-auto" withLabel />
       </div>
 
-      <Tabs defaultValue="posiciones" className="mt-8">
+      <SyncedTabs
+        tabs={TABS}
+        defaultTab="posiciones"
+        className="mt-8"
+      >
         {/* Mobile: cuadrícula 3+2 a todo el ancho; desktop: una fila repartida */}
         <TabsList className="grid h-auto w-full grid-cols-6 gap-1 group-data-horizontal/tabs:h-auto sm:flex">
           <TabsTrigger value="posiciones" className="col-span-2 py-1.5">
@@ -516,7 +532,7 @@ export default async function TournamentPage() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+      </SyncedTabs>
     </div>
   );
 }
