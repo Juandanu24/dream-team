@@ -133,27 +133,66 @@ export async function deleteMatch(matchId: string) {
   revalidateMatches();
 }
 
-// Avisa a todos que el calendario ya está listo. Es un paso aparte de
-// crear los partidos: así se arma y se corrige con calma, y el aviso
-// sale una sola vez, cuando el calendario está confirmado.
-export async function publishFixture(): Promise<number> {
+// Publica una semana: avisa a los suscritos con los cruces de esa
+// semana y la marca como anunciada. Va aparte de crearla, para poder
+// armarla y corregirla antes de que la vea todo el mundo.
+export async function publishWeek(week: number): Promise<number> {
   await requireAdmin();
 
   const supabase = createAdminClient();
   const tournamentId = await activeTournamentId();
-  const { count } = await supabase
+
+  const { data: matches } = await supabase
     .from("matches")
-    .select("id", { count: "exact", head: true })
+    .select("id, kickoff_at, home_team_id, away_team_id")
+    .eq("tournament_id", tournamentId)
+    .eq("week", week)
+    .order("kickoff_at", { nullsFirst: false });
+
+  if (!matches?.length) throw new Error(`La semana ${week} no tiene partidos`);
+
+  const { data: teams } = await supabase
+    .from("teams")
+    .select("id, name")
     .eq("tournament_id", tournamentId);
+  const nameOf = (id: string | null) =>
+    teams?.find((t) => t.id === id)?.name ?? "Por definir";
 
-  if (!count) throw new Error("No hay partidos que anunciar");
+  const dia = (iso: string | null) =>
+    iso
+      ? new Intl.DateTimeFormat("es-CO", {
+          weekday: "short",
+          hour: "numeric",
+          hour12: true,
+          timeZone: "America/Bogota",
+        }).format(new Date(iso))
+      : "";
 
-  return sendPushToAll({
-    title: "📅 ¡Ya hay calendario!",
-    body: "Ya está el fixture del torneo. Mira cuándo juega tu equipo.",
+  const body = matches
+    .map(
+      (m) =>
+        `${nameOf(m.home_team_id)} vs ${nameOf(m.away_team_id)}${
+          m.kickoff_at ? ` (${dia(m.kickoff_at)})` : ""
+        }`,
+    )
+    .join(" · ");
+
+  const enviados = await sendPushToAll({
+    title: `📅 Semana ${week} programada`,
+    body,
     url: "/torneo",
-    tag: "fixture",
+    tag: `semana-${week}`,
   });
+
+  const { error } = await supabase
+    .from("matches")
+    .update({ announced_at: new Date().toISOString() })
+    .eq("tournament_id", tournamentId)
+    .eq("week", week);
+  if (error) throw error;
+
+  revalidateMatches();
+  return enviados;
 }
 
 // Borra todos los partidos del torneo, incluidos resultados y eventos

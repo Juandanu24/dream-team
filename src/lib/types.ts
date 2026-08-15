@@ -73,6 +73,8 @@ export interface Match {
   home_score: number | null;
   away_score: number | null;
   status: MatchStatus;
+  /** Cuándo se anunció esta semana del calendario; null = sin publicar. */
+  announced_at?: string | null;
   created_at: string;
 }
 

@@ -30,9 +30,11 @@ const SLOTS: Slot[] = ["tue_home", "tue_away", "thu_home", "thu_away"];
 export function AddWeekForm({
   teams,
   nextWeek,
+  onSaved,
 }: {
   teams: Team[];
   nextWeek: number;
+  onSaved?: () => void;
 }) {
   const [mode, setMode] = useState<(typeof MODES)[number]["value"]>("group");
   const [picks, setPicks] = useState<Record<Slot, string>>({
@@ -94,6 +96,7 @@ export function AddWeekForm({
             await addWeek(formData);
             setPicks({ tue_home: "", tue_away: "", thu_home: "", thu_away: "" });
             toast.success("Semana programada");
+            onSaved?.();
           } catch (error) {
             toast.error(
               error instanceof Error

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Save, Trash2 } from "lucide-react";
+import { Save, Share2, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +12,13 @@ import { Input } from "@/components/ui/input";
 import { ConfirmButton } from "@/components/confirm-button";
 import { getAdminMatchesData, toBogotaInput } from "@/lib/admin-matches";
 import { STAGE_LABELS, type Match, type Team } from "@/lib/types";
+import {
+  buildWeekWhatsAppMessage,
+  whatsAppShareUrl,
+} from "@/lib/match-summary";
 import { deleteFixture, deleteMatch, updateMatch } from "./actions";
-import { AddWeekForm } from "./add-week-form";
-import { PublishFixtureButton } from "./publish-fixture-button";
+import { PublishWeekButton } from "./publish-week-button";
+import { WeekPlanner } from "./week-planner";
 
 export const dynamic = "force-dynamic";
 
@@ -160,29 +164,7 @@ export default async function AdminFixturePage() {
         </p>
       ) : (
         <>
-          {/* Programar una semana nueva. Si ya hay semanas, arranca
-              plegado: lo normal ahí es venir a ajustar, no a crear. */}
-          <Card className="mt-6 border-volt/40 bg-card/70 py-0">
-            <details open={weeks.length === 0} className="group">
-              <summary className="flex cursor-pointer list-none items-center gap-2 p-5">
-                <ChevronRight
-                  className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
-                  aria-hidden
-                />
-                <span className="font-display text-2xl tracking-wide">
-                  PROGRAMAR UNA SEMANA
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {weeks.length === 0
-                    ? "empieza por la semana 1"
-                    : `ya van ${weeks.length}: ${weeks.join(", ")}`}
-                </span>
-              </summary>
-              <CardContent className="px-5 pb-5">
-                <AddWeekForm teams={teams} nextWeek={nextWeek} />
-              </CardContent>
-            </details>
-          </Card>
+          <WeekPlanner teams={teams} nextWeek={nextWeek} weeks={weeks} />
 
           {/* Semanas ya programadas */}
           {weeks.length > 0 ? (
@@ -215,6 +197,29 @@ export default async function AdminFixturePage() {
                             teams={teams}
                           />
                         ))}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <PublishWeekButton
+                            week={week}
+                            published={weekMatches.every((m) => m.announced_at)}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-[#25D366]/50 text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366]"
+                            asChild
+                          >
+                            <a
+                              href={whatsAppShareUrl(
+                                buildWeekWhatsAppMessage(week, weekMatches, teams),
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Compartir la programación en WhatsApp"
+                            >
+                              <Share2 aria-hidden /> WhatsApp
+                            </a>
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   );
@@ -222,7 +227,6 @@ export default async function AdminFixturePage() {
               </div>
 
               <div className="mt-6 flex flex-wrap gap-2">
-                <PublishFixtureButton />
                 <ConfirmButton
                   action={deleteFixture}
                   message={

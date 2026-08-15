@@ -20,7 +20,7 @@ export interface CardImageData {
 }
 
 const W = 900;
-const H = 1260;
+const H = 1400;
 
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
@@ -33,16 +33,16 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-// Misma silueta que el clip-path de la carta.
+// Silueta de la carta, con las puntas superiores y la V inferior.
 function cardPath(ctx: CanvasRenderingContext2D, inset: number) {
   const x = inset;
   const y = inset;
   const w = W - inset * 2;
   const h = H - inset * 2;
   ctx.beginPath();
-  ctx.moveTo(x, y + h * 0.03);
+  ctx.moveTo(x, y + h * 0.035);
   ctx.lineTo(x + w * 0.5, y);
-  ctx.lineTo(x + w, y + h * 0.03);
+  ctx.lineTo(x + w, y + h * 0.035);
   ctx.lineTo(x + w, y + h * 0.9);
   ctx.lineTo(x + w * 0.5, y + h);
   ctx.lineTo(x, y + h * 0.9);
@@ -57,12 +57,32 @@ function fontStack(variable: string, fallback: string) {
   return value || fallback;
 }
 
+function mix(hex: string, target: string, t: number) {
+  const p = (h: string) => [
+    parseInt(h.slice(1, 3), 16),
+    parseInt(h.slice(3, 5), 16),
+    parseInt(h.slice(5, 7), 16),
+  ];
+  const [r1, g1, b1] = p(hex);
+  const [r2, g2, b2] = p(target);
+  const c = (a: number, b: number) =>
+    Math.round(a + (b - a) * t)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${c(r1, r2)}${c(g1, g2)}${c(b1, b2)}`;
+}
+
 export async function renderCardImage(data: CardImageData): Promise<Blob> {
   await document.fonts.ready;
 
   const display = fontStack("--font-bebas", "Impact, sans-serif");
   const sans = fontStack("--font-archivo", "system-ui, sans-serif");
+
+  // Tres tonos del color del equipo dan profundidad metálica en vez de
+  // un plano liso: claro arriba, base al centro, oscuro abajo.
   const accent = readableAccent(data.teamColor);
+  const light = mix(accent, "#ffffff", 0.55);
+  const deep = mix(accent, "#000000", 0.45);
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -70,59 +90,95 @@ export async function renderCardImage(data: CardImageData): Promise<Blob> {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("No se pudo crear el canvas");
 
-  // Marco con el color del equipo.
-  const frame = ctx.createLinearGradient(0, 0, 0, H);
-  frame.addColorStop(0, accent);
-  frame.addColorStop(0.55, `${accent}59`);
-  frame.addColorStop(1, `${accent}1a`);
+  // Marco metálico.
+  const frame = ctx.createLinearGradient(0, 0, W, H);
+  frame.addColorStop(0, light);
+  frame.addColorStop(0.35, accent);
+  frame.addColorStop(0.7, deep);
+  frame.addColorStop(1, accent);
   ctx.fillStyle = frame;
   cardPath(ctx, 0);
   ctx.fill();
 
-  // Interior oscuro.
+  // Interior.
   ctx.save();
-  cardPath(ctx, 7);
+  cardPath(ctx, 9);
   ctx.clip();
+
   const inner = ctx.createLinearGradient(0, 0, 0, H);
-  inner.addColorStop(0, "#1c2205");
-  inner.addColorStop(0.5, "#111403");
-  inner.addColorStop(1, "#0a0b02");
+  inner.addColorStop(0, mix(deep, "#000000", 0.55));
+  inner.addColorStop(0.45, "#0d0f08");
+  inner.addColorStop(1, "#07080a");
   ctx.fillStyle = inner;
   ctx.fillRect(0, 0, W, H);
 
-  // Posición y pie.
-  ctx.textAlign = "center";
-  ctx.fillStyle = accent;
-  ctx.font = `120px ${display}`;
-  ctx.fillText(data.positionShort || "—", 150, 220);
-  ctx.font = `26px ${sans}`;
-  ctx.globalAlpha = 0.7;
-  ctx.fillText((data.footLabel || "").toUpperCase(), 150, 262);
-  ctx.globalAlpha = 1;
+  // Resplandor del color del equipo detrás de la foto.
+  const glow = ctx.createRadialGradient(W / 2, 560, 40, W / 2, 560, 520);
+  glow.addColorStop(0, `${accent}40`);
+  glow.addColorStop(1, "transparent");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
 
-  // Escudo o marca.
+  // Banda diagonal sutil, como el corte de las cartas de FIFA.
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = light;
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.52);
+  ctx.lineTo(W, H * 0.36);
+  ctx.lineTo(W, H * 0.47);
+  ctx.lineTo(0, H * 0.63);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  ctx.textAlign = "center";
+
+  // ---- Bloque superior izquierdo: posición y pie ----
+  ctx.textAlign = "left";
+  ctx.fillStyle = light;
+  ctx.font = `150px ${display}`;
+  ctx.fillText(data.positionShort || "—", 78, 232);
+
+  ctx.fillStyle = `${accent}cc`;
+  ctx.fillRect(80, 254, 150, 3);
+
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = `28px ${sans}`;
+  ctx.fillText((data.footLabel || "").toUpperCase(), 80, 296);
+
+  // ---- Escudo arriba a la derecha ----
   const crest = data.crestUrl ? await loadImage(data.crestUrl) : null;
   if (crest) {
-    ctx.drawImage(crest, W - 250, 110, 140, 140);
+    ctx.drawImage(crest, W - 250, 105, 170, 170);
   } else {
     ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
-    ctx.font = `44px ${display}`;
-    ctx.fillText("DREAM", W - 110, 165);
-    ctx.fillText("TEAM", W - 110, 210);
-    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.font = `52px ${display}`;
+    ctx.fillText("DREAM", W - 80, 175);
+    ctx.fillText("TEAM", W - 80, 228);
   }
 
-  // Foto circular.
-  const photoY = 480;
-  const radius = 165;
+  // ---- Foto ----
+  ctx.textAlign = "center";
+  const photoY = 590;
+  const radius = 205;
+
+  ctx.save();
+  ctx.shadowColor = `${accent}88`;
+  ctx.shadowBlur = 45;
+  ctx.beginPath();
+  ctx.arc(W / 2, photoY, radius + 6, 0, Math.PI * 2);
+  ctx.fillStyle = deep;
+  ctx.fill();
+  ctx.restore();
+
   const photo = data.photoUrl ? await loadImage(data.photoUrl) : null;
   if (photo) {
     ctx.save();
     ctx.beginPath();
     ctx.arc(W / 2, photoY, radius, 0, Math.PI * 2);
     ctx.clip();
-    // Recorte tipo object-cover.
     const scale = Math.max(
       (radius * 2) / photo.width,
       (radius * 2) / photo.height,
@@ -132,61 +188,94 @@ export async function renderCardImage(data: CardImageData): Promise<Blob> {
     ctx.drawImage(photo, W / 2 - dw / 2, photoY - dh / 2, dw, dh);
     ctx.restore();
   }
+
+  // Aro de la foto, en degradado.
+  const ring = ctx.createLinearGradient(0, photoY - radius, 0, photoY + radius);
+  ring.addColorStop(0, light);
+  ring.addColorStop(1, deep);
   ctx.beginPath();
   ctx.arc(W / 2, photoY, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = `${accent}66`;
-  ctx.lineWidth = 6;
+  ctx.strokeStyle = ring;
+  ctx.lineWidth = 9;
   ctx.stroke();
 
   // Banda de capitán.
   if (data.isCaptain) {
-    const cx = W / 2 + radius * 0.72;
-    const cy = photoY + radius * 0.72;
+    const cx = W / 2 + radius * 0.74;
+    const cy = photoY + radius * 0.74;
     ctx.beginPath();
-    ctx.arc(cx, cy, 44, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 50, 0, Math.PI * 2);
     ctx.fillStyle = accent;
     ctx.fill();
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = "#0a0b02";
+    ctx.lineWidth = 9;
+    ctx.strokeStyle = "#07080a";
     ctx.stroke();
-    ctx.fillStyle = "#0a0b02";
-    ctx.font = `52px ${display}`;
+    ctx.fillStyle = "#07080a";
+    ctx.font = `60px ${display}`;
     ctx.textBaseline = "middle";
     ctx.fillText("C", cx, cy + 3);
     ctx.textBaseline = "alphabetic";
   }
 
-  // Nombre.
-  ctx.fillStyle = "#fafafa";
-  ctx.font = `76px ${display}`;
+  // ---- Nombre ----
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `92px ${display}`;
   let name = (data.name || "").toUpperCase();
-  while (ctx.measureText(name).width > W - 120 && name.length > 3) {
+  while (ctx.measureText(name).width > W - 130 && name.length > 3) {
     name = name.slice(0, -1);
   }
-  ctx.fillText(name, W / 2, 790);
+  ctx.fillText(name, W / 2, 920);
 
-  // Separador.
-  ctx.fillStyle = `${accent}66`;
-  ctx.fillRect(W * 0.125, 820, W * 0.75, 2);
+  // Separador con degradado hacia los bordes.
+  const line = ctx.createLinearGradient(W * 0.12, 0, W * 0.88, 0);
+  line.addColorStop(0, "transparent");
+  line.addColorStop(0.5, accent);
+  line.addColorStop(1, "transparent");
+  ctx.fillStyle = line;
+  ctx.fillRect(W * 0.12, 952, W * 0.76, 3);
 
-  // Datos.
+  // ---- Datos ----
   const stat = (label: string, value: string, x: number) => {
-    ctx.fillStyle = "#fafafa";
-    ctx.font = `62px ${display}`;
-    ctx.fillText(value || "—", x, 900);
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = `24px ${sans}`;
-    ctx.fillText(label, x, 940);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `74px ${display}`;
+    let v = value || "—";
+    while (ctx.measureText(v).width > W * 0.4 && v.length > 2) {
+      v = v.slice(0, -1);
+    }
+    ctx.fillText(v, x, 1040);
+    ctx.fillStyle = `${accent}dd`;
+    ctx.font = `26px ${sans}`;
+    ctx.fillText(label, x, 1082);
   };
-  stat("EDAD", String(data.age ?? ""), W * 0.3);
-  stat("EN EL DT", data.memberSince || "", W * 0.7);
+  stat("EDAD", String(data.age ?? ""), W * 0.29);
+  stat("EN EL DT", data.memberSince || "", W * 0.71);
 
-  // Equipo.
+  // Divisor vertical entre los dos datos.
+  ctx.fillStyle = `${accent}44`;
+  ctx.fillRect(W / 2 - 1, 990, 2, 100);
+
+  // ---- Equipo, en banda inferior ----
   if (data.teamName) {
-    ctx.fillStyle = accent;
-    ctx.font = `46px ${display}`;
-    ctx.fillText(data.teamName.toUpperCase(), W / 2, 1075);
+    const band = ctx.createLinearGradient(0, 0, W, 0);
+    band.addColorStop(0, "transparent");
+    band.addColorStop(0.5, `${accent}33`);
+    band.addColorStop(1, "transparent");
+    ctx.fillStyle = band;
+    ctx.fillRect(0, 1140, W, 86);
+
+    ctx.fillStyle = light;
+    ctx.font = `56px ${display}`;
+    let team = data.teamName.toUpperCase();
+    while (ctx.measureText(team).width > W - 140 && team.length > 3) {
+      team = team.slice(0, -1);
+    }
+    ctx.fillText(team, W / 2, 1198);
   }
+
+  // Firma del torneo.
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  ctx.font = `30px ${display}`;
+  ctx.fillText("DREAM TEAM · 1ER TORNEO AMISTOSO", W / 2, 1285);
 
   ctx.restore();
 

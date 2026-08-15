@@ -81,3 +81,39 @@ export function buildWhatsAppMessage(
 export function whatsAppShareUrl(message: string): string {
   return `https://wa.me/?text=${encodeURIComponent(message)}`;
 }
+
+// Mensaje con la programación de una semana, para avisar en el grupo.
+export function buildWeekWhatsAppMessage(
+  week: number,
+  matches: Match[],
+  teams: Team[],
+): string {
+  const nameOf = (id: string | null) =>
+    teams.find((t) => t.id === id)?.name ?? "Por definir";
+
+  const cuando = (iso: string | null) =>
+    iso
+      ? new Intl.DateTimeFormat("es-CO", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+          timeZone: "America/Bogota",
+        }).format(new Date(iso))
+      : "por confirmar";
+
+  const lines = [`📅 *Semana ${week} — Dream Team*`, ""];
+
+  for (const match of matches) {
+    lines.push(`*${nameOf(match.home_team_id)}* vs *${nameOf(match.away_team_id)}*`);
+    lines.push(`🕗 ${cuando(match.kickoff_at)}`);
+    lines.push("");
+  }
+
+  lines.push("📍 Cancha F8, Montería");
+  lines.push(`⚽ Calendario completo: ${SITE_URL}/torneo`);
+
+  return lines.join("\n");
+}
