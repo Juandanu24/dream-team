@@ -12,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { EnvBadge } from "@/components/env-badge";
 import { NotificationsButton } from "@/components/notifications-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -33,14 +34,17 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        <Link href="/" className="flex items-baseline gap-1.5">
-          <span className="font-display text-2xl tracking-wide text-foreground">
-            DREAM
-          </span>
-          <span className="font-display text-2xl tracking-wide text-volt">
-            TEAM
-          </span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-baseline gap-1.5">
+            <span className="font-display text-2xl tracking-wide text-foreground">
+              DREAM
+            </span>
+            <span className="font-display text-2xl tracking-wide text-volt">
+              TEAM
+            </span>
+          </Link>
+          <EnvBadge />
+        </div>
 
         {/* Desktop */}
         <nav className="hidden items-center gap-1 sm:flex">

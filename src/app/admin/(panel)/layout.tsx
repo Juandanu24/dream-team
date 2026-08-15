@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EnvBadge } from "@/components/env-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getAdminUser } from "@/lib/supabase/server";
 import { logout } from "../actions";
@@ -24,6 +25,7 @@ export default async function AdminLayout({
           >
             ADMIN <span className="text-volt">DT</span>
           </Link>
+          <EnvBadge />
           <AdminNav />
           <div className="ml-auto hidden items-center gap-1 sm:flex">
             <ThemeToggle />
