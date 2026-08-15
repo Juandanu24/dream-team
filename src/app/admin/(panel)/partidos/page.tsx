@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,12 +6,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ConfirmButton } from "@/components/confirm-button";
+import { ShareTextButton } from "@/components/share-text-button";
 import { getAdminMatchesData, toBogotaInput } from "@/lib/admin-matches";
 import { type Match, type Team } from "@/lib/types";
-import {
-  buildWeekWhatsAppMessage,
-  whatsAppShareUrl,
-} from "@/lib/match-summary";
+import { buildWeekWhatsAppMessage } from "@/lib/match-summary";
 import { deleteFixture } from "./actions";
 import { MatchScheduleRow } from "./match-schedule-row";
 import { PublishWeekButton } from "./publish-week-button";
@@ -135,23 +131,10 @@ export default async function AdminFixturePage() {
                             week={week}
                             published={weekMatches.every((m) => m.announced_at)}
                           />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-[#25D366]/50 text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366]"
-                            asChild
-                          >
-                            <a
-                              href={whatsAppShareUrl(
-                                buildWeekWhatsAppMessage(week, weekMatches, teams),
-                              )}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="Compartir la programación en WhatsApp"
-                            >
-                              <Share2 aria-hidden /> WhatsApp
-                            </a>
-                          </Button>
+                          <ShareTextButton
+                            text={buildWeekWhatsAppMessage(week, weekMatches, teams)}
+                            title="Compartir la programación en WhatsApp"
+                          />
                         </div>
                       </CardContent>
                     </Card>

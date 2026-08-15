@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, ChevronRight, RotateCcw, Share2, X } from "lucide-react";
+import { Check, ChevronRight, RotateCcw, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,8 @@ import {
   type EventWithPlayer,
   type RosterEntry,
 } from "@/lib/admin-matches";
-import { buildWhatsAppMessage, whatsAppShareUrl } from "@/lib/match-summary";
+import { buildWhatsAppMessage } from "@/lib/match-summary";
+import { ShareTextButton } from "@/components/share-text-button";
 import { readableAccent } from "@/lib/team-color";
 import {
   EVENT_ICONS,
@@ -149,32 +150,19 @@ function MatchResult({
 
         {match.status === "finished" ? (
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[#25D366]/50 text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366]"
-              asChild
-            >
-              <a
-                href={whatsAppShareUrl(
-                  buildWhatsAppMessage(
-                    match,
-                    teams,
-                    matchEvents.map((e) => ({
-                      player_id: e.player_id,
-                      team_id: e.team_id,
-                      type: e.type,
-                      name: e.players.full_name,
-                    })),
-                  ),
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Compartir el resultado en WhatsApp"
-              >
-                <Share2 aria-hidden /> WhatsApp
-              </a>
-            </Button>
+            <ShareTextButton
+              text={buildWhatsAppMessage(
+                match,
+                teams,
+                matchEvents.map((e) => ({
+                  player_id: e.player_id,
+                  team_id: e.team_id,
+                  type: e.type,
+                  name: e.players.full_name,
+                })),
+              )}
+              title="Compartir el resultado en WhatsApp"
+            />
             <form action={reopenMatch.bind(null, match.id)}>
               <Button
                 variant="ghost"
