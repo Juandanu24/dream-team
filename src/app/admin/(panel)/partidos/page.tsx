@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Save, Trash2 } from "lucide-react";
+import { ChevronRight, Save, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -160,16 +160,28 @@ export default async function AdminFixturePage() {
         </p>
       ) : (
         <>
-          {/* Programar la próxima semana */}
-          <Card className="mt-6 border-volt/40 bg-card/70">
-            <CardHeader>
-              <CardTitle className="font-display text-2xl tracking-wide">
-                PROGRAMAR SEMANA {nextWeek}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AddWeekForm teams={teams} nextWeek={nextWeek} />
-            </CardContent>
+          {/* Programar una semana nueva. Si ya hay semanas, arranca
+              plegado: lo normal ahí es venir a ajustar, no a crear. */}
+          <Card className="mt-6 border-volt/40 bg-card/70 py-0">
+            <details open={weeks.length === 0} className="group">
+              <summary className="flex cursor-pointer list-none items-center gap-2 p-5">
+                <ChevronRight
+                  className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+                  aria-hidden
+                />
+                <span className="font-display text-2xl tracking-wide">
+                  PROGRAMAR UNA SEMANA
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {weeks.length === 0
+                    ? "empieza por la semana 1"
+                    : `ya van ${weeks.length}: ${weeks.join(", ")}`}
+                </span>
+              </summary>
+              <CardContent className="px-5 pb-5">
+                <AddWeekForm teams={teams} nextWeek={nextWeek} />
+              </CardContent>
+            </details>
           </Card>
 
           {/* Semanas ya programadas */}
