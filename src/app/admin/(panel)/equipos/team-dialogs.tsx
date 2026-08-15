@@ -136,8 +136,8 @@ export function EditTeamDialog({ team }: { team: Team }) {
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
-            Vas a poder encuadrarlo y quitarle el fondo antes de guardar. Sin
-            escudo se usa el ícono con el color del equipo.
+            PNG con fondo transparente. Vas a poder encuadrarlo antes de
+            guardar. Sin escudo se usa el ícono con el color del equipo.
           </p>
         </div>
 
