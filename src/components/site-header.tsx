@@ -35,13 +35,15 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-baseline gap-1.5">
-            <span className="font-display text-2xl tracking-wide text-foreground">
-              DREAM
-            </span>
-            <span className="font-display text-2xl tracking-wide text-volt">
-              TEAM
-            </span>
+          <Link href="/" className="flex shrink-0 items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-dreamteam.webp"
+              alt="Dream Team"
+              width={600}
+              height={363}
+              className="h-10 w-auto sm:h-12"
+            />
           </Link>
           <EnvBadge />
         </div>

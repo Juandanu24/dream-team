@@ -5,9 +5,14 @@ export function SiteFooter() {
     <footer className="border-t border-border/60">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
         <div>
-          <p className="font-display text-lg tracking-wide">
-            DREAM <span className="text-volt">TEAM</span>
-          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-dreamteam.webp"
+            alt="Dream Team"
+            width={600}
+            height={363}
+            className="h-10 w-auto"
+          />
           <p className="text-sm text-muted-foreground">
             Pasión, amistad y buen fútbol. Montería, Colombia.
           </p>
