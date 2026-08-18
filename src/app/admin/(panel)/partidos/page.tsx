@@ -84,7 +84,7 @@ export default async function AdminFixturePage() {
           Primero crea los equipos en{" "}
           <Link
             href="/admin/equipos"
-            className="text-volt underline-offset-4 hover:underline"
+            className="text-dt-blue underline-offset-4 hover:underline"
           >
             Equipos
           </Link>

@@ -100,7 +100,7 @@ function MatchRow({
     <div className="border-b border-border/40 py-3 last:border-b-0">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
         <div className="flex w-40 shrink-0 flex-col">
-          <span className="text-xs tracking-widest text-volt uppercase">
+          <span className="text-xs tracking-widest text-dt-blue uppercase">
             {STAGE_LABELS[match.stage]}
           </span>
           {kickoff ? (
@@ -392,7 +392,7 @@ export default async function TournamentPage() {
                 RETO DE PENALES
                 <Link
                   href="/penales"
-                  className="ml-auto text-sm font-normal text-volt underline-offset-4 hover:underline"
+                  className="ml-auto text-sm font-normal text-dt-blue underline-offset-4 hover:underline"
                 >
                   Jugar →
                 </Link>
@@ -447,7 +447,7 @@ export default async function TournamentPage() {
           <Card className="border-border/60 bg-card/70">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
-                <Handshake className="size-5 text-volt" aria-hidden />
+                <Handshake className="size-5 text-dt-blue" aria-hidden />
                 ASISTENCIAS
               </CardTitle>
             </CardHeader>
@@ -460,7 +460,7 @@ export default async function TournamentPage() {
               ) : (
                 assists.map((assist, i) => (
                   <div key={assist.player_id} className="flex items-center gap-3">
-                    <span className="w-6 font-display text-lg text-volt">
+                    <span className="w-6 font-display text-lg text-dt-blue">
                       {i + 1}
                     </span>
                     <Avatar className="size-8">
@@ -475,7 +475,7 @@ export default async function TournamentPage() {
                         {assist.team_name}
                       </span>
                     </span>
-                    <span className="font-display text-2xl text-volt">
+                    <span className="font-display text-2xl text-dt-blue">
                       {assist.assists}
                     </span>
                   </div>

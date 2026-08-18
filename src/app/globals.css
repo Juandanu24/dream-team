@@ -11,6 +11,9 @@
   --font-display: var(--font-bebas);
   --font-heading: var(--font-bebas);
   --color-volt: var(--volt);
+  --color-dt-blue: var(--dt-blue);
+  --color-dt-blue-soft: var(--dt-blue-soft);
+  --color-dt-blue-ink: var(--dt-blue-ink);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,52 +53,67 @@
 }
 
 /*
- * Paleta del flyer, en dos temas anclados al OS (next-themes pone la clase):
- * light = día de partido, dark = noche de estadio.
- * --volt es el acento de marca: neón puro en dark, oliva legible en light.
+ * Paleta sacada del logo, en dos temas anclados al OS (next-themes pone la
+ * clase). Dos mundos distintos a propósito:
+ *   dark  = noche de estadio — el logo tal cual: neón sobre negro.
+ *   light = día de cancha    — fondo hueso, oliva y turquesa apagados.
+ *
+ * Dos acentos con roles fijos, para que no compitan:
+ *   --volt    → ACCIÓN y presente (inscríbete, gol, en vivo, campeón)
+ *   --dt-blue → INFORMACIÓN y navegación (enlaces, tabs, fechas, datos)
+ *
+ * El azul del logo (#015EF8) no se usa literal: da 3.73:1 sobre el negro y
+ * 4.90:1 sobre el claro, o sea que no pasa AA en ninguno de los dos. Cada
+ * tema lleva su versión, igual que --volt.
  */
 :root {
-  --volt: #5c7a08;
-  --stadium-glow-1: rgb(140 180 0 / 12%);
-  --stadium-glow-2: rgb(140 180 0 / 6%);
-  --background: #f6f6f4;
-  --foreground: #141414;
-  --card: #ffffff;
-  --card-foreground: #141414;
-  --popover: #ffffff;
-  --popover-foreground: #141414;
-  --primary: #bfef00;
-  --primary-foreground: #0a0a0a;
-  --secondary: #e9e9e6;
-  --secondary-foreground: #141414;
-  --muted: #ececea;
-  --muted-foreground: #6b6b6b;
-  --accent: #edf6cf;
-  --accent-foreground: #465c00;
-  --destructive: #d92d20;
-  --border: rgb(0 0 0 / 12%);
-  --input: rgb(0 0 0 / 18%);
-  --ring: #5c7a08;
-  --chart-1: #5c7a08;
-  --chart-2: #8fb300;
-  --chart-3: #465c00;
-  --chart-4: #141414;
-  --chart-5: #6b6b6b;
+  --volt: #55700a;
+  --dt-blue: #0e6e75;
+  --dt-blue-soft: #e3eded;
+  --dt-blue-ink: #0a5158;
+  --stadium-glow-1: rgb(85 112 10 / 11%);
+  --stadium-glow-2: rgb(14 110 117 / 9%);
+  --background: #f1ede4;
+  --foreground: #16211d;
+  --card: #fbf9f5;
+  --card-foreground: #16211d;
+  --popover: #fbf9f5;
+  --popover-foreground: #16211d;
+  --primary: #c2ec00;
+  --primary-foreground: #16211d;
+  --secondary: #e5e0d4;
+  --secondary-foreground: #16211d;
+  --muted: #e9e4d9;
+  --muted-foreground: #4a5a55;
+  --accent: #e3eded;
+  --accent-foreground: #0a5158;
+  --destructive: #b4231b;
+  --border: rgb(22 33 29 / 13%);
+  --input: rgb(22 33 29 / 20%);
+  --ring: #0e6e75;
+  --chart-1: #55700a;
+  --chart-2: #0e6e75;
+  --chart-3: #8a7a3e;
+  --chart-4: #16211d;
+  --chart-5: #4a5a55;
   --radius: 0.375rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #141414;
-  --sidebar-primary: #bfef00;
-  --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-accent: #e9e9e6;
-  --sidebar-accent-foreground: #141414;
-  --sidebar-border: rgb(0 0 0 / 12%);
-  --sidebar-ring: #5c7a08;
+  --sidebar: #fbf9f5;
+  --sidebar-foreground: #16211d;
+  --sidebar-primary: #c2ec00;
+  --sidebar-primary-foreground: #16211d;
+  --sidebar-accent: #e5e0d4;
+  --sidebar-accent-foreground: #16211d;
+  --sidebar-border: rgb(22 33 29 / 13%);
+  --sidebar-ring: #0e6e75;
 }
 
 .dark {
   --volt: #ccff00;
+  --dt-blue: #4fa8ff;
+  --dt-blue-soft: #0c1f33;
+  --dt-blue-ink: #9ccdff;
   --stadium-glow-1: rgb(204 255 0 / 14%);
-  --stadium-glow-2: rgb(204 255 0 / 7%);
+  --stadium-glow-2: rgb(79 168 255 / 9%);
   --background: #0a0a0a;
   --foreground: #f5f5f5;
   --card: #131313;
@@ -115,8 +133,8 @@
   --input: rgb(255 255 255 / 16%);
   --ring: var(--volt);
   --chart-1: var(--volt);
-  --chart-2: #8fb300;
-  --chart-3: #5c7300;
+  --chart-2: #4fa8ff;
+  --chart-3: #8fb300;
   --chart-4: #f5f5f5;
   --chart-5: #a1a1a1;
   --sidebar: #131313;

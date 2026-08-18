@@ -158,14 +158,14 @@ export default function HomePage() {
       <section className="mx-auto grid max-w-6xl gap-8 px-4 py-16 lg:grid-cols-[1fr_320px]">
         <div>
           <h2 className="flex items-center gap-3 font-display text-4xl tracking-wide sm:text-5xl">
-            <CalendarDays className="size-8 text-volt" aria-hidden />
+            <CalendarDays className="size-8 text-dt-blue" aria-hidden />
             CALENDARIO
           </h2>
           <div className="mt-8 space-y-3">
             {calendar.map((row) => (
               <Card key={row.week} className="border-border/60 bg-card/70 py-4">
                 <CardContent className="flex flex-col gap-2 px-5 sm:flex-row sm:items-center">
-                  <p className="w-32 shrink-0 font-display text-xl tracking-wide text-volt">
+                  <p className="w-32 shrink-0 font-display text-xl tracking-wide text-dt-blue">
                     {row.week}
                   </p>
                   <div className="flex flex-1 flex-col gap-1 text-sm sm:flex-row sm:gap-6">
@@ -187,7 +187,7 @@ export default function HomePage() {
           <p className="mt-4 text-xs text-muted-foreground">
             Los cruces de la fase de grupos se definen cuando se sorteen los
             equipos. Resultados y tabla en vivo en{" "}
-            <Link href="/torneo?tab=calendario" className="text-volt underline-offset-4 hover:underline">
+            <Link href="/torneo?tab=calendario" className="text-dt-blue underline-offset-4 hover:underline">
               la página del torneo
             </Link>
             .
@@ -196,26 +196,26 @@ export default function HomePage() {
 
         <aside className="space-y-3">
           <h2 className="font-display text-4xl tracking-wide">
-            ¿CUÁNDO<span className="text-volt">?</span>
+            ¿CUÁNDO<span className="text-dt-blue">?</span>
           </h2>
-          <Card className="border-volt/40 bg-card/70">
+          <Card className="border-dt-blue/40 bg-card/70">
             <CardContent className="space-y-4 px-5 py-2">
               <div className="flex items-center gap-3">
-                <Clock className="size-6 shrink-0 text-volt" aria-hidden />
+                <Clock className="size-6 shrink-0 text-dt-blue" aria-hidden />
                 <div>
                   <p className="font-display text-2xl tracking-wide">MARTES</p>
                   <p className="text-sm text-muted-foreground">8:00 PM</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Clock className="size-6 shrink-0 text-volt" aria-hidden />
+                <Clock className="size-6 shrink-0 text-dt-blue" aria-hidden />
                 <div>
                   <p className="font-display text-2xl tracking-wide">JUEVES</p>
                   <p className="text-sm text-muted-foreground">9:00 PM</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <MapPin className="size-6 shrink-0 text-volt" aria-hidden />
+                <MapPin className="size-6 shrink-0 text-dt-blue" aria-hidden />
                 <div>
                   <p className="font-display text-2xl tracking-wide">CANCHA F8</p>
                   <p className="text-sm text-muted-foreground">
