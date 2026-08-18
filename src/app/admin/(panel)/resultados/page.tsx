@@ -79,7 +79,7 @@ function MatchResult({
         Cruce sin definir — asígnalo en{" "}
         <Link
           href="/admin/partidos"
-          className="text-volt underline-offset-4 hover:underline"
+          className="text-dt-blue underline-offset-4 hover:underline"
         >
           Calendario
         </Link>
@@ -291,7 +291,7 @@ export default async function AdminResultsPage() {
           Todavía no hay partidos. Programa las semanas en{" "}
           <Link
             href="/admin/partidos"
-            className="text-volt underline-offset-4 hover:underline"
+            className="text-dt-blue underline-offset-4 hover:underline"
           >
             Calendario
           </Link>

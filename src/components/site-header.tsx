@@ -38,11 +38,11 @@ export function SiteHeader() {
           <Link href="/" className="flex shrink-0 items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo-dreamteam.webp"
+              src="/logo-dt.webp"
               alt="Dream Team"
-              width={600}
-              height={363}
-              className="h-10 w-auto sm:h-12"
+              width={480}
+              height={259}
+              className="h-9 w-auto sm:h-11"
             />
           </Link>
           <EnvBadge />

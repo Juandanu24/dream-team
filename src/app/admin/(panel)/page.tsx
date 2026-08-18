@@ -238,7 +238,7 @@ export default async function AdminHomePage() {
               Los resultados se cargan en{" "}
               <Link
                 href="/admin/partidos"
-                className="text-volt underline-offset-4 hover:underline"
+                className="text-dt-blue underline-offset-4 hover:underline"
               >
                 Partidos
               </Link>
