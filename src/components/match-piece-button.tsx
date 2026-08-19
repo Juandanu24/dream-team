@@ -8,6 +8,7 @@ import {
   postFileName,
   renderPostImage,
   type PostImageData,
+  type ScorerLine,
   type TeamSide,
 } from "@/lib/post-image";
 
@@ -19,14 +20,16 @@ export function MatchPieceButton({
   away,
   when,
   venue,
-  note,
+  homeScorers,
+  awayScorers,
 }: {
   eyebrow: string;
   home: TeamSide;
   away: TeamSide;
   when: string;
   venue: string;
-  note?: string;
+  homeScorers: ScorerLine[];
+  awayScorers: ScorerLine[];
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -45,7 +48,8 @@ export function MatchPieceButton({
         away,
         when,
         venue,
-        note,
+        homeScorers,
+        awayScorers,
       };
       const blob = await renderPostImage(piece);
       const file = new File([blob], postFileName(piece), { type: "image/png" });

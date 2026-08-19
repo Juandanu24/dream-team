@@ -194,3 +194,61 @@ export function buildLineupMessage(input: LineupMessageInput): string {
   partes.push("", "Mas info: dreamteamcolombia.vercel.app");
   return partes.join("\n");
 }
+
+// ---------- Goleadores por equipo, para las piezas ----------
+
+export interface GoalTally {
+  name: string;
+  goals: number;
+}
+
+interface GoalEvent {
+  type: MatchEventType;
+  team_id: string;
+  players: { full_name: string };
+}
+
+/** Reparte los goles del partido en las dos columnas de la pieza.
+ *
+ *  Un autogol se acredita al jugador que lo hizo pero SUMA AL RIVAL, así
+ *  que aparece en la columna del equipo que se benefició, marcado (e.c.).
+ *  De lo contrario los nombres de una columna no cuadrarían con su
+ *  marcador, que es lo primero que revisa quien mira la foto. */
+export function tallyScorers(
+  events: GoalEvent[],
+  homeTeamId: string,
+  awayTeamId: string,
+): { home: GoalTally[]; away: GoalTally[] } {
+  const conteo = { home: new Map<string, number>(), away: new Map<string, number>() };
+
+  for (const event of events) {
+    if (event.type !== "goal" && event.type !== "own_goal") continue;
+
+    const propio = event.type === "own_goal";
+    const deCasa = event.team_id === homeTeamId;
+    // El autogol cambia de lado; el gol normal se queda en el suyo.
+    const lado: "home" | "away" = propio
+      ? deCasa
+        ? "away"
+        : "home"
+      : deCasa
+        ? "home"
+        : "away";
+
+    // Un equipo distinto a los dos del partido no debería existir, pero
+    // si el dato viene sucio no lo colamos en una columna al azar.
+    if (!deCasa && event.team_id !== awayTeamId) continue;
+
+    const nombre = propio
+      ? `${event.players.full_name} (e.c.)`
+      : event.players.full_name;
+    conteo[lado].set(nombre, (conteo[lado].get(nombre) ?? 0) + 1);
+  }
+
+  const aLista = (m: Map<string, number>): GoalTally[] =>
+    [...m.entries()]
+      .map(([name, goals]) => ({ name, goals }))
+      .sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name));
+
+  return { home: aLista(conteo.home), away: aLista(conteo.away) };
+}

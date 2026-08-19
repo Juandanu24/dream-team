@@ -1,4 +1,5 @@
 import { getTournamentData, type EventWithPlayer } from "@/lib/data";
+import { tallyScorers } from "@/lib/match-summary";
 import { STAGE_LABELS, type Match, type Team } from "@/lib/types";
 import { PiecesStudio, type PiecesData } from "./pieces-studio";
 
@@ -34,23 +35,13 @@ function teamSide(teams: Team[], id: string | null) {
   };
 }
 
-// "Andrés G ×2, Carli Cardona" — los goles de un partido en una línea.
-function scorersNote(match: Match, events: EventWithPlayer[]): string | undefined {
-  const goals = events.filter(
-    (e) => e.match_id === match.id && (e.type === "goal" || e.type === "own_goal"),
+// Los goles del partido, ya repartidos en las dos columnas de la pieza.
+function scorersOf(match: Match, events: EventWithPlayer[]) {
+  return tallyScorers(
+    events.filter((e) => e.match_id === match.id),
+    match.home_team_id ?? "",
+    match.away_team_id ?? "",
   );
-  if (goals.length === 0) return undefined;
-  const counts = new Map<string, number>();
-  for (const goal of goals) {
-    const name =
-      goal.type === "own_goal"
-        ? `${goal.players.full_name} (ag)`
-        : goal.players.full_name;
-    counts.set(name, (counts.get(name) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([name, n]) => (n > 1 ? `${name} ×${n}` : name))
-    .join(", ");
 }
 
 function EmptyState({ message }: { message: string }) {
@@ -84,6 +75,9 @@ export default async function PiezasPage() {
       const home = teamSide(teams, match.home_team_id);
       const away = teamSide(teams, match.away_team_id);
       const finished = match.status === "finished";
+      const scorers = finished
+        ? scorersOf(match, events)
+        : { home: [], away: [] };
       return {
         id: match.id,
         label: `Semana ${match.week} · ${home.name} vs ${away.name}`,
@@ -93,7 +87,8 @@ export default async function PiezasPage() {
         home: { ...home, score: match.home_score },
         away: { ...away, score: match.away_score },
         finished,
-        note: finished ? scorersNote(match, events) : undefined,
+        homeScorers: scorers.home,
+        awayScorers: scorers.away,
       };
     });
 

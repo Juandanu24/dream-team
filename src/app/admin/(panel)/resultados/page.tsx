@@ -13,6 +13,7 @@ import {
   buildWhatsAppMessage,
   formatPieceWhen,
   PIECE_VENUE,
+  tallyScorers,
 } from "@/lib/match-summary";
 import { ShareTextButton } from "@/components/share-text-button";
 import { MatchPieceButton } from "@/components/match-piece-button";
@@ -54,25 +55,6 @@ function groupEvents(events: EventWithPlayer[]) {
       });
   }
   return [...groups.values()];
-}
-
-// "Andrés G ×2, Carli Cardona" — los goles del partido en una línea.
-function goalNote(events: EventWithPlayer[]): string | undefined {
-  const goals = events.filter(
-    (e) => e.type === "goal" || e.type === "own_goal",
-  );
-  if (goals.length === 0) return undefined;
-  const counts = new Map<string, number>();
-  for (const goal of goals) {
-    const name =
-      goal.type === "own_goal"
-        ? `${goal.players.full_name} (ag)`
-        : goal.players.full_name;
-    counts.set(name, (counts.get(name) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([name, n]) => (n > 1 ? `${name} ×${n}` : name))
-    .join(", ");
 }
 
 function MatchResult({
@@ -203,7 +185,12 @@ function MatchResult({
               }}
               when={formatPieceWhen(match.kickoff_at)}
               venue={PIECE_VENUE}
-              note={goalNote(matchEvents)}
+              homeScorers={
+                tallyScorers(matchEvents, home.id, away.id).home
+              }
+              awayScorers={
+                tallyScorers(matchEvents, home.id, away.id).away
+              }
             />
             <form action={reopenMatch.bind(null, match.id)}>
               <Button

@@ -101,6 +101,11 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   fuentes reales de next/font; un script de Node no las tiene. Los bloques
   se posicionan contra `L.footerY` (espacio disponible), no con offsets
   fijos: una nómina de 22 nombres o un panel con goleadores se montaban
-  sobre el pie en formato feed.
+  sobre el pie en formato feed. En la pieza de resultado los goleadores
+  van en dos columnas, una por equipo, con el alto de fila calculado y
+  un "+N más" cuando la lista no cabe: como una sola línea, en un
+  partido de muchos goles se salía del panel. El autogol aparece en la
+  columna del equipo que se benefició, marcado (e.c.), para que los
+  nombres de cada columna cuadren con su marcador.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

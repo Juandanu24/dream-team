@@ -38,6 +38,12 @@ export interface StandingLite {
   points: number;
 }
 
+/** Un goleador del partido. `goals` permite "×2" sin repetir la fila. */
+export interface ScorerLine {
+  name: string;
+  goals: number;
+}
+
 /** Una línea de la cancha, de arquero a delantera.
  *  `players` tiene largo `width` y admite huecos: una alineación a medio
  *  armar debe dejar la casilla vacía en su sitio, no repartir a los que
@@ -73,8 +79,11 @@ export type PostImageData = Common &
         when: string;
         /** "CANCHA F8 · MONTERÍA" */
         venue: string;
-        /** Goleadores, al pie del panel. */
-        note?: string;
+        /** Goleadores por equipo, solo en "resultado". Van en dos
+         *  columnas: antes era una sola cadena que se salía del panel
+         *  en cuanto el partido pasaba de tres o cuatro goles. */
+        homeScorers?: ScorerLine[];
+        awayScorers?: ScorerLine[];
       }
     | { kind: "posiciones"; rows: StandingLite[] }
     | { kind: "goleadores" | "penales"; rows: RankLite[]; unit: string }
@@ -189,6 +198,31 @@ function tracked(
     ctx.fillText(c, x, y);
     x += ctx.measureText(c).width + spacing;
   }
+}
+
+/** Balón pequeño. Se dibuja a mano porque el emoji ⚽ en canvas depende
+ *  de la fuente del sistema y en algunos equipos sale como cuadro. */
+function drawBall(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = "#F2F2F2";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.lineWidth = Math.max(1, r * 0.14);
+  ctx.stroke();
+
+  // Pentágono central: a este tamaño es lo que lo hace leer como balón.
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+    const x = cx + Math.cos(a) * r * 0.48;
+    const y = cy + Math.sin(a) * r * 0.48;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#141414";
+  ctx.fill();
 }
 
 function roundRect(
@@ -359,12 +393,31 @@ function drawMatchBody(
   const homeAccent = readableAccent(data.home.color);
   const awayAccent = readableAccent(data.away.color);
 
-  // Todo el bloque se centra en la banda libre. Con offsets fijos el
-  // panel con goleadores se montaba sobre el pie en formato feed.
-  const crestSize = 260;
-  const panelH = data.note ? 290 : 235;
-  const blockH = crestSize + 100 + panelH;
+  const homeScorers = data.homeScorers ?? [];
+  const awayScorers = data.awayScorers ?? [];
+  const filas = Math.max(homeScorers.length, awayScorers.length);
+  const conGoleadores = data.kind === "resultado" && filas > 0;
+
+  // Todo se mide contra la banda libre y no con offsets fijos: en un
+  // partido de muchos goles, la lista crece y el bloque tiene que
+  // encogerse solo en vez de montarse sobre el pie.
+  const crestSize = conGoleadores ? 220 : 260;
+  const gapNombres = 100;
+  const cabeceraPanel = conGoleadores ? 130 : 235;
   const band = L.footerY - L.bodyTop - 20;
+
+  // 88 = separador + encabezados de columna + aire de abajo.
+  const fijo = crestSize + gapNombres + cabeceraPanel + (conGoleadores ? 88 : 0);
+  // Por debajo de 24px la fila deja de leerse, así que en vez de seguir
+  // encogiendo se corta la lista y se remata con "+N más". Un 12-0 en
+  // formato feed se salía del pie.
+  const cabenFilas = Math.max(1, Math.floor((band - fijo) / 24));
+  const filasVisibles = Math.min(filas, cabenFilas);
+  const rowH = conGoleadores
+    ? Math.min(46, (band - fijo) / Math.max(1, filasVisibles))
+    : 0;
+  const panelH = cabeceraPanel + (conGoleadores ? 88 + filasVisibles * rowH : 0);
+  const blockH = crestSize + gapNombres + panelH;
   const blockTop = L.bodyTop + Math.max(0, (band - blockH) / 2);
 
   const crestY = blockTop + crestSize / 2;
@@ -401,33 +454,99 @@ function drawMatchBody(
     ctx.fillRect(cx - w / 2, nameY + 18, w, 5);
   }
 
-  // Panel con fecha, lugar y (si hay) goleadores.
-  const panelY = blockTop + crestSize + 100;
+  // Panel con fecha, lugar y, si hay, los goleadores en dos columnas.
+  const panelY = blockTop + crestSize + gapNombres;
+  const panelX = 90;
+  const panelW = L.w - 180;
   ctx.fillStyle = "rgba(255,255,255,0.04)";
-  roundRect(ctx, 90, panelY, L.w - 180, panelH, 22);
+  roundRect(ctx, panelX, panelY, panelW, panelH, 22);
   ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.14)";
   ctx.lineWidth = 2;
   ctx.stroke();
 
+  ctx.textAlign = "center";
+  const whenTop = conGoleadores ? 62 : 92;
   const whenSize = fitText(
-    ctx, data.when.toUpperCase(), (s) => `${s}px ${display}`, L.w - 260, 62, 34,
+    ctx,
+    data.when.toUpperCase(),
+    (s) => `${s}px ${display}`,
+    panelW - 80,
+    conGoleadores ? 46 : 62,
+    30,
   );
   ctx.font = `${whenSize}px ${display}`;
   ctx.fillStyle = VOLT;
-  ctx.fillText(data.when.toUpperCase(), L.w / 2, panelY + 92);
+  ctx.fillText(data.when.toUpperCase(), L.w / 2, panelY + whenTop);
 
-  ctx.font = `600 30px ${sans}`;
+  ctx.font = `600 ${conGoleadores ? 26 : 30}px ${sans}`;
   ctx.fillStyle = "#C9C9C9";
-  tracked(ctx, data.venue.toUpperCase(), L.w / 2, panelY + 150, 3);
+  tracked(ctx, data.venue.toUpperCase(), L.w / 2, panelY + whenTop + (conGoleadores ? 42 : 58), 3);
 
-  if (data.note) {
-    ctx.fillStyle = "rgba(255,255,255,0.14)";
-    ctx.fillRect(180, panelY + 188, L.w - 360, 2);
-    const noteSize = fitText(ctx, data.note, (s) => `${s}px ${sans}`, L.w - 260, 28, 18);
-    ctx.font = `${noteSize}px ${sans}`;
-    ctx.fillStyle = "#E8E8E8";
-    ctx.fillText(data.note, L.w / 2, panelY + 240);
+  if (!conGoleadores) return;
+
+  // ---- Goleadores: una columna por equipo ----
+  const sepY = panelY + cabeceraPanel - 18;
+  ctx.fillStyle = "rgba(255,255,255,0.14)";
+  ctx.fillRect(panelX + 40, sepY, panelW - 80, 2);
+
+  // Línea vertical que parte las dos columnas.
+  const listaTop = sepY + 26;
+  const listaAlto = 46 + filasVisibles * rowH;
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  ctx.fillRect(L.w / 2 - 1, listaTop, 2, listaAlto);
+
+  const colW = panelW / 2 - 70;
+  const columnas = [
+    { x: panelX + 42, scorers: homeScorers, accent: homeAccent, name: data.home.name },
+    { x: L.w / 2 + 32, scorers: awayScorers, accent: awayAccent, name: data.away.name },
+  ];
+
+  for (const col of columnas) {
+    // Encabezado con el nombre del equipo en su color: si alguien
+    // recorta la pieza, la columna sigue diciendo de quién es.
+    ctx.textAlign = "left";
+    ctx.font = `600 24px ${sans}`;
+    ctx.fillStyle = col.accent;
+    ctx.fillText(truncate(ctx, col.name.toUpperCase(), colW), col.x, listaTop + 26);
+
+    const ballR = Math.max(9, Math.min(15, rowH * 0.3));
+    const nameSize = Math.max(22, Math.min(34, Math.round(rowH * 0.66)));
+
+    // Si la columna no cabe entera, se reserva una fila para el resumen.
+    const cabe =
+      col.scorers.length > filasVisibles ? filasVisibles - 1 : filasVisibles;
+    const visibles = col.scorers.slice(0, cabe);
+    const restantes = col.scorers
+      .slice(cabe)
+      .reduce((total, r) => total + r.goals, 0);
+
+    const textoX = col.x + ballR * 2 + 14;
+    const anchoTexto = colW - (textoX - col.x);
+
+    visibles.forEach((scorer, i) => {
+      const y = listaTop + 46 + i * rowH + rowH / 2;
+      drawBall(ctx, col.x + ballR, y, ballR);
+
+      const etiqueta =
+        scorer.goals > 1 ? `${scorer.name} ×${scorer.goals}` : scorer.name;
+      ctx.font = `${nameSize}px ${display}`;
+      ctx.fillStyle = PAPER;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(truncate(ctx, etiqueta.toUpperCase(), anchoTexto), textoX, y + 1);
+      ctx.textBaseline = "alphabetic";
+    });
+
+    if (restantes > 0) {
+      const y = listaTop + 46 + visibles.length * rowH + rowH / 2;
+      ctx.font = `${Math.round(nameSize * 0.82)}px ${display}`;
+      ctx.fillStyle = MUTED;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`+${restantes} MÁS`, textoX, y + 1);
+      ctx.textBaseline = "alphabetic";
+    }
   }
 }
 

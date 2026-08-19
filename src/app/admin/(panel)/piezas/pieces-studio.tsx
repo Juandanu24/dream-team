@@ -21,6 +21,7 @@ import {
   type PieceKind,
   type PostImageData,
   type RankLite,
+  type ScorerLine,
   type StandingLite,
   type TeamSide,
 } from "@/lib/post-image";
@@ -38,7 +39,8 @@ export interface MatchPiece {
   home: TeamSide;
   away: TeamSide;
   finished: boolean;
-  note?: string;
+  homeScorers: ScorerLine[];
+  awayScorers: ScorerLine[];
 }
 
 export interface TeamPiece {
@@ -136,7 +138,8 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           away: match.away,
           when: match.when,
           venue: match.venue,
-          note: kind === "resultado" ? match.note : undefined,
+          homeScorers: kind === "resultado" ? match.homeScorers : undefined,
+          awayScorers: kind === "resultado" ? match.awayScorers : undefined,
         };
       case "posiciones":
         return {
@@ -186,7 +189,12 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       case "resultado": {
         if (!match) return "";
         const marker = `${match.home.name} ${match.home.score ?? 0} — ${match.away.score ?? 0} ${match.away.name}`;
-        const goals = match.note ? `\n\n⚽ Goles: ${match.note}` : "";
+        const lista = (rows: ScorerLine[]) =>
+          rows.map((r) => (r.goals > 1 ? `${r.name} ×${r.goals}` : r.name)).join(", ");
+        const goals =
+          match.homeScorers.length + match.awayScorers.length > 0
+            ? `\n\n⚽ ${match.home.name}: ${lista(match.homeScorers) || "—"}\n⚽ ${match.away.name}: ${lista(match.awayScorers) || "—"}`
+            : "";
         return `🔥 ¡SE JUGÓ Y QUEDÓ ASÍ!\n\n${marker}${goals}\n\nLa tabla de posiciones ya está actualizada en vivo en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Qué te pareció el partido? Cuéntanos abajo 👇\n\n${TAGS}`;
       }
       case "anuncio": {
