@@ -9,8 +9,13 @@ import {
   type EventWithPlayer,
   type RosterEntry,
 } from "@/lib/admin-matches";
-import { buildWhatsAppMessage } from "@/lib/match-summary";
+import {
+  buildWhatsAppMessage,
+  formatPieceWhen,
+  PIECE_VENUE,
+} from "@/lib/match-summary";
 import { ShareTextButton } from "@/components/share-text-button";
+import { MatchPieceButton } from "@/components/match-piece-button";
 import { readableAccent } from "@/lib/team-color";
 import {
   EVENT_ICONS,
@@ -49,6 +54,25 @@ function groupEvents(events: EventWithPlayer[]) {
       });
   }
   return [...groups.values()];
+}
+
+// "Andrés G ×2, Carli Cardona" — los goles del partido en una línea.
+function goalNote(events: EventWithPlayer[]): string | undefined {
+  const goals = events.filter(
+    (e) => e.type === "goal" || e.type === "own_goal",
+  );
+  if (goals.length === 0) return undefined;
+  const counts = new Map<string, number>();
+  for (const goal of goals) {
+    const name =
+      goal.type === "own_goal"
+        ? `${goal.players.full_name} (ag)`
+        : goal.players.full_name;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([name, n]) => (n > 1 ? `${name} ×${n}` : name))
+    .join(", ");
 }
 
 function MatchResult({
@@ -162,6 +186,24 @@ function MatchResult({
                 })),
               )}
               title="Compartir el resultado en WhatsApp"
+            />
+            <MatchPieceButton
+              eyebrow={`Semana ${match.week} · ${STAGE_LABELS[match.stage]}`}
+              home={{
+                name: home.name,
+                color: home.color,
+                crestUrl: home.crest_url,
+                score: match.home_score,
+              }}
+              away={{
+                name: away.name,
+                color: away.color,
+                crestUrl: away.crest_url,
+                score: match.away_score,
+              }}
+              when={formatPieceWhen(match.kickoff_at)}
+              venue={PIECE_VENUE}
+              note={goalNote(matchEvents)}
             />
             <form action={reopenMatch.bind(null, match.id)}>
               <Button

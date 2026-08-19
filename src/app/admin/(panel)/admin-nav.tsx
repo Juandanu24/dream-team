@@ -7,6 +7,7 @@ import {
   ClipboardList,
   ListChecks,
   ExternalLink,
+  Image as ImageIcon,
   LayoutDashboard,
   Users,
 } from "lucide-react";
@@ -19,6 +20,7 @@ export const ADMIN_NAV = [
   { href: "/admin/equipos", label: "Equipos", icon: Users },
   { href: "/admin/partidos", label: "Calendario", icon: CalendarDays },
   { href: "/admin/resultados", label: "Resultados", icon: ListChecks },
+  { href: "/admin/piezas", label: "Piezas", icon: ImageIcon },
 ];
 
 // Nav de escritorio del admin; en mobile se usa AdminMobileMenu.
