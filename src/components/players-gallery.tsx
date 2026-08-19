@@ -30,6 +30,8 @@ export interface GalleryPlayer {
 // grilla compacta para ver todos de un vistazo.
 export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
   const [view, setView] = useState<"carousel" | "grid">("carousel");
+  // Jugador por el que abrir el carrusel al venir de la grilla.
+  const [startAt, setStartAt] = useState(0);
   const [query, setQuery] = useState("");
 
   const q = query.trim().toLowerCase();
@@ -59,15 +61,6 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
     />
   );
 
-  const tilted = (player: GalleryPlayer, compact = false) => (
-    <TiltCard
-      key={player.id}
-      className={compact ? "w-full min-w-0" : "w-full min-w-0 max-w-[280px]"}
-    >
-      {card(player, compact)}
-    </TiltCard>
-  );
-
   return (
     <div>
       <div className="relative mb-3">
@@ -77,7 +70,12 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
         />
         <Input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            // La búsqueda cambia la lista, así que el índice guardado
+            // apuntaría a otro jugador.
+            setStartAt(0);
+            setQuery(e.target.value);
+          }}
           placeholder="Buscar por nombre, equipo o posición…"
           className="pl-9"
           aria-label="Buscar jugadores"
@@ -98,7 +96,10 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
           <Button
             variant={view === "grid" ? "secondary" : "ghost"}
             size="sm"
-            onClick={() => setView("grid")}
+            onClick={() => {
+              setStartAt(0);
+              setView("grid");
+            }}
             className={cn(view === "grid" && "text-foreground")}
           >
             <LayoutGrid aria-hidden /> Todos ({visible.length})
@@ -116,7 +117,7 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
       {/* Mobile/tablet */}
       <div className="mt-4 lg:hidden">
         {view === "carousel" ? (
-          <PlayerCarousel>
+          <PlayerCarousel startAt={startAt}>
             {visible.map((player) => (
               <div key={player.id} className="flex min-w-0 flex-col items-center gap-2">
                 <TiltCard className="w-full min-w-0">{card(player)}</TiltCard>
@@ -134,7 +135,22 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
           </PlayerCarousel>
         ) : (
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {visible.map((player) => tilted(player, true))}
+            {visible.map((player, i) => (
+              <button
+                key={player.id}
+                type="button"
+                className="min-w-0 rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                aria-label={`Ver la carta de ${player.name} en grande`}
+                onClick={() => {
+                  setStartAt(i);
+                  setView("carousel");
+                }}
+              >
+                <TiltCard className="w-full min-w-0">
+                  {card(player, true)}
+                </TiltCard>
+              </button>
+            ))}
           </div>
         )}
       </div>

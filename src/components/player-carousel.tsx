@@ -5,9 +5,17 @@ import { cn } from "@/lib/utils";
 
 // Carrusel con scroll-snap: la carta del centro se ve grande y las
 // vecinas asoman pequeñas a los lados. Se navega deslizando.
-export function PlayerCarousel({ children }: { children: React.ReactNode[] }) {
+export function PlayerCarousel({
+  children,
+  /** Diapositiva en la que abrir. Sirve para saltar desde la grilla al
+   *  jugador que se tocó, en vez de empezar siempre desde el primero. */
+  startAt = 0,
+}: {
+  children: React.ReactNode[];
+  startAt?: number;
+}) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(startAt);
 
   const updateActive = useCallback(() => {
     const track = trackRef.current;
@@ -28,6 +36,16 @@ export function PlayerCarousel({ children }: { children: React.ReactNode[] }) {
   }, []);
 
   useEffect(updateActive, [updateActive]);
+
+  // Centra la diapositiva pedida al abrir. Sin animación: se entra al
+  // carrusel YA en ese jugador, no viéndolo desfilar desde el primero.
+  useEffect(() => {
+    const track = trackRef.current;
+    const slide = track?.children[startAt] as HTMLElement | undefined;
+    if (!track || !slide) return;
+    track.scrollLeft =
+      slide.offsetLeft - (track.clientWidth - slide.offsetWidth) / 2;
+  }, [startAt]);
 
   return (
     <div>
