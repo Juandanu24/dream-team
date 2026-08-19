@@ -79,6 +79,11 @@ const FORMATS: { value: PieceFormat; label: string; hint: string }[] = [
   { value: "story", label: "Story", hint: "1080 × 1920" },
 ];
 
+/** Los rankings dejan escoger cuántos entran en la pieza. */
+function esRanking(kind: PieceKind) {
+  return kind === "goleadores" || kind === "penales";
+}
+
 /** Los tipos que dependen de escoger algo más en un selector. */
 function needsPicker(kind: PieceKind) {
   return kind === "anuncio" || kind === "resultado" || kind === "equipo";
@@ -94,6 +99,9 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const [format, setFormat] = useState<PieceFormat>("feed");
   const [matchId, setMatchId] = useState(data.matches[firstPending]?.id ?? "");
   const [teamId, setTeamId] = useState(data.teams[0]?.id ?? "");
+  // 0 = todos. Seis alcanza cuando el torneo avanza y hay diferencias;
+  // al principio, con muchos empatados, conviene mostrarlos a todos.
+  const [cuantos, setCuantos] = useState(6);
   const [rendered, setRendered] = useState<Rendered | null>(null);
   const [copied, setCopied] = useState(false);
   const latest = useRef<string | null>(null);
@@ -125,6 +133,19 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const piece = useMemo<PostImageData | null>(() => {
     if (missing) return null;
     const common = { format };
+
+    // Cortar en seco parte un empate por la mitad: si el sexto y el
+    // séptimo tienen los mismos goles, o entran los dos o no entra
+    // ninguno. Se estira el corte hasta donde termina el empate.
+    const recortar = (rows: RankLite[]) => {
+      if (cuantos === 0 || rows.length <= cuantos) return rows;
+      let fin = cuantos;
+      while (fin < rows.length && rows[fin].value === rows[cuantos - 1].value) {
+        fin++;
+      }
+      return rows.slice(0, fin);
+    };
+
     switch (kind) {
       case "anuncio":
       case "resultado":
@@ -155,7 +176,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           kind,
           eyebrow: data.scorers.eyebrow,
           headline: "Goleadores",
-          rows: data.scorers.rows,
+          rows: recortar(data.scorers.rows),
           unit: "goles",
         };
       case "penales":
@@ -164,7 +185,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           kind,
           eyebrow: data.penalties.eyebrow,
           headline: "Ranking de penales",
-          rows: data.penalties.rows,
+          rows: recortar(data.penalties.rows),
           unit: "de 5",
         };
       case "equipo":
@@ -182,7 +203,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         // "alineacion" se arma desde /admin/alineaciones, no acá.
         return null;
     }
-  }, [kind, format, match, team, data, missing]);
+  }, [kind, format, match, team, data, missing, cuantos]);
 
   const caption = useMemo(() => {
     switch (kind) {
@@ -239,7 +260,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   // "Está ocupado" se deduce de si lo dibujado corresponde a lo
   // seleccionado, en vez de setearlo dentro del efecto: React 19 marca
   // como error el setState síncrono en el cuerpo de un efecto.
-  const key = piece ? `${kind}:${format}:${matchId}:${teamId}` : "";
+  const key = piece ? `${kind}:${format}:${matchId}:${teamId}:${cuantos}` : "";
   const busy = Boolean(piece) && rendered?.key !== key;
   const preview = piece && rendered?.key === key ? rendered.url : null;
   const blob = piece && rendered?.key === key ? rendered.blob : null;
@@ -430,6 +451,27 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                 en 0-0. Cárgalo en Resultados primero.
               </p>
             ) : null}
+          </div>
+        ) : null}
+
+        {esRanking(kind) ? (
+          <div className="space-y-2">
+            <Label htmlFor="cuantos">Cuántos mostrar</Label>
+            <select
+              id="cuantos"
+              className="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover"
+              value={cuantos}
+              onChange={(e) => setCuantos(Number(e.target.value))}
+            >
+              <option value={5}>Los 5 primeros</option>
+              <option value={6}>Los 6 primeros</option>
+              <option value={8}>Los 8 primeros</option>
+              <option value={10}>Los 10 primeros</option>
+              <option value={0}>Todos</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Si hay empate justo en el corte, entran todos los empatados.
+            </p>
           </div>
         ) : null}
 

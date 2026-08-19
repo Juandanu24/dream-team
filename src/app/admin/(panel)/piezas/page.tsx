@@ -113,7 +113,10 @@ export default async function PiezasPage() {
     },
     scorers: {
       eyebrow: weekLabel,
-      rows: scorers.slice(0, 6).map((row) => ({
+      // Se mandan todos y el estudio decide cuántos dibujar: tras la
+      // primera fecha hay nueve empatados en un gol y recortar a seis
+      // dejaba fuera a gente con el mismo mérito.
+      rows: scorers.slice(0, 20).map((row) => ({
         name: row.full_name,
         detail: row.team_name,
         value: row.goals,
@@ -123,7 +126,7 @@ export default async function PiezasPage() {
     },
     penalties: {
       eyebrow: "Reto de penales",
-      rows: penaltyLeaderboard.slice(0, 6).map((row) => ({
+      rows: penaltyLeaderboard.slice(0, 20).map((row) => ({
         name: row.full_name,
         detail: `${row.attempts} ${row.attempts === 1 ? "intento" : "intentos"}`,
         value: row.best_score,

@@ -181,7 +181,12 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return `${cut.trimEnd()}…`;
 }
 
-/** Texto con espaciado entre letras, que canvas no trae de fábrica. */
+/** Texto centrado con espaciado entre letras, que canvas no trae de fábrica.
+ *
+ *  La x que se calcula acá es el BORDE IZQUIERDO de cada letra, así que hay
+ *  que forzar textAlign a "left" mientras se dibuja. Los llamadores dejan
+ *  "center" activo, y con eso cada glifo se centraba sobre su borde
+ *  izquierdo: la línea entera quedaba descentrada. */
 function tracked(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -190,14 +195,18 @@ function tracked(
   spacing: number,
 ) {
   const chars = [...text];
+  const anchos = chars.map((c) => ctx.measureText(c).width);
   const total =
-    chars.reduce((sum, c) => sum + ctx.measureText(c).width, 0) +
-    spacing * (chars.length - 1);
+    anchos.reduce((sum, w) => sum + w, 0) + spacing * (chars.length - 1);
+
+  const alineacionPrevia = ctx.textAlign;
+  ctx.textAlign = "left";
   let x = cx - total / 2;
-  for (const c of chars) {
+  chars.forEach((c, i) => {
     ctx.fillText(c, x, y);
-    x += ctx.measureText(c).width + spacing;
-  }
+    x += anchos[i] + spacing;
+  });
+  ctx.textAlign = alineacionPrevia;
 }
 
 /** Balón pequeño. Se dibuja a mano porque el emoji ⚽ en canvas depende
@@ -634,8 +643,8 @@ function drawRankBody(
 ) {
   const x0 = 90;
   const width = L.w - 180;
-  // El alto de fila sale del espacio libre: con 6 filas y alto fijo la
-  // última quedaba pegada al pie.
+  // El alto de fila sale del espacio libre: con alto fijo, la última
+  // quedaba pegada al pie.
   const band = L.footerY - L.bodyTop - 40;
   const rowH = Math.min(
     data.format === "story" ? 150 : 126,
@@ -644,20 +653,36 @@ function drawRankBody(
   const avatar = Math.round(rowH * 0.66);
   const y = L.bodyTop + 20;
 
+  // Puesto real, con empates: nueve jugadores con un gol comparten el
+  // primer puesto, no van numerados del 1 al 9. El número solo se
+  // imprime cuando cambia, para que el empate se lea de una.
+  const puestos = data.rows.map((row, i, todas) =>
+    i > 0 && todas[i - 1].value === row.value ? 0 : i + 1,
+  );
+
+  // Si TODOS están empatados no hay líder, y resaltar al primero de la
+  // lista sería inventarse un orden que los datos no tienen.
+  const mejor = data.rows[0]?.value;
+  const todosIguales = data.rows.every((r) => r.value === mejor);
+  const esLider = (row: RankLite) => !todosIguales && row.value === mejor;
+
   data.rows.forEach((row, i) => {
     const top = y + i * rowH;
     const accent = readableAccent(row.color ?? null);
+    const lider = esLider(row);
 
-    if (i === 0) {
+    if (lider) {
       ctx.fillStyle = "rgba(204,255,0,0.07)";
       roundRect(ctx, x0, top - 10, width, rowH - 14, 14);
       ctx.fill();
     }
 
     ctx.textAlign = "left";
-    ctx.font = `${Math.round(rowH * 0.37)}px ${display}`;
-    ctx.fillStyle = i === 0 ? VOLT : MUTED;
-    ctx.fillText(String(i + 1), x0 + 16, top + rowH * 0.38);
+    if (puestos[i] > 0) {
+      ctx.font = `${Math.round(rowH * 0.37)}px ${display}`;
+      ctx.fillStyle = lider ? VOLT : MUTED;
+      ctx.fillText(String(puestos[i]), x0 + 16, top + rowH * 0.38);
+    }
 
     drawAvatar(ctx, photos[i], x0 + 128, top + rowH * 0.28, avatar, row.name, sans);
 
@@ -674,7 +699,7 @@ function drawRankBody(
 
     ctx.textAlign = "right";
     ctx.font = `${Math.round(rowH * 0.48)}px ${display}`;
-    ctx.fillStyle = i === 0 ? VOLT : PAPER;
+    ctx.fillStyle = lider ? VOLT : PAPER;
     const valueX = x0 + width - 16;
     ctx.fillText(String(row.value), valueX, top + rowH * 0.4);
 
