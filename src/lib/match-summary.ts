@@ -150,3 +150,47 @@ export function formatPieceWhen(iso: string | null): string {
 
 /** Lugar fijo del torneo, usado en las piezas. */
 export const PIECE_VENUE = "Cancha F8 · Montería";
+
+// ---------- Alineaciones ----------
+
+export interface LineupMessageInput {
+  teamName: string;
+  rivalName: string;
+  when: string;
+  venue: string;
+  formation: string;
+  /** De arquero a delantera. */
+  lines: { label: string; players: string[] }[];
+  bench: string[];
+  notes?: string | null;
+}
+
+/** Texto de la alineación para WhatsApp. Mismo criterio de emoji que el
+ *  resumen del partido: solo Unicode 6, que renderiza cualquier teléfono. */
+export function buildLineupMessage(input: LineupMessageInput): string {
+  const partes = [
+    `ALINEACION - ${input.teamName.toUpperCase()}`,
+    "",
+    `vs ${input.rivalName}`,
+    input.when,
+    input.venue,
+    "",
+    `Formacion: ${input.formation}`,
+    "",
+  ];
+
+  for (const line of input.lines) {
+    if (line.players.length === 0) continue;
+    partes.push(`${line.label}: ${line.players.join(", ")}`);
+  }
+
+  if (input.bench.length > 0) {
+    partes.push("", `Suplentes: ${input.bench.join(", ")}`);
+  }
+  if (input.notes) {
+    partes.push("", input.notes);
+  }
+
+  partes.push("", "Mas info: dreamteamcolombia.vercel.app");
+  return partes.join("\n");
+}

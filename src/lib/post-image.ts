@@ -17,7 +17,8 @@ export type PieceKind =
   | "posiciones"
   | "goleadores"
   | "equipo"
-  | "penales";
+  | "penales"
+  | "alineacion";
 
 export type PieceFormat = "feed" | "story";
 
@@ -35,6 +36,11 @@ export interface StandingLite {
   played: number;
   goalDiff: number;
   points: number;
+}
+
+/** Una línea de la cancha, de arquero a delantera. */
+export interface LineupRow {
+  players: { name: string; isCaptain?: boolean }[];
 }
 
 export interface RankLite {
@@ -73,6 +79,14 @@ export type PostImageData = Common &
         team: TeamSide;
         captain?: string;
         players: string[];
+      }
+    | {
+        kind: "alineacion";
+        team: TeamSide;
+        formation: string;
+        /** De arquero a delantera; se dibuja de abajo hacia arriba. */
+        rows: LineupRow[];
+        bench: string[];
       }
   );
 
@@ -613,6 +627,167 @@ function drawTeamBody(
   }
 }
 
+/** "Juan David Pérez" → "J. Pérez": en la cancha no cabe el nombre entero. */
+function shortName(full: string): string {
+  const parts = full.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return `${parts[0][0]}. ${parts[parts.length - 1]}`;
+}
+
+function drawLineupBody(
+  ctx: CanvasRenderingContext2D,
+  data: Extract<PostImageData, { kind: "alineacion" }>,
+  L: Layout,
+  crest: HTMLImageElement | null,
+  display: string,
+  sans: string,
+) {
+  const accent = readableAccent(data.team.color);
+
+  // La cancha ocupa la banda libre, menos la línea de suplentes si hay.
+  const benchH = data.bench.length > 0 ? 96 : 0;
+  const top = L.bodyTop + 10;
+  const bottom = L.footerY - 20 - benchH;
+  const pitchH = bottom - top;
+  const pitchX = 90;
+  const pitchW = L.w - 180;
+
+  // ---- Cancha ----
+  ctx.save();
+  roundRect(ctx, pitchX, top, pitchW, pitchH, 18);
+  ctx.clip();
+
+  // Verde muy oscuro, para que no pelee con el negro de la marca.
+  const grass = ctx.createLinearGradient(0, top, 0, bottom);
+  grass.addColorStop(0, "#0C1E12");
+  grass.addColorStop(1, "#07140C");
+  ctx.fillStyle = grass;
+  ctx.fillRect(pitchX, top, pitchW, pitchH);
+
+  // Franjas de corte del césped.
+  ctx.fillStyle = "rgba(255,255,255,0.018)";
+  const stripes = 8;
+  for (let i = 0; i < stripes; i += 2) {
+    ctx.fillRect(pitchX, top + (pitchH / stripes) * i, pitchW, pitchH / stripes);
+  }
+
+  // Líneas: perímetro, medio campo, círculo central y las dos áreas.
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(pitchX + 18, top + 18, pitchW - 36, pitchH - 36);
+
+  ctx.beginPath();
+  ctx.moveTo(pitchX + 18, top + pitchH / 2);
+  ctx.lineTo(pitchX + pitchW - 18, top + pitchH / 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(pitchX + pitchW / 2, top + pitchH / 2, pitchW * 0.13, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const boxW = pitchW * 0.46;
+  const boxH = pitchH * 0.14;
+  ctx.strokeRect(pitchX + (pitchW - boxW) / 2, top + 18, boxW, boxH);
+  ctx.strokeRect(pitchX + (pitchW - boxW) / 2, bottom - 18 - boxH, boxW, boxH);
+  ctx.restore();
+
+  // ---- Jugadores ----
+  // rows viene de arquero a delantera; se dibuja de abajo hacia arriba.
+  const n = data.rows.length;
+  const disc = Math.min(54, pitchH / (n * 3.4));
+  // Los márgenes salen del tamaño del disco, no de constantes: con 0.9
+  // fijo, la etiqueta del arquero se salía de la cancha y chocaba con
+  // la línea de suplentes.
+  const marginTop = Math.max(0.12, (disc + 30) / pitchH);
+  const marginBottom = Math.min(0.88, 1 - (disc * 1.78 + 24) / pitchH);
+
+  data.rows.forEach((row, rowIndex) => {
+    if (row.players.length === 0) return;
+    const t =
+      n === 1
+        ? marginBottom
+        : marginBottom - ((marginBottom - marginTop) * rowIndex) / (n - 1);
+    const y = top + pitchH * t;
+
+    row.players.forEach((player, i) => {
+      const x = pitchX + (pitchW * (i + 1)) / (row.players.length + 1);
+
+      // Disco con el color del equipo.
+      ctx.beginPath();
+      ctx.arc(x, y, disc, 0, Math.PI * 2);
+      ctx.fillStyle = `${accent}33`;
+      ctx.fill();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Iniciales dentro del disco.
+      ctx.fillStyle = accent;
+      ctx.font = `${Math.round(disc * 0.82)}px ${display}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const initials = player.name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase();
+      ctx.fillText(initials, x, y + disc * 0.04);
+      ctx.textBaseline = "alphabetic";
+
+      // Nombre bajo el disco, con fondo para que se lea sobre el césped.
+      const label = shortName(player.name).toUpperCase();
+      ctx.font = `${Math.round(disc * 0.58)}px ${display}`;
+      const wLabel = ctx.measureText(label).width;
+      const padX = 12;
+      ctx.fillStyle = "rgba(0,0,0,0.62)";
+      roundRect(
+        ctx,
+        x - wLabel / 2 - padX,
+        y + disc + 12,
+        wLabel + padX * 2,
+        disc * 0.78,
+        7,
+      );
+      ctx.fill();
+      ctx.fillStyle = PAPER;
+      ctx.textAlign = "center";
+      ctx.fillText(label, x, y + disc + 12 + disc * 0.58);
+
+      if (player.isCaptain) {
+        ctx.fillStyle = VOLT;
+        ctx.font = `${Math.round(disc * 0.44)}px ${display}`;
+        ctx.fillText("C", x + disc * 0.86, y - disc * 0.62);
+      }
+    });
+  });
+
+  // Escudo y formación, arriba a la izquierda de la cancha.
+  if (crest) {
+    drawCrest(ctx, crest, pitchX + 64, top + 60, 76, accent, display,
+      data.team.name.slice(0, 1), false);
+  }
+  ctx.textAlign = "right";
+  ctx.font = `44px ${display}`;
+  ctx.fillStyle = VOLT;
+  ctx.fillText(data.formation, pitchX + pitchW - 34, top + 74);
+
+  // ---- Suplentes ----
+  if (data.bench.length > 0) {
+    ctx.textAlign = "center";
+    ctx.font = `600 24px ${sans}`;
+    ctx.fillStyle = MUTED;
+    tracked(ctx, "SUPLENTES", L.w / 2, bottom + 42, 5);
+
+    const bench = data.bench.map(shortName).join("  ·  ").toUpperCase();
+    const size = fitText(ctx, bench, (s) => `${s}px ${display}`, L.w - 160, 34, 18);
+    ctx.font = `${size}px ${display}`;
+    ctx.fillStyle = "#DEDEDE";
+    ctx.fillText(bench, L.w / 2, bottom + 84);
+  }
+}
+
 // ── Punto de entrada ────────────────────────────────────────────────
 
 export async function renderPostImage(data: PostImageData): Promise<Blob> {
@@ -649,7 +824,7 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
       data.rows.map((r) => (r.crestUrl ? loadImage(r.crestUrl) : null)),
     );
     glows = [{ x: L.w * 0.5, color: VOLT }];
-  } else if (data.kind === "equipo") {
+  } else if (data.kind === "equipo" || data.kind === "alineacion") {
     crests = [data.team.crestUrl ? await loadImage(data.team.crestUrl) : null];
     glows = [{ x: L.w * 0.5, color: readableAccent(data.team.color) }];
   } else if (data.kind === "goleadores" || data.kind === "penales") {
@@ -667,6 +842,8 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
     drawStandingsBody(ctx, data, L, crests, display, sans);
   } else if (data.kind === "equipo") {
     drawTeamBody(ctx, data, L, crests[0], display, sans);
+  } else if (data.kind === "alineacion") {
+    drawLineupBody(ctx, data, L, crests[0], display, sans);
   } else if (data.kind === "goleadores" || data.kind === "penales") {
     drawRankBody(ctx, data, L, photos, display, sans);
   }
@@ -692,7 +869,7 @@ export function postFileName(data: PostImageData) {
   const detail =
     data.kind === "anuncio" || data.kind === "resultado"
       ? `-${slug(data.home.name)}-vs-${slug(data.away.name)}`
-      : data.kind === "equipo"
+      : data.kind === "equipo" || data.kind === "alineacion"
         ? `-${slug(data.team.name)}`
         : "";
   return `dt-${data.kind}${detail}-${data.format}.png`;

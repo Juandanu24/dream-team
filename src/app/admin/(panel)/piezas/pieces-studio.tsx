@@ -175,6 +175,9 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           captain: team.captain,
           players: team.players,
         };
+      default:
+        // "alineacion" se arma desde /admin/alineaciones, no acá.
+        return null;
     }
   }, [kind, format, match, team, data, missing]);
 
@@ -214,6 +217,8 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
             : "";
         return `⚽ CONOCE A ${team.team.name.toUpperCase()}\n\nEstos son los que van a dejar el alma en la cancha por el primer título del Dream Team.${cap}${nomina}\n\nLas cartas tipo FIFA de cada uno están en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Le tienes fe a este combo? 👇\n\n${TAGS}`;
       }
+      default:
+        return "";
     }
   }, [kind, match, team, data]);
 

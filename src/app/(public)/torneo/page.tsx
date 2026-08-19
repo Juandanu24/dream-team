@@ -25,6 +25,8 @@ import {
   getTournamentData,
   type EventWithPlayer,
 } from "@/lib/data";
+import { getPublishedLineups, type LineupWithPlayers } from "@/lib/lineups";
+import { readableAccent } from "@/lib/team-color";
 import {
   EVENT_ICONS,
   FOOT_LABELS,
@@ -89,10 +91,12 @@ function MatchRow({
   match,
   teams,
   events,
+  lineups,
 }: {
   match: Match;
   teams: Team[];
   events: EventWithPlayer[];
+  lineups: LineupWithPlayers[];
 }) {
   const kickoff = formatKickoff(match.kickoff_at);
   const matchEvents = events.filter((e) => e.match_id === match.id);
@@ -128,12 +132,87 @@ function MatchRow({
           {summarizeEvents(matchEvents)}
         </p>
       ) : null}
+      {lineups.length > 0 ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:pl-44">
+          {lineups.map((lineup) => (
+            <LineupBlock
+              key={lineup.id}
+              lineup={lineup}
+              teamName={teamName(teams, lineup.team_id)}
+              color={teams.find((t) => t.id === lineup.team_id)?.color ?? null}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Alineación publicada, compacta: los titulares por línea y la banca.
+function LineupBlock({
+  lineup,
+  teamName,
+  color,
+}: {
+  lineup: LineupWithPlayers;
+  teamName: string;
+  color: string | null;
+}) {
+  const accent = readableAccent(color);
+  const starters = lineup.entries.filter((e) => e.is_starter);
+  const bench = lineup.entries.filter((e) => !e.is_starter);
+  const byLine = (line: string) =>
+    starters.filter((e) => e.line === line).map((e) => e.full_name);
+
+  const lines = [
+    { label: "ARQ", players: byLine("gk") },
+    { label: "DEF", players: byLine("def") },
+    { label: "MED", players: byLine("mid") },
+    { label: "DEL", players: byLine("fwd") },
+  ].filter((l) => l.players.length > 0);
+
+  if (lines.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-border/60 bg-card/50 p-3">
+      <div className="flex items-center gap-2">
+        <span
+          className="size-2.5 shrink-0 rounded-full"
+          style={{ background: accent }}
+          aria-hidden
+        />
+        <span className="font-display text-base tracking-wide">{teamName}</span>
+        <span className="ml-auto text-xs text-dt-blue">{lineup.formation}</span>
+      </div>
+      <dl className="mt-2 space-y-1">
+        {lines.map((line) => (
+          <div key={line.label} className="flex gap-2 text-xs">
+            <dt className="w-9 shrink-0 text-muted-foreground">{line.label}</dt>
+            <dd className="flex-1">{line.players.join(", ")}</dd>
+          </div>
+        ))}
+        {bench.length > 0 ? (
+          <div className="flex gap-2 border-t border-border/40 pt-1 text-xs">
+            <dt className="w-9 shrink-0 text-muted-foreground">BAN</dt>
+            <dd className="flex-1 text-muted-foreground">
+              {bench.map((e) => e.full_name).join(", ")}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {lineup.notes ? (
+        <p className="mt-2 border-t border-border/40 pt-2 text-xs text-volt">
+          {lineup.notes}
+        </p>
+      ) : null}
     </div>
   );
 }
 
 export default async function TournamentPage() {
   const data = await getTournamentData();
+  // Solo las publicadas: los borradores del admin no salen acá.
+  const lineups = data ? await getPublishedLineups(data.tournament.id) : [];
 
   if (!data) {
     return (
@@ -352,6 +431,7 @@ export default async function TournamentPage() {
                         match={match}
                         teams={teams}
                         events={events}
+                        lineups={lineups.filter((l) => l.match_id === match.id)}
                       />
                     ))}
                 </CardContent>

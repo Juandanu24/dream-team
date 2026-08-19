@@ -89,6 +89,68 @@ export interface MatchEvent {
 }
 
 // Filas de las vistas calculadas.
+// ---------- Alineaciones ----------
+
+/** Línea de la cancha. La formación se dibuja a partir de esto. */
+export type LineupLine = "gk" | "def" | "mid" | "fwd";
+
+export interface Lineup {
+  id: string;
+  tournament_id: string;
+  match_id: string;
+  team_id: string;
+  /** Sin el arquero: "3-3-2", "3-2-3"… Sus dígitos suman 8. */
+  formation: string;
+  notes: string | null;
+  /** null = borrador; con fecha = publicada y notificada. */
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LineupPlayer {
+  id: string;
+  lineup_id: string;
+  player_id: string;
+  line: LineupLine;
+  /** Orden dentro de la línea, de izquierda a derecha. */
+  slot: number;
+  is_starter: boolean;
+  created_at: string;
+}
+
+/** Formaciones de fútbol 9, sin contar al arquero. */
+export const FORMATIONS = [
+  "3-3-2",
+  "3-2-3",
+  "4-3-1",
+  "4-2-2",
+  "2-4-2",
+  "3-4-1",
+] as const;
+
+export type Formation = (typeof FORMATIONS)[number];
+
+/** Cuántos jugadores lleva cada línea en una formación dada. */
+export function formationLines(formation: string): Record<
+  Exclude<LineupLine, "gk">,
+  number
+> {
+  const [def, mid, fwd] = formation.split("-").map(Number);
+  return {
+    def: Number.isFinite(def) ? def : 3,
+    mid: Number.isFinite(mid) ? mid : 3,
+    fwd: Number.isFinite(fwd) ? fwd : 2,
+  };
+}
+
+export const LINE_LABELS: Record<LineupLine, string> = {
+  gk: "Arquero",
+  def: "Defensa",
+  mid: "Mediocampo",
+  fwd: "Delantera",
+};
+
 export interface GroupStandingRow {
   tournament_id: string;
   team_id: string;

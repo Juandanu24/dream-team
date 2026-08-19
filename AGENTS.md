@@ -54,7 +54,8 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
   posiciones, calendario, equipos, goleadores). Páginas con datos usan
   `force-dynamic` y degradan a estados vacíos si Supabase no responde.
 - `admin/login` + `admin/(panel)/` — panel, inscripciones (aprobar/rechazar),
-  equipos, partidos, resultados y `piezas` (generador de imágenes para redes).
+  equipos, partidos, `alineaciones`, resultados y `piezas` (generador de
+  imágenes para redes).
 - Las fotos van al bucket público `player-photos`, comprimidas en el cliente
   (webp ≤ 250 KB) antes de la server action.
 
@@ -65,8 +66,16 @@ equipos (CRUD + escudos + asignación de aprobados), partidos (fixture, marcador
 goles/asistencias/tarjetas por jugador), PWA, `/penales` (reto arcade con
 ranking) y `/admin/piezas` (generador de imágenes para Instagram: anuncio,
 resultado, posiciones, goleadores, equipo y penales, en feed 1080×1350 y
-story 1080×1920, con el texto del post sugerido y editable).
-Desplegado en Vercel: dreamteamcolombia.vercel.app.
+story 1080×1920, con el texto del post sugerido y editable) y
+`/admin/alineaciones` (titular por equipo y partido, con push, WhatsApp e
+imagen de cancha). Desplegado en Vercel: dreamteamcolombia.vercel.app.
+
+Las alineaciones no guardan coordenadas: guardan la línea (`gk`/`def`/`mid`/
+`fwd`) más el `slot` dentro de la línea, de izquierda a derecha. Con eso la
+cancha se dibuja sin ambigüedad y cambiar de formación no obliga a recolocar
+a nadie. `published_at` en null = borrador: no sale en la web pública ni
+dispara push. Republicar una alineación editada NO vuelve a notificar, para
+no sonarle el teléfono a todos dos veces.
 
 El reto de penales tiene la lógica pura en `src/lib/penalty-game.ts` (zonas,
 arquero adaptativo, resolución del disparo) separada de la UI: se puede simular

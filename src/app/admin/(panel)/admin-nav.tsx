@@ -8,6 +8,7 @@ import {
   ListChecks,
   ExternalLink,
   Image as ImageIcon,
+  ClipboardCheck,
   LayoutDashboard,
   Users,
 } from "lucide-react";
@@ -19,6 +20,7 @@ export const ADMIN_NAV = [
   { href: "/admin/inscripciones", label: "Inscripciones", icon: ClipboardList },
   { href: "/admin/equipos", label: "Equipos", icon: Users },
   { href: "/admin/partidos", label: "Calendario", icon: CalendarDays },
+  { href: "/admin/alineaciones", label: "Alineaciones", icon: ClipboardCheck },
   { href: "/admin/resultados", label: "Resultados", icon: ListChecks },
   { href: "/admin/piezas", label: "Piezas", icon: ImageIcon },
 ];
