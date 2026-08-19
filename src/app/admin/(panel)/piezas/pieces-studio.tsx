@@ -134,16 +134,26 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     if (missing) return null;
     const common = { format };
 
-    // Cortar en seco parte un empate por la mitad: si el sexto y el
-    // séptimo tienen los mismos goles, o entran los dos o no entra
-    // ninguno. Se estira el corte hasta donde termina el empate.
-    const recortar = (rows: RankLite[]) => {
-      if (cuantos === 0 || rows.length <= cuantos) return rows;
-      let fin = cuantos;
-      while (fin < rows.length && rows[fin].value === rows[cuantos - 1].value) {
-        fin++;
+    // El número elegido se respeta tal cual. Antes se estiraba el corte
+    // hasta el final del empate, y con nueve jugadores empatados en un
+    // gol pedir "los 5" devolvía los 9: el control no servía de nada.
+    // Ahora, si el corte parte un empate, se dice al pie de la pieza.
+    const recortar = (rows: RankLite[], unidad: string) => {
+      if (cuantos === 0 || rows.length <= cuantos) {
+        return { rows, footnote: undefined as string | undefined };
       }
-      return rows.slice(0, fin);
+      const visibles = rows.slice(0, cuantos);
+      const corte = visibles[visibles.length - 1].value;
+      const empatadosFuera = rows
+        .slice(cuantos)
+        .filter((r) => r.value === corte).length;
+      return {
+        rows: visibles,
+        footnote:
+          empatadosFuera > 0
+            ? `+${empatadosFuera} más con ${corte} ${unidad}`
+            : undefined,
+      };
     };
 
     switch (kind) {
@@ -170,24 +180,30 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           headline: "Tabla de posiciones",
           rows: data.standings.rows,
         };
-      case "goleadores":
+      case "goleadores": {
+        const { rows, footnote } = recortar(data.scorers.rows, "gol");
         return {
           ...common,
           kind,
           eyebrow: data.scorers.eyebrow,
           headline: "Goleadores",
-          rows: recortar(data.scorers.rows),
+          rows,
           unit: "goles",
+          footnote,
         };
-      case "penales":
+      }
+      case "penales": {
+        const { rows, footnote } = recortar(data.penalties.rows, "de 5");
         return {
           ...common,
           kind,
           eyebrow: data.penalties.eyebrow,
           headline: "Ranking de penales",
-          rows: recortar(data.penalties.rows),
+          rows,
           unit: "de 5",
+          footnote,
         };
+      }
       case "equipo":
         if (!team) return null;
         return {
@@ -470,7 +486,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
               <option value={0}>Todos</option>
             </select>
             <p className="text-xs text-muted-foreground">
-              Si hay empate justo en el corte, entran todos los empatados.
+              Si el corte parte un empate, la pieza lo dice al pie.
             </p>
           </div>
         ) : null}

@@ -86,7 +86,13 @@ export type PostImageData = Common &
         awayScorers?: ScorerLine[];
       }
     | { kind: "posiciones"; rows: StandingLite[] }
-    | { kind: "goleadores" | "penales"; rows: RankLite[]; unit: string }
+    | {
+        kind: "goleadores" | "penales";
+        rows: RankLite[];
+        unit: string;
+        /** "+4 más con 1 gol", cuando el corte parte un empate. */
+        footnote?: string;
+      }
     | {
         kind: "equipo";
         team: TeamSide;
@@ -251,6 +257,64 @@ function roundRect(
   ctx.closePath();
 }
 
+interface ContentBox {
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+}
+
+// Cada escudo trae distinto margen transparente: el de un equipo ocupaba
+// el 94% de su PNG y el de otro el 86%, así que al encajarlos por el
+// lienzo uno salía 11% más grande que el otro y la pieza se veía
+// cargada hacia un lado. Se mide el contenido real y se encaja ESE.
+const cacheCaja = new WeakMap<HTMLImageElement, ContentBox | null>();
+
+function contentBox(img: HTMLImageElement): ContentBox | null {
+  const guardado = cacheCaja.get(img);
+  if (guardado !== undefined) return guardado;
+
+  let caja: ContentBox | null = null;
+  try {
+    // Un muestreo de 200px basta para hallar los bordes y es barato.
+    const escala = Math.min(1, 200 / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * escala));
+    const h = Math.max(1, Math.round(img.height * escala));
+    const lienzo = document.createElement("canvas");
+    lienzo.width = w;
+    lienzo.height = h;
+    const c = lienzo.getContext("2d");
+    if (c) {
+      c.drawImage(img, 0, 0, w, h);
+      const datos = c.getImageData(0, 0, w, h).data;
+      let minX = w, minY = h, maxX = -1, maxY = -1;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (datos[(y * w + x) * 4 + 3] > 12) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX >= 0) {
+        caja = {
+          sx: minX / escala,
+          sy: minY / escala,
+          sw: (maxX - minX + 1) / escala,
+          sh: (maxY - minY + 1) / escala,
+        };
+      }
+    }
+  } catch {
+    // Si el bucket no manda CORS, getImageData lanza: se usa el PNG entero.
+    caja = null;
+  }
+  cacheCaja.set(img, caja);
+  return caja;
+}
+
 /** Escudo del equipo, o un círculo con la inicial si no hay imagen. */
 function drawCrest(
   ctx: CanvasRenderingContext2D,
@@ -274,11 +338,18 @@ function drawCrest(
   }
 
   if (crest) {
-    // Encajar sin deformar: el lado largo manda.
-    const scale = Math.min(size / crest.width, size / crest.height);
-    const w = crest.width * scale;
-    const h = crest.height * scale;
-    ctx.drawImage(crest, cx - w / 2, cy - h / 2, w, h);
+    // Encajar sin deformar el CONTENIDO, no el lienzo: así dos escudos
+    // con distinto margen transparente salen del mismo tamaño.
+    const caja = contentBox(crest) ?? {
+      sx: 0,
+      sy: 0,
+      sw: crest.width,
+      sh: crest.height,
+    };
+    const scale = Math.min(size / caja.sw, size / caja.sh);
+    const w = caja.sw * scale;
+    const h = caja.sh * scale;
+    ctx.drawImage(crest, caja.sx, caja.sy, caja.sw, caja.sh, cx - w / 2, cy - h / 2, w, h);
     return;
   }
 
@@ -447,14 +518,21 @@ function drawMatchBody(
     ctx.fillText("VS", L.w / 2, crestY + 36);
   }
 
-  // Nombres bajo cada escudo, con su color como subrayado.
+  // Nombres bajo cada escudo, con su color como subrayado. Los dos van
+  // al MISMO tamaño —manda el que menos quepa—: ajustar cada uno por
+  // separado dejaba el nombre corto enorme al lado del largo y la pieza
+  // se veía cargada hacia ese lado.
   const nameY = blockTop + crestSize + 56;
+  const tamNombre = Math.min(
+    fitText(ctx, data.home.name.toUpperCase(), (s) => `${s}px ${display}`, 420, 56, 28),
+    fitText(ctx, data.away.name.toUpperCase(), (s) => `${s}px ${display}`, 420, 56, 28),
+  );
   for (const [cx, side, accent] of [
     [leftX, data.home, homeAccent],
     [rightX, data.away, awayAccent],
   ] as const) {
     const name = side.name.toUpperCase();
-    const size = fitText(ctx, name, (s) => `${s}px ${display}`, 420, 56, 28);
+    const size = tamNombre;
     ctx.font = `${size}px ${display}`;
     ctx.fillStyle = PAPER;
     ctx.fillText(name, cx, nameY);
@@ -645,7 +723,10 @@ function drawRankBody(
   const width = L.w - 180;
   // El alto de fila sale del espacio libre: con alto fijo, la última
   // quedaba pegada al pie.
-  const band = L.footerY - L.bodyTop - 40;
+  // La nota al pie se descuenta antes de repartir el alto de fila, si no
+  // la última fila se le monta encima.
+  const notaH = data.footnote ? 54 : 0;
+  const band = L.footerY - L.bodyTop - 40 - notaH;
   const rowH = Math.min(
     data.format === "story" ? 150 : 126,
     band / Math.max(1, data.rows.length),
@@ -708,6 +789,14 @@ function drawRankBody(
     ctx.textAlign = "right";
     ctx.fillText(data.unit.toUpperCase(), valueX, top + rowH * 0.63);
   });
+
+  // Quien quedó fuera del corte por empate: se dice, no se esconde.
+  if (data.footnote) {
+    ctx.textAlign = "center";
+    ctx.font = `500 28px ${sans}`;
+    ctx.fillStyle = MUTED;
+    ctx.fillText(data.footnote, L.w / 2, y + data.rows.length * rowH + 34);
+  }
 }
 
 function drawTeamBody(
