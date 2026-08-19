@@ -26,8 +26,15 @@ import {
   type TeamSide,
 } from "@/lib/post-image";
 import { TeamCardsButton } from "@/components/team-cards-button";
+import { renderCardImage } from "@/lib/card-image";
+import { renderPlayerPost } from "@/lib/post-image";
 import type { CardImageData } from "@/lib/card-image";
 import { cn } from "@/lib/utils";
+
+/** El estudio ofrece un tipo más que los que sabe dibujar renderPostImage:
+ *  "figura" se compone en dos pasos (carta + marco), así que no forma
+ *  parte de PieceKind. */
+type StudioKind = PieceKind | "figura";
 
 const SITE = "dreamteamcolombia.vercel.app";
 const TAGS = "#DreamTeamColombia #FutbolAmateur #Montería #LaF8 #CanchaF8";
@@ -55,8 +62,17 @@ export interface TeamPiece {
   cards: CardImageData[];
 }
 
+export interface MvpPiece {
+  matchId: string;
+  label: string;
+  eyebrow: string;
+  marker: string;
+  card: CardImageData;
+}
+
 export interface PiecesData {
   matches: MatchPiece[];
+  mvps: MvpPiece[];
   standings: { eyebrow: string; rows: StandingLite[] };
   scorers: { eyebrow: string; rows: RankLite[] };
   assists: { eyebrow: string; rows: RankLite[] };
@@ -70,12 +86,13 @@ interface Rendered {
   blob: Blob;
 }
 
-const KINDS: { value: PieceKind; label: string; hint: string }[] = [
+const KINDS: { value: StudioKind; label: string; hint: string }[] = [
   { value: "anuncio", label: "Anuncio", hint: "Antes del partido" },
   { value: "resultado", label: "Resultado", hint: "Después del partido" },
   { value: "posiciones", label: "Posiciones", hint: "La tabla al día" },
   { value: "goleadores", label: "Goleadores", hint: "Los que la rompen" },
   { value: "asistencias", label: "Asistencias", hint: "Los que la sirven" },
+  { value: "figura", label: "Figura", hint: "El mejor del partido" },
   { value: "equipo", label: "Equipo", hint: "Escudo y nómina" },
   { value: "penales", label: "Penales", hint: "Ranking del reto" },
 ];
@@ -86,13 +103,18 @@ const FORMATS: { value: PieceFormat; label: string; hint: string }[] = [
 ];
 
 /** Los rankings dejan escoger cuántos entran en la pieza. */
-function esRanking(kind: PieceKind) {
+function esRanking(kind: StudioKind) {
   return kind === "goleadores" || kind === "asistencias" || kind === "penales";
 }
 
 /** Los tipos que dependen de escoger algo más en un selector. */
-function needsPicker(kind: PieceKind) {
-  return kind === "anuncio" || kind === "resultado" || kind === "equipo";
+function needsPicker(kind: StudioKind) {
+  return (
+    kind === "anuncio" ||
+    kind === "resultado" ||
+    kind === "equipo" ||
+    kind === "figura"
+  );
 }
 
 export function PiecesStudio({ data }: { data: PiecesData }) {
@@ -101,10 +123,11 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     data.matches.findIndex((m) => !m.finished),
   );
 
-  const [kind, setKind] = useState<PieceKind>("anuncio");
+  const [kind, setKind] = useState<StudioKind>("anuncio");
   const [format, setFormat] = useState<PieceFormat>("feed");
   const [matchId, setMatchId] = useState(data.matches[firstPending]?.id ?? "");
   const [teamId, setTeamId] = useState(data.teams[0]?.id ?? "");
+  const [mvpId, setMvpId] = useState(data.mvps[0]?.matchId ?? "");
   // 0 = todos. Seis alcanza cuando el torneo avanza y hay diferencias;
   // al principio, con muchos empatados, conviene mostrarlos a todos.
   const [cuantos, setCuantos] = useState(6);
@@ -119,6 +142,10 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const team = useMemo(
     () => data.teams.find((t) => t.id === teamId),
     [data.teams, teamId],
+  );
+  const mvp = useMemo(
+    () => data.mvps.find((m) => m.matchId === mvpId),
+    [data.mvps, mvpId],
   );
 
   // Un tipo sin datos no se puede dibujar; el aviso explica qué falta.
@@ -135,8 +162,10 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       return "Nadie ha jugado el reto de penales todavía.";
     if (kind === "equipo" && !team)
       return "Todavía no hay equipos. Ármalos en Equipos.";
+    if (kind === "figura" && !mvp)
+      return "Todavía no has elegido ninguna figura. Se escoge en Resultados.";
     return null;
-  }, [kind, match, team, data]);
+  }, [kind, match, team, mvp, data]);
 
   const piece = useMemo<PostImageData | null>(() => {
     if (missing) return null;
@@ -236,7 +265,8 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           players: team.players,
         };
       default:
-        // "alineacion" se arma desde /admin/alineaciones, no acá.
+        // "alineacion" se arma desde /admin/alineaciones, y "figura" se
+        // dibuja en dos pasos (carta y luego marco), fuera de este switch.
         return null;
     }
   }, [kind, format, match, team, data, missing, cuantos]);
@@ -270,6 +300,10 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           : "";
         return `⚽ LOS QUE LA ESTÁN ROMPIENDO\n\nTabla de goleadores del torneo.${lider}\n\nLa lista completa y las cartas de cada jugador están en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Quién se lleva la bota de oro? 👇\n\n${TAGS}`;
       }
+      case "figura": {
+        if (!mvp) return "";
+        return `🏆 FIGURA DEL PARTIDO\n\n${mvp.card.name}${mvp.card.teamName ? ` (${mvp.card.teamName})` : ""} se llevó los aplausos en el ${mvp.marker}.\n\nSu carta y sus números están en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿De acuerdo con la elección? 👇\n\n${TAGS}`;
+      }
       case "asistencias": {
         const top = data.assists.rows[0];
         const lider = top
@@ -292,29 +326,47 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       default:
         return "";
     }
-  }, [kind, match, team, data]);
+  }, [kind, match, team, mvp, data]);
 
   // La edición se guarda junto a la selección que la produjo: al cambiar
   // de pieza el texto vuelve solo al sugerido, sin efectos ni refs.
-  const captionKey = `${kind}:${matchId}:${teamId}`;
+  const captionKey = `${kind}:${matchId}:${teamId}:${mvpId}`;
   const [edited, setEdited] = useState<{ key: string; text: string } | null>(null);
   const text = edited?.key === captionKey ? edited.text : caption;
 
   // "Está ocupado" se deduce de si lo dibujado corresponde a lo
   // seleccionado, en vez de setearlo dentro del efecto: React 19 marca
   // como error el setState síncrono en el cuerpo de un efecto.
-  const key = piece ? `${kind}:${format}:${matchId}:${teamId}:${cuantos}` : "";
-  const busy = Boolean(piece) && rendered?.key !== key;
-  const preview = piece && rendered?.key === key ? rendered.url : null;
-  const blob = piece && rendered?.key === key ? rendered.blob : null;
+  const esFigura = kind === "figura" && Boolean(mvp) && !missing;
+  const dibujable = Boolean(piece) || esFigura;
+  const key = dibujable
+    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}`
+    : "";
+  const busy = dibujable && rendered?.key !== key;
+  const preview = dibujable && rendered?.key === key ? rendered.url : null;
+  const blob = dibujable && rendered?.key === key ? rendered.blob : null;
 
   // Redibuja cuando cambia la selección. El objeto URL anterior se libera
   // justo cuando lo reemplaza el nuevo, para no dejar blobs colgando.
   useEffect(() => {
-    if (!piece) return;
+    if (!dibujable) return;
     let cancelled = false;
 
-    renderPostImage(piece)
+    // La figura son dos pasos: primero su carta FIFA, después el marco de
+    // Instagram con el encabezado encima.
+    const dibujar = async () => {
+      if (esFigura && mvp) {
+        const carta = await renderCardImage(mvp.card);
+        return renderPlayerPost(carta, mvp.card.teamColor ?? null, {
+          eyebrow: mvp.eyebrow,
+          headline: "Figura del partido",
+          format,
+        });
+      }
+      return renderPostImage(piece!);
+    };
+
+    dibujar()
       .then((result) => {
         if (cancelled) return;
         const url = URL.createObjectURL(result);
@@ -331,7 +383,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     return () => {
       cancelled = true;
     };
-  }, [piece, key]);
+  }, [piece, key, dibujable, esFigura, mvp, format]);
 
   // Suelta el último blob al salir de la página.
   useEffect(() => {
@@ -340,7 +392,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     };
   }, []);
 
-  function selectKind(next: PieceKind) {
+  function selectKind(next: StudioKind) {
     setKind(next);
     // Un partido ya jugado casi siempre se quiere como resultado, y al revés.
     if (next === "resultado" && match && !match.finished) {
@@ -357,8 +409,14 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     typeof navigator !== "undefined" && typeof navigator.canShare === "function";
 
   async function download() {
-    if (!blob || !piece) return;
-    const file = new File([blob], postFileName(piece), { type: "image/png" });
+    if (!blob) return;
+    const nombre =
+      esFigura && mvp
+        ? `dt-figura-${mvp.card.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${format}.png`
+        : piece
+          ? postFileName(piece)
+          : "dt-pieza.png";
+    const file = new File([blob], nombre, { type: "image/png" });
 
     if (canShareFiles && navigator.canShare({ files: [file] })) {
       try {
@@ -458,9 +516,26 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         {needsPicker(kind) ? (
           <div className="space-y-2">
             <Label htmlFor="objetivo">
-              {kind === "equipo" ? "Equipo" : "Partido"}
+              {kind === "equipo"
+                ? "Equipo"
+                : kind === "figura"
+                  ? "Figura"
+                  : "Partido"}
             </Label>
-            {kind === "equipo" ? (
+            {kind === "figura" ? (
+              <select
+                id="objetivo"
+                className="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover"
+                value={mvpId}
+                onChange={(e) => setMvpId(e.target.value)}
+              >
+                {data.mvps.map((m) => (
+                  <option key={m.matchId} value={m.matchId}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            ) : kind === "equipo" ? (
               <Select value={teamId} onValueChange={setTeamId}>
                 <SelectTrigger id="objetivo" className="w-full">
                   <SelectValue />

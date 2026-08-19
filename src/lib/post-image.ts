@@ -1188,12 +1188,12 @@ export async function renderPlayerPost(
   teamColor: string | null,
   /** Con encabezado la carta se achica y sube; sin él ocupa todo. Es lo
    *  que separa "una carta más del equipo" de "la figura del partido". */
-  titulo?: { eyebrow: string; headline: string },
+  titulo?: { eyebrow: string; headline: string; format?: PieceFormat },
 ): Promise<Blob> {
   await document.fonts.ready;
 
   const sans = fontStack("--font-archivo", "system-ui, sans-serif");
-  const L = LAYOUT.feed;
+  const L = LAYOUT[titulo?.format ?? "feed"];
   const accent = readableAccent(teamColor);
 
   const canvas = document.createElement("canvas");
@@ -1224,30 +1224,39 @@ export async function renderPlayerPost(
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
 
+    // La carta se estira hasta llenar lo que quede libre, así el mismo
+    // código sirve para feed y para story sin números escritos a mano.
+    const pieAlto = 90;
     let cartaTop = 70;
-    let cartaAlto = 1190;
 
     if (titulo) {
+      const eyebrowY = L.eyebrowY;
       ctx.fillStyle = BLUE;
       ctx.font = `600 26px ${sans}`;
-      tracked(ctx, titulo.eyebrow.toUpperCase(), L.w / 2, 108, 5);
+      tracked(ctx, titulo.eyebrow.toUpperCase(), L.w / 2, eyebrowY, 5);
 
       const encabezado = titulo.headline.toUpperCase();
       const tam = fitText(ctx, encabezado, (v) => `${v}px ${display}`, L.w - 140, 96, 52);
       ctx.font = `${tam}px ${display}`;
       ctx.fillStyle = VOLT;
-      ctx.fillText(encabezado, L.w / 2, 196);
+      ctx.fillText(encabezado, L.w / 2, eyebrowY + 88);
 
       ctx.fillStyle = VOLT;
-      ctx.fillRect(L.w / 2 - 60, 222, 120, 5);
+      ctx.fillRect(L.w / 2 - 60, eyebrowY + 114, 120, 5);
 
-      cartaTop = 258;
-      cartaAlto = 1000;
+      cartaTop = eyebrowY + 150;
     }
 
+    // Además de la altura libre, la carta no puede pasarse de ancho.
+    const altoDisponible = L.h - cartaTop - pieAlto;
+    const razon = carta ? carta.width / carta.height : 900 / 1400;
+    const cartaAlto = Math.min(altoDisponible, (L.w - 120) / razon);
+
     if (carta) {
-      const ancho = (carta.width / carta.height) * cartaAlto;
-      ctx.drawImage(carta, L.w / 2 - ancho / 2, cartaTop, ancho, cartaAlto);
+      const ancho = razon * cartaAlto;
+      // Centrada en la banda libre, no pegada arriba.
+      const y = cartaTop + (altoDisponible - cartaAlto) / 2;
+      ctx.drawImage(carta, L.w / 2 - ancho / 2, y, ancho, cartaAlto);
     }
 
     ctx.textAlign = "center";

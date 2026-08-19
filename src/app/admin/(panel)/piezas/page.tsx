@@ -114,8 +114,39 @@ export default async function PiezasPage() {
   const lastWeek = playedWeeks.size > 0 ? Math.max(...playedWeeks) : 0;
   const weekLabel = lastWeek > 0 ? `Después de la semana ${lastWeek}` : "Fase de grupos";
 
+  // Figuras ya elegidas, con todo lo que necesita su carta.
+  const mvps = matches
+    .filter((m) => m.mvp_player_id && m.home_team_id && m.away_team_id)
+    .map((match) => {
+      const entry = roster.find((r) => r.player_id === match.mvp_player_id);
+      if (!entry) return null;
+      const team = teams.find((t) => t.id === entry.team_id);
+      const home = teamSide(teams, match.home_team_id);
+      const away = teamSide(teams, match.away_team_id);
+      return {
+        matchId: match.id,
+        label: `Semana ${match.week} · ${entry.players.full_name}`,
+        eyebrow: `Semana ${match.week} · ${home.name} vs ${away.name}`,
+        marker: `${home.name} ${match.home_score ?? 0}-${match.away_score ?? 0} ${away.name}`,
+        card: {
+          name: entry.players.full_name,
+          age: entry.players.age,
+          positionShort: POSITION_SHORT[entry.players.position],
+          footLabel: FOOT_LABELS[entry.players.dominant_foot],
+          memberSince: entry.players.member_since,
+          photoUrl: entry.players.photo_url,
+          teamName: team?.name ?? null,
+          teamColor: team?.color ?? null,
+          crestUrl: team?.crest_url ?? null,
+          isCaptain: Boolean(entry.is_captain),
+        },
+      };
+    })
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+
   const pieces: PiecesData = {
     matches: matchOptions,
+    mvps,
     standings: {
       eyebrow: weekLabel,
       rows: standings.map((row) => ({
