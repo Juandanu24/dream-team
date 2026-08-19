@@ -38,9 +38,13 @@ export interface StandingLite {
   points: number;
 }
 
-/** Una línea de la cancha, de arquero a delantera. */
+/** Una línea de la cancha, de arquero a delantera.
+ *  `players` tiene largo `width` y admite huecos: una alineación a medio
+ *  armar debe dejar la casilla vacía en su sitio, no repartir a los que
+ *  hay. Si no, dos defensas de tres se dibujan como si fueran dos. */
 export interface LineupRow {
-  players: { name: string; isCaptain?: boolean }[];
+  width: number;
+  players: ({ name: string; isCaptain?: boolean } | null)[];
 }
 
 export interface RankLite {
@@ -634,6 +638,38 @@ function shortName(full: string): string {
   return `${parts[0][0]}. ${parts[parts.length - 1]}`;
 }
 
+/** Variante alternativa: "Juan David Pérez" → "Juan P." */
+function altName(full: string): string {
+  const parts = full.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+}
+
+// Dos "J. PÉREZ" en la misma cancha son indistinguibles y la pieza
+// miente sobre quién juega. Se desempata a "JUAN P." y, si vuelven a
+// chocar, al nombre completo.
+function shirtNames(nombres: string[]): Map<string, string> {
+  const out = new Map<string, string>();
+  const porCorto = new Map<string, string[]>();
+  for (const nombre of nombres) {
+    const corto = shortName(nombre);
+    porCorto.set(corto, [...(porCorto.get(corto) ?? []), nombre]);
+  }
+  for (const [corto, grupo] of porCorto) {
+    const distintos = [...new Set(grupo)];
+    if (distintos.length === 1) {
+      out.set(distintos[0], corto);
+      continue;
+    }
+    const alternativos = distintos.map(altName);
+    const sinChoque = new Set(alternativos).size === alternativos.length;
+    distintos.forEach((nombre, i) => {
+      out.set(nombre, sinChoque ? alternativos[i] : nombre);
+    });
+  }
+  return out;
+}
+
 function drawLineupBody(
   ctx: CanvasRenderingContext2D,
   data: Extract<PostImageData, { kind: "alineacion" }>,
@@ -643,6 +679,14 @@ function drawLineupBody(
   sans: string,
 ) {
   const accent = readableAccent(data.team.color);
+
+  // Las etiquetas se resuelven contra TODA la pieza (cancha + banca),
+  // porque el choque puede ser entre un titular y un suplente.
+  const etiquetas = shirtNames([
+    ...data.rows.flatMap((r) => r.players.filter(Boolean).map((p) => p!.name)),
+    ...data.bench,
+  ]);
+  const etiqueta = (nombre: string) => etiquetas.get(nombre) ?? shortName(nombre);
 
   // La cancha ocupa la banda libre, menos la línea de suplentes si hay.
   const benchH = data.bench.length > 0 ? 96 : 0;
@@ -702,15 +746,31 @@ function drawLineupBody(
   const marginBottom = Math.min(0.88, 1 - (disc * 1.78 + 24) / pitchH);
 
   data.rows.forEach((row, rowIndex) => {
-    if (row.players.length === 0) return;
+    const width = Math.max(row.width, row.players.length);
+    if (width === 0) return;
     const t =
       n === 1
         ? marginBottom
         : marginBottom - ((marginBottom - marginTop) * rowIndex) / (n - 1);
     const y = top + pitchH * t;
 
-    row.players.forEach((player, i) => {
-      const x = pitchX + (pitchW * (i + 1)) / (row.players.length + 1);
+    for (let i = 0; i < width; i++) {
+      const player = row.players[i] ?? null;
+      const x = pitchX + (pitchW * (i + 1)) / (width + 1);
+
+      // Casilla vacía: se marca con línea punteada para que se note que
+      // falta alguien, en vez de correr al resto y mentir la formación.
+      if (!player) {
+        ctx.save();
+        ctx.setLineDash([8, 8]);
+        ctx.beginPath();
+        ctx.arc(x, y, disc, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.28)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+        continue;
+      }
 
       // Disco con el color del equipo.
       ctx.beginPath();
@@ -737,7 +797,7 @@ function drawLineupBody(
       ctx.textBaseline = "alphabetic";
 
       // Nombre bajo el disco, con fondo para que se lea sobre el césped.
-      const label = shortName(player.name).toUpperCase();
+      const label = etiqueta(player.name).toUpperCase();
       ctx.font = `${Math.round(disc * 0.58)}px ${display}`;
       const wLabel = ctx.measureText(label).width;
       const padX = 12;
@@ -760,7 +820,7 @@ function drawLineupBody(
         ctx.font = `${Math.round(disc * 0.44)}px ${display}`;
         ctx.fillText("C", x + disc * 0.86, y - disc * 0.62);
       }
-    });
+    }
   });
 
   // Escudo y formación, arriba a la izquierda de la cancha.
@@ -780,7 +840,7 @@ function drawLineupBody(
     ctx.fillStyle = MUTED;
     tracked(ctx, "SUPLENTES", L.w / 2, bottom + 42, 5);
 
-    const bench = data.bench.map(shortName).join("  ·  ").toUpperCase();
+    const bench = data.bench.map(etiqueta).join("  ·  ").toUpperCase();
     const size = fitText(ctx, bench, (s) => `${s}px ${display}`, L.w - 160, 34, 18);
     ctx.font = `${size}px ${display}`;
     ctx.fillStyle = "#DEDEDE";

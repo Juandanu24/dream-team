@@ -118,8 +118,17 @@ export async function saveLineup(input: SaveLineupInput): Promise<string> {
   return lineup.id;
 }
 
-/** Publica la alineación: la hace visible en la web y manda el push. */
-export async function publishLineup(lineupId: string): Promise<number> {
+/** Publica la alineación: la hace visible en la web y avisa por push.
+ *
+ *  `notify` lo decide quien llama, no la acción. Antes esto se saltaba
+ *  el push cuando la alineación ya estaba publicada, así que "Republicar"
+ *  reescribía la fecha, devolvía 0 y mostraba un toast de éxito sin haber
+ *  avisado a nadie: fallaba en silencio con confirmación positiva. Para
+ *  corregir un dato sin molestar a nadie está el botón Guardar. */
+export async function publishLineup(
+  lineupId: string,
+  notify = true,
+): Promise<number> {
   await requireAdmin();
   const supabase = createAdminClient();
 
@@ -135,23 +144,26 @@ export async function publishLineup(lineupId: string): Promise<number> {
     (lineup as unknown as { teams: { name: string } | null }).teams?.name ??
     "el equipo";
 
-  const yaPublicada = Boolean(lineup.published_at);
-
+  // La fecha se sella ANTES de notificar: sendPushToAll nunca lanza y
+  // devuelve 0 si algo falla, así que el peor caso es "publicada pero
+  // sin avisar" —que el admin ve en el toast y reintenta— en vez de
+  // "avisada pero sin publicar", que deja el link apuntando a nada.
   const { error: updateError } = await supabase
     .from("lineups")
     .update({ published_at: new Date().toISOString() })
     .eq("id", lineupId);
   if (updateError) throw updateError;
 
-  // Republicar una alineación editada no vuelve a notificar: el tag
-  // agrupa la notificación, pero igual sonaría el teléfono de todos.
   let enviados = 0;
-  if (!yaPublicada) {
+  if (notify) {
+    // El tag va por PARTIDO, no por alineación: al publicar los dos
+    // equipos, el segundo aviso reemplaza al primero en la bandeja en
+    // vez de apilar dos notificaciones del mismo partido.
     enviados = await sendPushToAll({
-      title: `📋 Alineación de ${teamName}`,
-      body: "Ya está la titular para el próximo partido. Míratela.",
+      title: "📋 Alineaciones listas",
+      body: `Ya está la titular de ${teamName} para el próximo partido.`,
       url: "/torneo?tab=calendario",
-      tag: `alineacion-${lineupId}`,
+      tag: `alineacion-${lineup.match_id}`,
     });
   }
 

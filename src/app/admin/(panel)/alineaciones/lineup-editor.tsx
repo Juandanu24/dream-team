@@ -13,13 +13,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ShareTextButton } from "@/components/share-text-button";
 import { LineupPieceButton } from "@/components/lineup-piece-button";
@@ -90,7 +83,18 @@ function casillasDe(formation: string): Casilla[] {
   return out;
 }
 
-const SIN_ASIGNAR = "__vacio__";
+/** Nombres de una línea, saltando las casillas sin asignar. */
+function nombresDe(players: ({ name: string } | null)[]): string[] {
+  return players.filter((p): p is { name: string } => p !== null).map((p) => p.name);
+}
+
+const SIN_ASIGNAR = "";
+
+// Misma clase que add-week-form y match-event-form: en el celular el
+// <select> nativo abre el picker del sistema. Con 18 casillas y una
+// mano, eso decide si la pantalla se usa o no.
+const selectClass =
+  "border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover";
 
 export function LineupEditor({ target }: { target: EditorTarget }) {
   const [formation, setFormation] = useState(
@@ -181,18 +185,20 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
   // Datos para compartir e imagen, calculados de lo que hay en pantalla.
   const lines = formationLines(formation);
   const filas = useMemo(() => {
+    // Sin filtrar: una casilla vacía tiene que llegar como null al
+    // dibujo, para que no corra al resto y mienta la formación.
     const porLinea = (line: LineupLine, count: number) =>
-      Array.from({ length: count }, (_, i) => asignados[`${line}:${i}`])
-        .filter(Boolean)
-        .map((playerId) => {
-          const p = target.squad.find((s) => s.playerId === playerId);
-          return { name: p?.name ?? "—", isCaptain: p?.isCaptain };
-        });
+      Array.from({ length: count }, (_, i) => {
+        const playerId = asignados[`${line}:${i}`];
+        if (!playerId) return null;
+        const p = target.squad.find((s) => s.playerId === playerId);
+        return { name: p?.name ?? "—", isCaptain: p?.isCaptain };
+      });
     return [
-      { players: porLinea("gk", 1) },
-      { players: porLinea("def", lines.def) },
-      { players: porLinea("mid", lines.mid) },
-      { players: porLinea("fwd", lines.fwd) },
+      { width: 1, players: porLinea("gk", 1) },
+      { width: lines.def, players: porLinea("def", lines.def) },
+      { width: lines.mid, players: porLinea("mid", lines.mid) },
+      { width: lines.fwd, players: porLinea("fwd", lines.fwd) },
     ];
   }, [asignados, lines, target.squad]);
 
@@ -203,10 +209,10 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
     venue: target.venue,
     formation,
     lines: [
-      { label: "Arquero", players: filas[0].players.map((p) => p.name) },
-      { label: "Defensa", players: filas[1].players.map((p) => p.name) },
-      { label: "Mediocampo", players: filas[2].players.map((p) => p.name) },
-      { label: "Delantera", players: filas[3].players.map((p) => p.name) },
+      { label: "Arquero", players: nombresDe(filas[0].players) },
+      { label: "Defensa", players: nombresDe(filas[1].players) },
+      { label: "Mediocampo", players: nombresDe(filas[2].players) },
+      { label: "Delantera", players: nombresDe(filas[3].players) },
     ],
     bench: suplentes.map((p) => p.name),
     notes: notes.trim() || null,
@@ -220,19 +226,19 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={`formacion-${target.teamId}`}>Formación</Label>
-          <Select value={formation} onValueChange={setFormation}>
-            <SelectTrigger id={`formacion-${target.teamId}`} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {FORMATIONS.map((f) => (
-                <SelectItem key={f} value={f}>
-                  {f} · {formationLines(f).def} defensas,{" "}
-                  {formationLines(f).mid} medios, {formationLines(f).fwd} arriba
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select
+            id={`formacion-${target.teamId}`}
+            className={selectClass}
+            value={formation}
+            onChange={(e) => setFormation(e.target.value)}
+          >
+            {FORMATIONS.map((f) => (
+              <option key={f} value={f}>
+                {f} · {formationLines(f).def} def, {formationLines(f).mid} med,{" "}
+                {formationLines(f).fwd} del
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2">
           <Label htmlFor={`notas-${target.teamId}`}>Nota (opcional)</Label>
@@ -274,27 +280,22 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
                   const key = `${c.line}:${c.slot}`;
                   const value = asignados[key] ?? SIN_ASIGNAR;
                   return (
-                    <Select
+                    <select
                       key={key}
+                      className={selectClass}
                       value={value}
-                      onValueChange={(v) => asignar(key, v)}
+                      aria-label={c.label}
+                      onChange={(e) => asignar(key, e.target.value)}
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={c.label} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SIN_ASIGNAR}>
-                          — {c.label} —
-                        </SelectItem>
-                        {target.squad.map((p) => (
-                          <SelectItem key={p.playerId} value={p.playerId}>
-                            {p.name}
-                            {p.isCaptain ? " (C)" : ""}
-                            {p.isGoalkeeper ? " 🧤" : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <option value={SIN_ASIGNAR}>— {c.label} —</option>
+                      {target.squad.map((p) => (
+                        <option key={p.playerId} value={p.playerId}>
+                          {p.name}
+                          {p.isCaptain ? " (C)" : ""}
+                          {p.isGoalkeeper ? " (ARQ)" : ""}
+                        </option>
+                      ))}
+                    </select>
                   );
                 })}
               </div>
@@ -340,22 +341,26 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
           disabled={pending || !completa}
           title={
             completa
-              ? "Guardar, publicar y notificar por push"
+              ? "Guardar, publicar y avisar por push a todos"
               : "Completa los titulares primero"
           }
           onClick={() =>
             guardar(async (lineupId) => {
               const enviados = await publishLineup(lineupId);
-              toast.success(
-                enviados > 0
-                  ? `Publicada y notificada a ${enviados} ${enviados === 1 ? "persona" : "personas"}`
-                  : "Alineación publicada",
-              );
+              if (enviados > 0) {
+                toast.success(
+                  `Publicada y avisada a ${enviados} ${enviados === 1 ? "persona" : "personas"}`,
+                );
+              } else {
+                // Distinguirlo importa: antes esto decía "publicada" a
+                // secas y el admin creía que había avisado.
+                toast.warning("Publicada, pero no salió ningún aviso");
+              }
             })
           }
         >
           <Megaphone aria-hidden />
-          {publicada ? "Republicar" : "Publicar y notificar"}
+          {publicada ? "Republicar y avisar" : "Publicar y avisar"}
         </Button>
 
         <ShareTextButton text={whatsapp} title="Compartir por WhatsApp" />
