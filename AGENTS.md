@@ -106,6 +106,14 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   un "+N más" cuando la lista no cabe: como una sola línea, en un
   partido de muchos goles se salía del panel. El autogol aparece en la
   columna del equipo que se benefició, marcado (e.c.), para que los
-  nombres de cada columna cuadren con su marcador.
+  nombres de cada columna cuadren con su marcador. En la cancha de
+  alineaciones cada jugador va con su foto recortada en círculo; las
+  iniciales quedan solo de respaldo para quien no tenga. Las fotos se
+  cargan una vez por URL, no una por jugador.
+- En los editores de alineación y once ideal, el que ya está puesto en una
+  casilla NO aparece en las otras listas: así se ve de un vistazo quién
+  falta y no hay forma de moverlo de posición sin querer.
+- La figura del partido es POR PARTIDO (columna en `matches`), no por
+  semana: en una semana hay dos partidos y por tanto dos figuras.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

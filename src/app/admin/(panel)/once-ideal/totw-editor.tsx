@@ -30,6 +30,7 @@ const SIN_ASIGNAR = "";
 export interface TotwCandidate {
   playerId: string;
   name: string;
+  photoUrl: string | null;
   teamName: string;
   isGoalkeeper: boolean;
 }
@@ -111,7 +112,7 @@ export function TotwEditor({
         const playerId = asignados[`${line}:${i}`];
         if (!playerId) return null;
         const p = candidates.find((c) => c.playerId === playerId);
-        return { name: p?.name ?? "—" };
+        return { name: p?.name ?? "—", photoUrl: p?.photoUrl ?? null };
       });
     return [
       { width: 1, players: porLinea("gk", 1) },
@@ -238,15 +239,22 @@ export function TotwEditor({
                     const key = `${c.line}:${c.slot}`;
                     // Para el arco solo se ofrecen arqueros; en el resto de
                     // líneas juega cualquiera, que en fútbol amateur pasa.
+                    const puestos = new Set(
+                      Object.values(asignados).filter(Boolean),
+                    );
+                    const value = asignados[key] ?? SIN_ASIGNAR;
+                    const libres = candidates.filter(
+                      (p) => !puestos.has(p.playerId) || p.playerId === value,
+                    );
                     const opciones =
                       c.line === "gk"
-                        ? candidates.filter((p) => p.isGoalkeeper)
-                        : candidates;
+                        ? libres.filter((p) => p.isGoalkeeper)
+                        : libres;
                     return (
                       <select
                         key={key}
                         className={selectClass}
-                        value={asignados[key] ?? SIN_ASIGNAR}
+                        value={value}
                         aria-label={c.label}
                         onChange={(e) => asignar(key, e.target.value)}
                       >

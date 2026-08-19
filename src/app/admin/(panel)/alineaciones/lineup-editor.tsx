@@ -34,6 +34,7 @@ import {
 export interface SquadPlayer {
   playerId: string;
   name: string;
+  photoUrl: string | null;
   isGoalkeeper: boolean;
   isCaptain: boolean;
 }
@@ -192,7 +193,11 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
         const playerId = asignados[`${line}:${i}`];
         if (!playerId) return null;
         const p = target.squad.find((s) => s.playerId === playerId);
-        return { name: p?.name ?? "—", isCaptain: p?.isCaptain };
+        return {
+          name: p?.name ?? "—",
+          photoUrl: p?.photoUrl ?? null,
+          isCaptain: p?.isCaptain,
+        };
       });
     return [
       { width: 1, players: porLinea("gk", 1) },
@@ -279,6 +284,12 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
                 {delLinea.map((c) => {
                   const key = `${c.line}:${c.slot}`;
                   const value = asignados[key] ?? SIN_ASIGNAR;
+                  // Los que ya están en otra casilla salen de la lista:
+                  // así se ve de un vistazo quién falta por poner, y no
+                  // hay forma de moverlo sin querer de su posición.
+                  const disponibles = target.squad.filter(
+                    (p) => !titulares.has(p.playerId) || p.playerId === value,
+                  );
                   return (
                     <select
                       key={key}
@@ -288,7 +299,7 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
                       onChange={(e) => asignar(key, e.target.value)}
                     >
                       <option value={SIN_ASIGNAR}>— {c.label} —</option>
-                      {target.squad.map((p) => (
+                      {disponibles.map((p) => (
                         <option key={p.playerId} value={p.playerId}>
                           {p.name}
                           {p.isCaptain ? " (C)" : ""}

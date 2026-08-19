@@ -125,7 +125,9 @@ export default async function PiezasPage() {
       const away = teamSide(teams, match.away_team_id);
       return {
         matchId: match.id,
-        label: `Semana ${match.week} · ${entry.players.full_name}`,
+        // La figura es POR PARTIDO: la etiqueta nombra el partido, no
+        // solo la semana, porque en una semana hay dos.
+        label: `S${match.week} · ${home.name} vs ${away.name} · ${entry.players.full_name}`,
         eyebrow: `Semana ${match.week} · ${home.name} vs ${away.name}`,
         marker: `${home.name} ${match.home_score ?? 0}-${match.away_score ?? 0} ${away.name}`,
         card: {

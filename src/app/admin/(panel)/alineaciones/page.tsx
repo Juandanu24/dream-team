@@ -65,6 +65,7 @@ export default async function AlineacionesPage() {
       .map((r) => ({
         playerId: r.player_id,
         name: r.players.full_name,
+        photoUrl: r.players.photo_url,
         isGoalkeeper: r.is_goalkeeper,
         isCaptain: Boolean(r.is_captain),
       }))

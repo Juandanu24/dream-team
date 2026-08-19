@@ -69,6 +69,7 @@ export default async function OnceIdealPage() {
               .map((r) => ({
                 playerId: r.player_id,
                 name: r.players.full_name,
+                photoUrl: r.players.photo_url,
                 teamName:
                   teams.find((t) => t.id === r.team_id)?.name ?? "Sin equipo",
                 isGoalkeeper: r.is_goalkeeper,

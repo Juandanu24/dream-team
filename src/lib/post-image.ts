@@ -51,7 +51,10 @@ export interface ScorerLine {
  *  hay. Si no, dos defensas de tres se dibujan como si fueran dos. */
 export interface LineupRow {
   width: number;
-  players: ({ name: string; isCaptain?: boolean } | null)[];
+  players: (
+    | { name: string; photoUrl?: string | null; isCaptain?: boolean }
+    | null
+  )[];
 }
 
 export interface RankLite {
@@ -909,6 +912,8 @@ function drawLineupBody(
   data: Extract<PostImageData, { kind: "alineacion" }>,
   L: Layout,
   crest: HTMLImageElement | null,
+  /** Fotos ya cargadas, por URL: varios jugadores pueden no tener. */
+  fotos: Map<string, HTMLImageElement | null>,
   display: string,
   sans: string,
 ) {
@@ -1006,29 +1011,48 @@ function drawLineupBody(
         continue;
       }
 
-      // Disco con el color del equipo.
-      ctx.beginPath();
-      ctx.arc(x, y, disc, 0, Math.PI * 2);
-      ctx.fillStyle = `${accent}33`;
-      ctx.fill();
-      ctx.strokeStyle = accent;
-      ctx.lineWidth = 4;
-      ctx.stroke();
+      // La foto manda; las iniciales son el respaldo de quien no tiene.
+      const foto = player.photoUrl ? (fotos.get(player.photoUrl) ?? null) : null;
 
-      // Iniciales dentro del disco.
-      ctx.fillStyle = accent;
-      ctx.font = `${Math.round(disc * 0.82)}px ${display}`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const initials = player.name
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase();
-      ctx.fillText(initials, x, y + disc * 0.04);
-      ctx.textBaseline = "alphabetic";
+      if (foto) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, disc, 0, Math.PI * 2);
+        ctx.clip();
+        // Recorte tipo "cover": la cara llena el disco sin deformarse.
+        const escala = Math.max((disc * 2) / foto.width, (disc * 2) / foto.height);
+        const w = foto.width * escala;
+        const h = foto.height * escala;
+        ctx.drawImage(foto, x - w / 2, y - h / 2, w, h);
+        ctx.restore();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(x, y, disc, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, disc, 0, Math.PI * 2);
+        ctx.fillStyle = `${accent}33`;
+        ctx.fill();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.fillStyle = accent;
+        ctx.font = `${Math.round(disc * 0.82)}px ${display}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const initials = player.name
+          .trim()
+          .split(/\s+/)
+          .slice(0, 2)
+          .map((w) => w[0])
+          .join("")
+          .toUpperCase();
+        ctx.fillText(initials, x, y + disc * 0.04);
+        ctx.textBaseline = "alphabetic";
+      }
 
       // Nombre bajo el disco, con fondo para que se lea sobre el césped.
       const label = etiqueta(player.name).toUpperCase();
@@ -1103,6 +1127,7 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
   let glows: { x: number; color: string }[] = [];
   let crests: (HTMLImageElement | null)[] = [];
   let photos: (HTMLImageElement | null)[] = [];
+  const fotosPorUrl = new Map<string, HTMLImageElement | null>();
 
   if (data.kind === "anuncio" || data.kind === "resultado") {
     crests = await Promise.all([
@@ -1121,6 +1146,21 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
   } else if (data.kind === "equipo" || data.kind === "alineacion") {
     crests = [data.team.crestUrl ? await loadImage(data.team.crestUrl) : null];
     glows = [{ x: L.w * 0.5, color: readableAccent(data.team.color) }];
+
+    if (data.kind === "alineacion") {
+      // Una carga por URL: dos jugadores podrían compartir foto y no
+      // tiene sentido bajarla dos veces.
+      const urls = [
+        ...new Set(
+          data.rows
+            .flatMap((r) => r.players)
+            .map((p) => p?.photoUrl)
+            .filter((u): u is string => Boolean(u)),
+        ),
+      ];
+      const cargadas = await Promise.all(urls.map((u) => loadImage(u)));
+      urls.forEach((u, i) => fotosPorUrl.set(u, cargadas[i]));
+    }
   } else if (
     data.kind === "goleadores" ||
     data.kind === "asistencias" ||
@@ -1141,7 +1181,7 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
   } else if (data.kind === "equipo") {
     drawTeamBody(ctx, data, L, crests[0], display, sans);
   } else if (data.kind === "alineacion") {
-    drawLineupBody(ctx, data, L, crests[0], display, sans);
+    drawLineupBody(ctx, data, L, crests[0], fotosPorUrl, display, sans);
   } else if (
     data.kind === "goleadores" ||
     data.kind === "asistencias" ||
