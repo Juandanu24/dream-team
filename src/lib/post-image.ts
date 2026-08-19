@@ -1167,3 +1167,65 @@ export function postFileName(data: PostImageData) {
         : "";
   return `dt-${data.kind}${detail}-${data.format}.png`;
 }
+
+// ── Carta de jugador como pieza de Instagram ────────────────────────
+
+/** La carta FIFA mide 900×1400 y el feed pide 1080×1350. En un carrusel
+ *  todas las diapositivas comparten la proporción de la primera, así que
+ *  la carta se monta sobre el lienzo de marca en vez de subirse suelta:
+ *  de lo contrario Instagram la recorta y le come la cabeza al jugador. */
+export async function renderPlayerPost(
+  cardBlob: Blob,
+  teamColor: string | null,
+): Promise<Blob> {
+  await document.fonts.ready;
+
+  const sans = fontStack("--font-archivo", "system-ui, sans-serif");
+  const L = LAYOUT.feed;
+  const accent = readableAccent(teamColor);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = L.w;
+  canvas.height = L.h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("No se pudo crear el canvas");
+
+  const url = URL.createObjectURL(cardBlob);
+  try {
+    const carta = await loadImage(url);
+
+    ctx.fillStyle = INK;
+    ctx.fillRect(0, 0, L.w, L.h);
+
+    // Resplandor del color del equipo detrás de la carta.
+    const g = ctx.createRadialGradient(L.w / 2, L.h * 0.44, 80, L.w / 2, L.h * 0.44, L.h * 0.5);
+    g.addColorStop(0, `${accent}2E`);
+    g.addColorStop(1, "transparent");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, L.w, L.h);
+
+    ctx.fillStyle = sweepGradient(ctx, 0, L.w);
+    ctx.fillRect(0, 0, L.w, 12);
+    ctx.fillRect(0, L.h - 12, L.w, 12);
+
+    if (carta) {
+      const alto = 1190;
+      const ancho = (carta.width / carta.height) * alto;
+      ctx.drawImage(carta, L.w / 2 - ancho / 2, 70, ancho, alto);
+    }
+
+    ctx.textAlign = "center";
+    ctx.font = `500 24px ${sans}`;
+    ctx.fillStyle = "#8A8A8A";
+    tracked(ctx, "DREAMTEAMCOLOMBIA.VERCEL.APP", L.w / 2, L.h - 42, 3);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("No se pudo exportar la carta"))),
+      "image/png",
+    );
+  });
+}

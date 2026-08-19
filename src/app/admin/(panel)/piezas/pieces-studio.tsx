@@ -25,6 +25,8 @@ import {
   type StandingLite,
   type TeamSide,
 } from "@/lib/post-image";
+import { TeamCardsButton } from "@/components/team-cards-button";
+import type { CardImageData } from "@/lib/card-image";
 import { cn } from "@/lib/utils";
 
 const SITE = "dreamteamcolombia.vercel.app";
@@ -49,6 +51,7 @@ export interface TeamPiece {
   team: TeamSide;
   captain?: string;
   players: string[];
+  cards: CardImageData[];
 }
 
 export interface PiecesData {
@@ -516,6 +519,14 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
             ))}
           </div>
         </div>
+
+        {kind === "equipo" && team ? (
+          <TeamCardsButton
+            teamName={team.team.name}
+            teamColor={team.team.color}
+            cards={team.cards}
+          />
+        ) : null}
 
         <Button onClick={download} disabled={!blob || busy} className="w-full">
           {busy ? (

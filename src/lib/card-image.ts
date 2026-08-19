@@ -81,6 +81,33 @@ function mix(hex: string, target: string, t: number) {
   return `#${c(r1, r2)}${c(g1, g2)}${c(b1, b2)}`;
 }
 
+/** Achica la fuente hasta que el texto quepa, y solo si aun asi no cabe
+ *  recorta con puntos suspensivos. Antes se cortaban letras a lo bruto:
+ *  "Carli Cardona" salia como "CARLI CARDON", sin ninguna senal de que
+ *  faltaba algo. */
+function fitOrTrim(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  family: string,
+  maxWidth: number,
+  startSize: number,
+  minSize: number,
+) {
+  let size = startSize;
+  ctx.font = `${size}px ${family}`;
+  while (ctx.measureText(text).width > maxWidth && size > minSize) {
+    size -= 2;
+    ctx.font = `${size}px ${family}`;
+  }
+  if (ctx.measureText(text).width <= maxWidth) return text;
+
+  let cut = text;
+  while (cut.length > 1 && ctx.measureText(`${cut}…`).width > maxWidth) {
+    cut = cut.slice(0, -1);
+  }
+  return `${cut.trimEnd()}…`;
+}
+
 export async function renderCardImage(data: CardImageData): Promise<Blob> {
   await document.fonts.ready;
 
@@ -231,11 +258,14 @@ export async function renderCardImage(data: CardImageData): Promise<Blob> {
 
   // ---- Nombre ----
   ctx.fillStyle = "#ffffff";
-  ctx.font = `92px ${display}`;
-  let name = (data.name || "").toUpperCase();
-  while (ctx.measureText(name).width > W - 130 && name.length > 3) {
-    name = name.slice(0, -1);
-  }
+  const name = fitOrTrim(
+    ctx,
+    (data.name || "").toUpperCase(),
+    display,
+    W - 130,
+    92,
+    52,
+  );
   ctx.fillText(name, W / 2, 920);
 
   // Separador con degradado hacia los bordes.
@@ -276,11 +306,14 @@ export async function renderCardImage(data: CardImageData): Promise<Blob> {
     ctx.fillRect(0, 1140, W, 86);
 
     ctx.fillStyle = light;
-    ctx.font = `56px ${display}`;
-    let team = data.teamName.toUpperCase();
-    while (ctx.measureText(team).width > W - 140 && team.length > 3) {
-      team = team.slice(0, -1);
-    }
+    const team = fitOrTrim(
+      ctx,
+      data.teamName.toUpperCase(),
+      display,
+      W - 140,
+      56,
+      34,
+    );
     ctx.fillText(team, W / 2, 1198);
   }
 

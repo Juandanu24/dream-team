@@ -1,6 +1,12 @@
 import { getTournamentData, type EventWithPlayer } from "@/lib/data";
 import { tallyScorers } from "@/lib/match-summary";
-import { STAGE_LABELS, type Match, type Team } from "@/lib/types";
+import {
+  FOOT_LABELS,
+  POSITION_SHORT,
+  STAGE_LABELS,
+  type Match,
+  type Team,
+} from "@/lib/types";
 import { PiecesStudio, type PiecesData } from "./pieces-studio";
 
 export const dynamic = "force-dynamic";
@@ -148,6 +154,23 @@ export default async function PiezasPage() {
         players: squad
           .map((r) => r.players.full_name)
           .sort((a, b) => a.localeCompare(b)),
+        // Datos completos de cada carta, para exportar el multipost
+        // del equipo: escudo + una carta por jugador.
+        cards: squad
+          .slice()
+          .sort((a, b) => a.players.full_name.localeCompare(b.players.full_name))
+          .map((r) => ({
+            name: r.players.full_name,
+            age: r.players.age,
+            positionShort: POSITION_SHORT[r.players.position],
+            footLabel: FOOT_LABELS[r.players.dominant_foot],
+            memberSince: r.players.member_since,
+            photoUrl: r.players.photo_url,
+            teamName: team.name,
+            teamColor: team.color,
+            crestUrl: team.crest_url ?? null,
+            isCaptain: Boolean(r.is_captain),
+          })),
       };
     }),
   };
