@@ -8,6 +8,7 @@ import {
   type Team,
 } from "@/lib/types";
 import { PiecesStudio, type PiecesData } from "./pieces-studio";
+import { WeekPack } from "./week-pack";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,7 @@ export default async function PiezasPage() {
         : { home: [], away: [] };
       return {
         id: match.id,
+        week: match.week,
         label: `Semana ${match.week} · ${home.name} vs ${away.name}`,
         eyebrow: `Semana ${match.week} · ${STAGE_LABELS[match.stage]}`,
         when: formatWhen(match.kickoff_at),
@@ -195,6 +197,7 @@ export default async function PiezasPage() {
         Las imágenes se dibujan con los datos reales del torneo, con las fuentes
         y los colores de la web. Descárgalas y súbelas a Instagram.
       </p>
+      <WeekPack data={pieces} />
       <PiecesStudio data={pieces} />
     </div>
   );

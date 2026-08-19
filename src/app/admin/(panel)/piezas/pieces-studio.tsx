@@ -34,6 +34,7 @@ const TAGS = "#DreamTeamColombia #FutbolAmateur #Montería #LaF8 #CanchaF8";
 
 export interface MatchPiece {
   id: string;
+  week: number;
   label: string;
   eyebrow: string;
   when: string;
