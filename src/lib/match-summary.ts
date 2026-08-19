@@ -127,3 +127,26 @@ export function buildWeekWhatsAppMessage(
 
   return lines.join("\n");
 }
+
+/** "Martes 18 de agosto · 8:00 PM" en hora de Colombia, para las piezas
+ *  de redes. Se arma a mano porque toLocaleString mete comas y "a. m."
+ *  donde no van. */
+export function formatPieceWhen(iso: string | null): string {
+  if (!iso) return "Fecha por definir";
+  const parts = new Intl.DateTimeFormat("es-CO", {
+    timeZone: "America/Bogota",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(new Date(iso));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  const period = get("dayPeriod").replace(/[.\s]/g, "").toUpperCase();
+  return `${get("weekday")} ${get("day")} de ${get("month")} · ${get("hour")}:${get("minute")} ${period}`;
+}
+
+/** Lugar fijo del torneo, usado en las piezas. */
+export const PIECE_VENUE = "Cancha F8 · Montería";

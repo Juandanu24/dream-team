@@ -22,6 +22,15 @@ export interface CardImageData {
 const W = 900;
 const H = 1400;
 
+// El barrido del logo: azul profundo → cian → aqua → lima → amarillo.
+const SWEEP: [number, string][] = [
+  [0, "#012D9B"],
+  [0.28, "#029CF3"],
+  [0.46, "#03E4FA"],
+  [0.7, "#A4E405"],
+  [1, "#E1F804"],
+];
+
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -152,11 +161,14 @@ export async function renderCardImage(data: CardImageData): Promise<Blob> {
   if (crest) {
     ctx.drawImage(crest, W - 250, 105, 170, 170);
   } else {
-    ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
-    ctx.font = `52px ${display}`;
-    ctx.fillText("DREAM", W - 80, 175);
-    ctx.fillText("TEAM", W - 80, 228);
+    const mark = await loadImage("/logo-dt.webp");
+    if (mark) {
+      const h = 110;
+      const w = (mark.width / mark.height) * h;
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(mark, W - 90 - w, 130, w, h);
+      ctx.globalAlpha = 1;
+    }
   }
 
   // ---- Foto ----
@@ -272,10 +284,22 @@ export async function renderCardImage(data: CardImageData): Promise<Blob> {
     ctx.fillText(team, W / 2, 1198);
   }
 
-  // Firma del torneo.
-  ctx.fillStyle = "rgba(255,255,255,0.28)";
-  ctx.font = `30px ${display}`;
-  ctx.fillText("DREAM TEAM · 1ER TORNEO AMISTOSO", W / 2, 1285);
+  // ---- Firma del torneo ----
+  const mark = await loadImage("/logo-dt.webp");
+  if (mark) {
+    const h = 54;
+    const w = (mark.width / mark.height) * h;
+    ctx.drawImage(mark, W / 2 - w / 2, 1246, w, h);
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.34)";
+  ctx.font = `26px ${display}`;
+  ctx.fillText("1ER TORNEO AMISTOSO", W / 2, 1330);
+
+  // Barrido del logo cerrando la carta, dentro del marco.
+  const sweep = ctx.createLinearGradient(W * 0.2, 0, W * 0.8, 0);
+  for (const [stop, color] of SWEEP) sweep.addColorStop(stop, color);
+  ctx.fillStyle = sweep;
+  ctx.fillRect(W * 0.2, 1352, W * 0.6, 5);
 
   ctx.restore();
 

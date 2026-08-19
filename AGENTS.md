@@ -54,7 +54,7 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
   posiciones, calendario, equipos, goleadores). Páginas con datos usan
   `force-dynamic` y degradan a estados vacíos si Supabase no responde.
 - `admin/login` + `admin/(panel)/` — panel, inscripciones (aprobar/rechazar),
-  equipos y partidos (pendientes de construir, ver Estado).
+  equipos, partidos, resultados y `piezas` (generador de imágenes para redes).
 - Las fotos van al bucket público `player-photos`, comprimidas en el cliente
   (webp ≤ 250 KB) antes de la server action.
 
@@ -62,8 +62,11 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
 
 Construido: landing, inscripción, `/torneo`, login admin, cola de aprobación,
 equipos (CRUD + escudos + asignación de aprobados), partidos (fixture, marcadores,
-goles/asistencias/tarjetas por jugador), PWA, y `/penales` (reto arcade con
-ranking). Desplegado en Vercel: dreamteamcolombia.vercel.app.
+goles/asistencias/tarjetas por jugador), PWA, `/penales` (reto arcade con
+ranking) y `/admin/piezas` (generador de imágenes para Instagram: anuncio,
+resultado, posiciones, goleadores, equipo y penales, en feed 1080×1350 y
+story 1080×1920, con el texto del post sugerido y editable).
+Desplegado en Vercel: dreamteamcolombia.vercel.app.
 
 El reto de penales tiene la lógica pura en `src/lib/penalty-game.ts` (zonas,
 arquero adaptativo, resolución del disparo) separada de la UI: se puede simular
@@ -75,7 +78,20 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
 ## Convenciones
 
 - Commits en español. No hacer push ni crear ramas remotas sin confirmación explícita.
-- Diseño dark-only calcado del flyer: tokens en `globals.css` (`--volt` #CCFF00,
-  fuentes Bebas Neue/Archivo vía `font-display`/`font-sans`).
+- Diseño en dos temas anclados al OS, con tokens en `globals.css`:
+  **dark** = noche de estadio (negro #0A0A0A, volt #CCFF00, azul #4FA8FF);
+  **light** = día de cancha (hueso #F1EDE4, oliva #55700A, turquesa #0E6E75).
+  Fuentes Bebas Neue/Archivo vía `font-display`/`font-sans`.
+- **Dos acentos con roles fijos**, para que no compitan: `--volt` es ACCIÓN y
+  presente (inscríbete, gol, en vivo, campeón); `--dt-blue` es INFORMACIÓN y
+  navegación (enlaces, tabs, fechas, asistencias, datos secundarios).
+  Los colores del logo no se usan literales: el azul #015EF8 da 3.73:1 sobre el
+  negro y 4.90:1 sobre el claro, o sea que no pasa AA en ninguno de los dos.
+- Las imágenes para redes se dibujan en canvas en el navegador
+  (`src/lib/post-image.ts`, igual que `card-image.ts`) porque así usan las
+  fuentes reales de next/font; un script de Node no las tiene. Los bloques
+  se posicionan contra `L.footerY` (espacio disponible), no con offsets
+  fijos: una nómina de 22 nombres o un panel con goleadores se montaban
+  sobre el pie en formato feed.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
