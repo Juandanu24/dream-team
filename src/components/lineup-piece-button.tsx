@@ -31,7 +31,9 @@ export function LineupPieceButton({
   const canShareFiles =
     typeof navigator !== "undefined" && typeof navigator.canShare === "function";
 
-  const vacia = rows.every((r) => r.players.length === 0);
+  // Ahora players trae null en las casillas libres, así que su largo
+  // siempre es el de la formación: hay que contar los que sí están.
+  const vacia = rows.every((r) => r.players.every((p) => p === null));
 
   async function handleClick() {
     setBusy(true);
