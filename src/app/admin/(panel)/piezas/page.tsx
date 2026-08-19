@@ -71,8 +71,16 @@ export default async function PiezasPage() {
     );
   }
 
-  const { teams, matches, events, standings, scorers, roster, penaltyLeaderboard } =
-    data;
+  const {
+    teams,
+    matches,
+    events,
+    standings,
+    scorers,
+    assists,
+    roster,
+    penaltyLeaderboard,
+  } = data;
 
   // Solo sirven los partidos con los dos equipos definidos: una
   // semifinal sin cruce todavía no se puede dibujar.
@@ -128,6 +136,16 @@ export default async function PiezasPage() {
         name: row.full_name,
         detail: row.team_name,
         value: row.goals,
+        photoUrl: row.photo_url,
+        color: row.team_color,
+      })),
+    },
+    assists: {
+      eyebrow: weekLabel,
+      rows: assists.slice(0, 20).map((row) => ({
+        name: row.full_name,
+        detail: row.team_name,
+        value: row.assists,
         photoUrl: row.photo_url,
         color: row.team_color,
       })),

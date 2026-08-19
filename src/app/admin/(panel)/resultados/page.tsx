@@ -20,6 +20,8 @@ import { MatchPieceButton } from "@/components/match-piece-button";
 import { readableAccent } from "@/lib/team-color";
 import {
   EVENT_ICONS,
+  FOOT_LABELS,
+  POSITION_SHORT,
   STAGE_LABELS,
   type Match,
   type MatchEvent,
@@ -27,6 +29,8 @@ import {
 } from "@/lib/types";
 import { deleteEvent, reopenMatch, saveResult } from "./actions";
 import { MatchEventForm } from "./match-event-form";
+import { MvpPicker, type MvpOption } from "./mvp-picker";
+import { MvpPieceButton } from "@/components/mvp-piece-button";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +97,43 @@ function MatchResult({
       </div>
     );
   }
+
+  // Candidatos a figura: los de los dos equipos, con su equipo al lado
+  // porque hay nombres repetidos entre plantillas.
+  const mvpOptions: MvpOption[] = [
+    ...rosterByTeam(home.id).map((r) => ({
+      playerId: r.player_id,
+      name: r.players.full_name,
+      teamName: home.name,
+    })),
+    ...rosterByTeam(away.id).map((r) => ({
+      playerId: r.player_id,
+      name: r.players.full_name,
+      teamName: away.name,
+    })),
+  ];
+
+  // Datos de la carta de la figura, si ya está elegida.
+  const mvpEntry = match.mvp_player_id
+    ? roster.find((r) => r.player_id === match.mvp_player_id)
+    : undefined;
+  const mvpTeam = mvpEntry
+    ? teams.find((t) => t.id === mvpEntry.team_id)
+    : undefined;
+  const mvpCard = mvpEntry
+    ? {
+        name: mvpEntry.players.full_name,
+        age: mvpEntry.players.age,
+        positionShort: POSITION_SHORT[mvpEntry.players.position],
+        footLabel: FOOT_LABELS[mvpEntry.players.dominant_foot],
+        memberSince: mvpEntry.players.member_since,
+        photoUrl: mvpEntry.players.photo_url,
+        teamName: mvpTeam?.name ?? null,
+        teamColor: mvpTeam?.color ?? null,
+        crestUrl: mvpTeam?.crest_url ?? null,
+        isCaptain: Boolean(mvpEntry.is_captain),
+      }
+    : null;
 
   const totalScore = (match.home_score ?? 0) + (match.away_score ?? 0);
   const assignedGoals = matchEvents.filter(
@@ -192,6 +233,20 @@ function MatchResult({
                 tallyScorers(matchEvents, home.id, away.id).away
               }
             />
+            <div className="w-full sm:max-w-xs">
+              <MvpPicker
+                matchId={match.id}
+                current={match.mvp_player_id ?? null}
+                options={mvpOptions}
+              />
+            </div>
+            {mvpCard ? (
+              <MvpPieceButton
+                card={mvpCard}
+                eyebrow={`Semana ${match.week} · ${home.name} vs ${away.name}`}
+                caption={`🏆 FIGURA DEL PARTIDO\n\n${mvpCard.name} se llevó los aplausos en el ${home.name} ${match.home_score ?? 0}-${match.away_score ?? 0} ${away.name}.\n\nSu carta y sus números están en la web, link en la bio.\n\n#DreamTeamColombia #FutbolAmateur #Montería #LaF8`}
+              />
+            ) : null}
             <form action={reopenMatch.bind(null, match.id)}>
               <Button
                 variant="ghost"

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Goal, Handshake, RectangleVertical, Target } from "lucide-react";
+import { Goal, Handshake, RectangleVertical, Star, Target, Trophy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,10 @@ import {
   type EventWithPlayer,
 } from "@/lib/data";
 import { getPublishedLineups, type LineupWithPlayers } from "@/lib/lineups";
+import {
+  getPublishedTeamsOfWeek,
+  type TeamOfWeekWithPlayers,
+} from "@/lib/team-of-week";
 import { readableAccent } from "@/lib/team-color";
 import {
   EVENT_ICONS,
@@ -92,11 +96,13 @@ function MatchRow({
   teams,
   events,
   lineups,
+  mvp,
 }: {
   match: Match;
   teams: Team[];
   events: EventWithPlayer[];
   lineups: LineupWithPlayers[];
+  mvp?: { id: string; full_name: string };
 }) {
   const kickoff = formatKickoff(match.kickoff_at);
   const matchEvents = events.filter((e) => e.match_id === match.id);
@@ -132,6 +138,18 @@ function MatchRow({
           {summarizeEvents(matchEvents)}
         </p>
       ) : null}
+      {mvp ? (
+        <p className="mt-1 flex items-center justify-center gap-1.5 text-xs sm:pl-44">
+          <Trophy className="size-3.5 text-volt" aria-hidden />
+          <span className="text-muted-foreground">Figura:</span>
+          <Link
+            href={`/jugador/${mvp.id}`}
+            className="font-medium text-volt underline-offset-4 hover:underline"
+          >
+            {mvp.full_name}
+          </Link>
+        </p>
+      ) : null}
       {lineups.length > 0 ? (
         <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:pl-44">
           {lineups.map((lineup) => (
@@ -143,6 +161,46 @@ function MatchRow({
             />
           ))}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Once ideal de la fecha: los nueve por línea, con su equipo al lado.
+function TeamOfWeekBlock({ totw }: { totw: TeamOfWeekWithPlayers }) {
+  const porLinea = (line: string) =>
+    totw.entries.filter((e) => e.line === line).map((e) => e.full_name);
+
+  const lineas = [
+    { label: "ARQ", players: porLinea("gk") },
+    { label: "DEF", players: porLinea("def") },
+    { label: "MED", players: porLinea("mid") },
+    { label: "DEL", players: porLinea("fwd") },
+  ].filter((l) => l.players.length > 0);
+
+  if (lineas.length === 0) return null;
+
+  return (
+    <div className="mt-4 rounded-md border border-volt/40 bg-volt/5 p-4">
+      <div className="flex items-center gap-2">
+        <Star className="size-4 text-volt" aria-hidden />
+        <span className="font-display text-lg tracking-wide text-volt">
+          ONCE IDEAL DE LA FECHA
+        </span>
+        <span className="ml-auto text-xs text-dt-blue">{totw.formation}</span>
+      </div>
+      <dl className="mt-2 space-y-1">
+        {lineas.map((l) => (
+          <div key={l.label} className="flex gap-2 text-xs">
+            <dt className="w-9 shrink-0 text-muted-foreground">{l.label}</dt>
+            <dd className="flex-1">{l.players.join(", ")}</dd>
+          </div>
+        ))}
+      </dl>
+      {totw.notes ? (
+        <p className="mt-2 border-t border-volt/20 pt-2 text-xs text-muted-foreground">
+          {totw.notes}
+        </p>
       ) : null}
     </div>
   );
@@ -213,6 +271,9 @@ export default async function TournamentPage() {
   const data = await getTournamentData();
   // Solo las publicadas: los borradores del admin no salen acá.
   const lineups = data ? await getPublishedLineups(data.tournament.id) : [];
+  const oncesIdeales = data
+    ? await getPublishedTeamsOfWeek(data.tournament.id)
+    : [];
 
   if (!data) {
     return (
@@ -432,7 +493,19 @@ export default async function TournamentPage() {
                         teams={teams}
                         events={events}
                         lineups={lineups.filter((l) => l.match_id === match.id)}
+                        mvp={
+                          match.mvp_player_id
+                            ? approvedPlayers.find(
+                                (p) => p.id === match.mvp_player_id,
+                              )
+                            : undefined
+                        }
                       />
+                    ))}
+                  {oncesIdeales
+                    .filter((t) => t.week === week)
+                    .map((t) => (
+                      <TeamOfWeekBlock key={t.id} totw={t} />
                     ))}
                 </CardContent>
               </Card>

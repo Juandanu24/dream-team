@@ -59,6 +59,7 @@ export interface PiecesData {
   matches: MatchPiece[];
   standings: { eyebrow: string; rows: StandingLite[] };
   scorers: { eyebrow: string; rows: RankLite[] };
+  assists: { eyebrow: string; rows: RankLite[] };
   penalties: { eyebrow: string; rows: RankLite[] };
   teams: TeamPiece[];
 }
@@ -74,6 +75,7 @@ const KINDS: { value: PieceKind; label: string; hint: string }[] = [
   { value: "resultado", label: "Resultado", hint: "Después del partido" },
   { value: "posiciones", label: "Posiciones", hint: "La tabla al día" },
   { value: "goleadores", label: "Goleadores", hint: "Los que la rompen" },
+  { value: "asistencias", label: "Asistencias", hint: "Los que la sirven" },
   { value: "equipo", label: "Equipo", hint: "Escudo y nómina" },
   { value: "penales", label: "Penales", hint: "Ranking del reto" },
 ];
@@ -85,7 +87,7 @@ const FORMATS: { value: PieceFormat; label: string; hint: string }[] = [
 
 /** Los rankings dejan escoger cuántos entran en la pieza. */
 function esRanking(kind: PieceKind) {
-  return kind === "goleadores" || kind === "penales";
+  return kind === "goleadores" || kind === "asistencias" || kind === "penales";
 }
 
 /** Los tipos que dependen de escoger algo más en un selector. */
@@ -127,6 +129,8 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       return "La tabla está vacía. Aparece cuando haya equipos y resultados.";
     if (kind === "goleadores" && data.scorers.rows.length === 0)
       return "Todavía no hay goles cargados. Anótalos en Resultados.";
+    if (kind === "asistencias" && data.assists.rows.length === 0)
+      return "Todavía no hay asistencias cargadas. Anótalas en Resultados.";
     if (kind === "penales" && data.penalties.rows.length === 0)
       return "Nadie ha jugado el reto de penales todavía.";
     if (kind === "equipo" && !team)
@@ -196,6 +200,18 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           footnote,
         };
       }
+      case "asistencias": {
+        const { rows, footnote } = recortar(data.assists.rows, "asistencia");
+        return {
+          ...common,
+          kind,
+          eyebrow: data.assists.eyebrow,
+          headline: "Asistencias",
+          rows,
+          unit: "asist.",
+          footnote,
+        };
+      }
       case "penales": {
         const { rows, footnote } = recortar(data.penalties.rows, "de 5");
         return {
@@ -253,6 +269,13 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           ? `\n\nEl pichichi por ahora es ${top.name} (${top.detail}) con ${top.value} ${top.value === 1 ? "gol" : "goles"}. 🔥`
           : "";
         return `⚽ LOS QUE LA ESTÁN ROMPIENDO\n\nTabla de goleadores del torneo.${lider}\n\nLa lista completa y las cartas de cada jugador están en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Quién se lleva la bota de oro? 👇\n\n${TAGS}`;
+      }
+      case "asistencias": {
+        const top = data.assists.rows[0];
+        const lider = top
+          ? `\n\nEl que más la sirve es ${top.name} (${top.detail}) con ${top.value} ${top.value === 1 ? "asistencia" : "asistencias"}. 🎯`
+          : "";
+        return `🎯 LOS QUE PONEN EL PASE\n\nNo todo es meterla: alguien la tuvo que servir.${lider}\n\nLa tabla completa está en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Quién es el mejor asistidor del parche? 👇\n\n${TAGS}`;
       }
       case "penales": {
         return `🥅 ¿CUÁNTOS LE METES AL ARQUERO?\n\nEste es el ranking del reto de penales. Son 5 tiros y el arquero te va aprendiendo las mañas: si repites palo, te la ataja.\n\n¿Te crees capaz de meter los 5? Entra y compite 👇\n\n🔗 ${SITE}/penales (Link en la bio)\n\n💬 Comenta tu puntaje 👇\n\n${TAGS}`;

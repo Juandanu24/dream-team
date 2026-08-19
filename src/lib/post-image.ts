@@ -16,6 +16,7 @@ export type PieceKind =
   | "resultado"
   | "posiciones"
   | "goleadores"
+  | "asistencias"
   | "equipo"
   | "penales"
   | "alineacion";
@@ -87,7 +88,7 @@ export type PostImageData = Common &
       }
     | { kind: "posiciones"; rows: StandingLite[] }
     | {
-        kind: "goleadores" | "penales";
+        kind: "goleadores" | "asistencias" | "penales";
         rows: RankLite[];
         unit: string;
         /** "+4 más con 1 gol", cuando el corte parte un empate. */
@@ -713,7 +714,7 @@ function drawStandingsBody(
 
 function drawRankBody(
   ctx: CanvasRenderingContext2D,
-  data: Extract<PostImageData, { kind: "goleadores" | "penales" }>,
+  data: Extract<PostImageData, { kind: "goleadores" | "asistencias" | "penales" }>,
   L: Layout,
   photos: (HTMLImageElement | null)[],
   display: string,
@@ -1120,7 +1121,11 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
   } else if (data.kind === "equipo" || data.kind === "alineacion") {
     crests = [data.team.crestUrl ? await loadImage(data.team.crestUrl) : null];
     glows = [{ x: L.w * 0.5, color: readableAccent(data.team.color) }];
-  } else if (data.kind === "goleadores" || data.kind === "penales") {
+  } else if (
+    data.kind === "goleadores" ||
+    data.kind === "asistencias" ||
+    data.kind === "penales"
+  ) {
     photos = await Promise.all(
       data.rows.map((r) => (r.photoUrl ? loadImage(r.photoUrl) : null)),
     );
@@ -1137,7 +1142,11 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
     drawTeamBody(ctx, data, L, crests[0], display, sans);
   } else if (data.kind === "alineacion") {
     drawLineupBody(ctx, data, L, crests[0], display, sans);
-  } else if (data.kind === "goleadores" || data.kind === "penales") {
+  } else if (
+    data.kind === "goleadores" ||
+    data.kind === "asistencias" ||
+    data.kind === "penales"
+  ) {
     drawRankBody(ctx, data, L, photos, display, sans);
   }
 
@@ -1177,6 +1186,9 @@ export function postFileName(data: PostImageData) {
 export async function renderPlayerPost(
   cardBlob: Blob,
   teamColor: string | null,
+  /** Con encabezado la carta se achica y sube; sin él ocupa todo. Es lo
+   *  que separa "una carta más del equipo" de "la figura del partido". */
+  titulo?: { eyebrow: string; headline: string },
 ): Promise<Blob> {
   await document.fonts.ready;
 
@@ -1208,10 +1220,34 @@ export async function renderPlayerPost(
     ctx.fillRect(0, 0, L.w, 12);
     ctx.fillRect(0, L.h - 12, L.w, 12);
 
+    const display = fontStack("--font-bebas", "Impact, sans-serif");
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+
+    let cartaTop = 70;
+    let cartaAlto = 1190;
+
+    if (titulo) {
+      ctx.fillStyle = BLUE;
+      ctx.font = `600 26px ${sans}`;
+      tracked(ctx, titulo.eyebrow.toUpperCase(), L.w / 2, 108, 5);
+
+      const encabezado = titulo.headline.toUpperCase();
+      const tam = fitText(ctx, encabezado, (v) => `${v}px ${display}`, L.w - 140, 96, 52);
+      ctx.font = `${tam}px ${display}`;
+      ctx.fillStyle = VOLT;
+      ctx.fillText(encabezado, L.w / 2, 196);
+
+      ctx.fillStyle = VOLT;
+      ctx.fillRect(L.w / 2 - 60, 222, 120, 5);
+
+      cartaTop = 258;
+      cartaAlto = 1000;
+    }
+
     if (carta) {
-      const alto = 1190;
-      const ancho = (carta.width / carta.height) * alto;
-      ctx.drawImage(carta, L.w / 2 - ancho / 2, 70, ancho, alto);
+      const ancho = (carta.width / carta.height) * cartaAlto;
+      ctx.drawImage(carta, L.w / 2 - ancho / 2, cartaTop, ancho, cartaAlto);
     }
 
     ctx.textAlign = "center";

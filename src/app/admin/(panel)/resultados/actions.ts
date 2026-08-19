@@ -146,3 +146,22 @@ export async function deleteEvent(eventId: string) {
 
   revalidateMatches();
 }
+
+/** Elige (o quita) la figura del partido.
+ *
+ *  No sale de una fórmula a propósito: el que más corrió o el que salvó
+ *  bajo palos no aparece en ninguna estadística, así que lo escoge el
+ *  admin a dedo. `null` la quita. */
+export async function setMatchMvp(
+  matchId: string,
+  playerId: string | null,
+): Promise<void> {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("matches")
+    .update({ mvp_player_id: playerId })
+    .eq("id", matchId);
+  if (error) throw error;
+  revalidateMatches();
+}

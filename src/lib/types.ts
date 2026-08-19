@@ -75,6 +75,8 @@ export interface Match {
   status: MatchStatus;
   /** Cuándo se anunció esta semana del calendario; null = sin publicar. */
   announced_at?: string | null;
+  /** Figura del partido, elegida a dedo por el admin. */
+  mvp_player_id?: string | null;
   created_at: string;
 }
 
@@ -89,6 +91,28 @@ export interface MatchEvent {
 }
 
 // Filas de las vistas calculadas.
+// ---------- Once ideal de la fecha ----------
+
+export interface TeamOfWeek {
+  id: string;
+  tournament_id: string;
+  week: number;
+  formation: string;
+  notes: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamOfWeekPlayer {
+  id: string;
+  totw_id: string;
+  player_id: string;
+  line: LineupLine;
+  slot: number;
+  created_at: string;
+}
+
 // ---------- Alineaciones ----------
 
 /** Línea de la cancha. La formación se dibuja a partir de esto. */

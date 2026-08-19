@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CardShareButton } from "@/components/card-share-button";
 import { MotionButton } from "@/components/motion-button";
+import Link from "next/link";
 import { PlayerCard } from "@/components/player-card";
 import { PlayerCarousel } from "@/components/player-carousel";
 import { TiltCard } from "@/components/tilt-card";
@@ -119,7 +120,15 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
             {visible.map((player) => (
               <div key={player.id} className="flex min-w-0 flex-col items-center gap-2">
                 <TiltCard className="w-full min-w-0">{card(player)}</TiltCard>
-                <CardShareButton card={player} />
+                <div className="flex items-center gap-3">
+                  <CardShareButton card={player} />
+                  <Link
+                    href={`/jugador/${player.id}`}
+                    className="text-xs text-dt-blue underline-offset-4 hover:underline"
+                  >
+                    Ver perfil
+                  </Link>
+                </div>
               </div>
             ))}
           </PlayerCarousel>
@@ -135,7 +144,15 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
         {visible.map((player) => (
           <div key={player.id} className="flex min-w-0 flex-col items-center gap-2">
             <TiltCard className="w-full min-w-0 max-w-[280px]">{card(player)}</TiltCard>
-            <CardShareButton card={player} />
+            <div className="flex items-center gap-3">
+              <CardShareButton card={player} />
+              <Link
+                href={`/jugador/${player.id}`}
+                className="text-xs text-dt-blue underline-offset-4 hover:underline"
+              >
+                Ver perfil
+              </Link>
+            </div>
           </div>
         ))}
       </div>
