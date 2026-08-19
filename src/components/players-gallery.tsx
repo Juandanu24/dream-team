@@ -61,7 +61,7 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
   const tilted = (player: GalleryPlayer, compact = false) => (
     <TiltCard
       key={player.id}
-      className={compact ? "w-full" : "w-full max-w-[280px]"}
+      className={compact ? "w-full min-w-0" : "w-full min-w-0 max-w-[280px]"}
     >
       {card(player, compact)}
     </TiltCard>
@@ -117,8 +117,8 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
         {view === "carousel" ? (
           <PlayerCarousel>
             {visible.map((player) => (
-              <div key={player.id} className="flex flex-col items-center gap-2">
-                <TiltCard className="w-full">{card(player)}</TiltCard>
+              <div key={player.id} className="flex min-w-0 flex-col items-center gap-2">
+                <TiltCard className="w-full min-w-0">{card(player)}</TiltCard>
                 <CardShareButton card={player} />
               </div>
             ))}
@@ -133,8 +133,8 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
       {/* Desktop */}
       <div className="mt-4 hidden grid-cols-3 justify-items-center gap-6 lg:grid xl:grid-cols-4">
         {visible.map((player) => (
-          <div key={player.id} className="flex flex-col items-center gap-2">
-            <TiltCard className="w-full max-w-[280px]">{card(player)}</TiltCard>
+          <div key={player.id} className="flex min-w-0 flex-col items-center gap-2">
+            <TiltCard className="w-full min-w-0 max-w-[280px]">{card(player)}</TiltCard>
             <CardShareButton card={player} />
           </div>
         ))}

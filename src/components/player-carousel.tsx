@@ -40,7 +40,11 @@ export function PlayerCarousel({ children }: { children: React.ReactNode[] }) {
           <div
             key={index}
             className={cn(
-              "w-[72%] max-w-[280px] shrink-0 snap-center transition-all duration-300 ease-out",
+              // min-w-0 es obligatorio: en flexbox el min-width:auto de un item
+              // resuelve al ancho mínimo de su contenido, y como el nombre va
+              // con truncate (nowrap) ese mínimo LE GANA al max-w y estira la
+              // carta. Con nombres largos las cartas salían más anchas.
+              "w-[72%] max-w-[280px] min-w-0 shrink-0 snap-center transition-all duration-300 ease-out",
               index === active ? "scale-100 opacity-100" : "scale-85 opacity-50",
             )}
           >

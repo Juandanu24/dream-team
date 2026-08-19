@@ -45,7 +45,7 @@ export function PlayerCard({
     <div
       style={{ "--accent": accent } as React.CSSProperties}
       className={cn(
-        "w-full max-w-[280px] p-[2px]",
+        "w-full max-w-[280px] min-w-0 p-[2px]",
         "bg-[linear-gradient(to_bottom,var(--accent),color-mix(in_srgb,var(--accent)_35%,transparent),color-mix(in_srgb,var(--accent)_10%,transparent))]",
         "[clip-path:polygon(0_3%,50%_0,100%_3%,100%_90%,50%_100%,0_90%)]",
         "drop-shadow-[0_8px_18px_rgba(60,80,0,0.25)] dark:drop-shadow-[0_0_25px_color-mix(in_srgb,var(--accent)_20%,transparent)]",
@@ -54,7 +54,7 @@ export function PlayerCard({
     >
       <div
         className={cn(
-          "flex h-full flex-col bg-gradient-to-b from-[#f3f7dd] via-[#fbfcf4] to-[#e9eecf] [clip-path:polygon(0_3%,50%_0,100%_3%,100%_90%,50%_100%,0_90%)] dark:from-[#1c2205] dark:via-[#111403] dark:to-[#0a0b02]",
+          "flex h-full min-w-0 flex-col bg-gradient-to-b from-[#f3f7dd] via-[#fbfcf4] to-[#e9eecf] [clip-path:polygon(0_3%,50%_0,100%_3%,100%_90%,50%_100%,0_90%)] dark:from-[#1c2205] dark:via-[#111403] dark:to-[#0a0b02]",
           compact ? "px-2.5 pt-3 pb-5" : "px-5 pt-6 pb-10",
         )}
       >
@@ -142,10 +142,23 @@ export function PlayerCard({
           )}
         </div>
 
+        {/* El tamaño baja con la longitud para que quepa el nombre entero
+            en vez de cortarlo: el más largo del torneo tiene 30 caracteres.
+            El truncate queda de red de seguridad, no como comportamiento
+            normal. */}
         <p
           className={cn(
             "truncate text-center font-display tracking-wide text-foreground uppercase",
-            compact ? "mt-1.5 text-xs" : "mt-4 text-2xl",
+            compact
+              ? "mt-1.5 text-xs"
+              : cn(
+                  "mt-4",
+                  (name?.length ?? 0) <= 18
+                    ? "text-2xl"
+                    : (name?.length ?? 0) <= 24
+                      ? "text-xl"
+                      : "text-lg",
+                ),
           )}
         >
           {name || "Tu nombre"}
