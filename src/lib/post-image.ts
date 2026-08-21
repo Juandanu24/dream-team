@@ -1468,15 +1468,17 @@ function panelDiagonal(
 // Medidos sobre el PNG real analizando el brillo fila por fila. Si se
 // cambia el marco, hay que volver a medirlos.
 const HUECO = {
-  arribaY0: 0.095,
-  arribaY1: 0.375,
-  abajoY0: 0.602,
+  // A sangre: la foto va de borde a borde y el marco le cae ENCIMA en
+  // "screen", así el humo, los cristales y las luces quedan sobre ella.
+  // Metida y achicada se leía flotando sobre el degradado, que era el
+  // problema: el inset no hacía falta, porque los brillos del marco se
+  // superponen igual.
+  arribaY0: 0.055,
+  arribaY1: 0.425,
+  abajoY0: 0.555,
   abajoY1: 0.945,
   costura: 0.482,
-  // Medido: el negro utilizable llega hasta x 0.145. Con un margen menor
-  // la foto tapaba los cristales y las luces laterales del marco, que es
-  // justo lo que le da profundidad.
-  margenX: 0.115,
+  margenX: 0,
 } as const;
 
 /** Duelo con marco generado: las fotos van DEBAJO y el marco encima en
@@ -1531,11 +1533,11 @@ function drawDueloConMarco(
       h,
     );
 
-    // Se come el alfa de los bordes con degradados: así la foto muere en
-    // el negro del marco en vez de cortarse en seco.
+    // Solo se desvanecen arriba y abajo: a los lados la foto se sale del
+    // lienzo, así que no hay borde que disimular.
     c.globalCompositeOperation = "destination-out";
-    const fx = ancho * 0.13;
-    const fy = alto * 0.16;
+    const fx = 0;
+    const fy = alto * 0.2;
     const borde = (
       x: number,
       yy: number,
@@ -1552,8 +1554,10 @@ function drawDueloConMarco(
       c.fillStyle = g;
       c.fillRect(x, yy, bw, bh);
     };
-    borde(0, 0, fx, alto, 0, 0, fx, 0);
-    borde(ancho - fx, 0, fx, alto, ancho, 0, ancho - fx, 0);
+    if (fx > 0) {
+      borde(0, 0, fx, alto, 0, 0, fx, 0);
+      borde(ancho - fx, 0, fx, alto, ancho, 0, ancho - fx, 0);
+    }
     borde(0, 0, ancho, fy, 0, 0, 0, fy);
     borde(0, alto - fy, ancho, fy, 0, alto, 0, alto - fy);
     c.globalCompositeOperation = "source-over";
