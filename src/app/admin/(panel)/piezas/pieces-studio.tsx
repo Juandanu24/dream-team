@@ -135,6 +135,13 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     home: null,
     away: null,
   });
+  // Encuadre por foto: zoom y posición dentro del panel.
+  const [encuadre, setEncuadre] = useState<
+    Record<"home" | "away", { zoom: number; x: number; y: number }>
+  >({
+    home: { zoom: 1, x: 0, y: 0 },
+    away: { zoom: 1, x: 0, y: 0 },
+  });
   // 0 = todos. Seis alcanza cuando el torneo avanza y hay diferencias;
   // al principio, con muchos empatados, conviene mostrarlos a todos.
   const [cuantos, setCuantos] = useState(6);
@@ -269,8 +276,20 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         return {
           ...common,
           kind,
-          home: { ...match.home, photoUrl: fotos.home },
-          away: { ...match.away, photoUrl: fotos.away },
+          home: {
+            ...match.home,
+            photoUrl: fotos.home,
+            photoZoom: encuadre.home.zoom,
+            photoX: encuadre.home.x,
+            photoY: encuadre.home.y,
+          },
+          away: {
+            ...match.away,
+            photoUrl: fotos.away,
+            photoZoom: encuadre.away.zoom,
+            photoX: encuadre.away.x,
+            photoY: encuadre.away.y,
+          },
           footer: match.finished
             ? `Semana ${match.week} · ${match.home.score ?? 0} - ${match.away.score ?? 0}`
             : `Semana ${match.week} · 1er Torneo Amistoso`,
@@ -292,7 +311,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         // dibuja en dos pasos (carta y luego marco), fuera de este switch.
         return null;
     }
-  }, [kind, format, match, team, data, missing, cuantos, fotos]);
+  }, [kind, format, match, team, data, missing, cuantos, fotos, encuadre]);
 
   const caption = useMemo(() => {
     switch (kind) {
@@ -370,7 +389,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const esFigura = kind === "figura" && Boolean(mvp) && !missing;
   const dibujable = Boolean(piece) || esFigura;
   const key = dibujable
-    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}`
+    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}:${JSON.stringify(encuadre)}`
     : "";
   const busy = dibujable && rendered?.key !== key;
   const preview = dibujable && rendered?.key === key ? rendered.url : null;
@@ -622,6 +641,53 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                           });
                         }}
                       />
+                      {fotos[lado] ? (
+                        <div className="space-y-1 rounded-md border border-border/60 p-2">
+                          {(
+                            [
+                              { k: "zoom", label: "Zoom", min: 1, max: 3, step: 0.05 },
+                              { k: "x", label: "Izq/Der", min: -1, max: 1, step: 0.02 },
+                              { k: "y", label: "Arr/Aba", min: -1, max: 1, step: 0.02 },
+                            ] as const
+                          ).map((c) => (
+                            <label
+                              key={c.k}
+                              className="flex items-center gap-2 text-[11px] text-muted-foreground"
+                            >
+                              <span className="w-14 shrink-0">{c.label}</span>
+                              <input
+                                type="range"
+                                min={c.min}
+                                max={c.max}
+                                step={c.step}
+                                value={encuadre[lado][c.k]}
+                                className="h-1 w-full accent-[var(--dt-blue)]"
+                                onChange={(e) =>
+                                  setEncuadre((prev) => ({
+                                    ...prev,
+                                    [lado]: {
+                                      ...prev[lado],
+                                      [c.k]: Number(e.target.value),
+                                    },
+                                  }))
+                                }
+                              />
+                            </label>
+                          ))}
+                          <button
+                            type="button"
+                            className="text-[11px] text-dt-blue underline-offset-2 hover:underline"
+                            onClick={() =>
+                              setEncuadre((prev) => ({
+                                ...prev,
+                                [lado]: { zoom: 1, x: 0, y: 0 },
+                              }))
+                            }
+                          >
+                            Reiniciar encuadre
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}

@@ -31,6 +31,16 @@ export interface TeamSide {
   score?: number | null;
 }
 
+/** Encuadre de la foto dentro de su panel. `x`/`y` van de -1 a 1 y se
+ *  miden sobre el sobrante que deja el recorte, así que nunca destapan
+ *  un borde vacío por más que se muevan. */
+export interface DueloFoto {
+  photoUrl?: string | null;
+  photoZoom?: number;
+  photoX?: number;
+  photoY?: number;
+}
+
 export interface StandingLite {
   teamName: string;
   color: string | null;
@@ -112,8 +122,8 @@ export type PostImageData = Common &
       })
     | {
         kind: "duelo";
-        home: TeamSide & { photoUrl?: string | null };
-        away: TeamSide & { photoUrl?: string | null };
+        home: TeamSide & DueloFoto;
+        away: TeamSide & DueloFoto;
         /** "CANCHA F8 · MONTERÍA" o el marcador si ya se jugó. */
         footer: string;
       }
@@ -1438,11 +1448,19 @@ function drawDueloBody(
     ctx.clip();
 
     if (foto) {
-      // Recorte "cover": la foto llena el panel sin deformarse.
-      const escala = Math.max(ancho / foto.width, panelAlto / foto.height);
+      // Recorte "cover" más el encuadre que eligió el admin: en una foto
+      // de grupo vertical, el recorte automático suele cortar cabezas.
+      const zoom = Math.max(1, side.photoZoom ?? 1);
+      const escala = Math.max(ancho / foto.width, panelAlto / foto.height) * zoom;
       const w = foto.width * escala;
       const h = foto.height * escala;
-      ctx.drawImage(foto, L.w / 2 - w / 2, y + panelAlto / 2 - h / 2, w, h);
+      // El desplazamiento se mide sobre el sobrante, no en píxeles: así
+      // el extremo del control es justo el borde de la foto.
+      const sobraX = Math.max(0, w - ancho) / 2;
+      const sobraY = Math.max(0, h - panelAlto) / 2;
+      const dx = L.w / 2 - w / 2 + (side.photoX ?? 0) * sobraX;
+      const dy = y + panelAlto / 2 - h / 2 + (side.photoY ?? 0) * sobraY;
+      ctx.drawImage(foto, dx, dy, w, h);
     } else {
       ctx.fillStyle = "#141414";
       ctx.fillRect(margen, y, ancho, panelAlto);
@@ -1479,43 +1497,55 @@ function drawDueloBody(
     // El de arriba va MÁS SEPARADO del borde inferior que el de abajo: el
     // VS se dibuja justo en la costura entre los dos paneles y, con la
     // misma separación, se le montaba encima.
+    // El escudo va PEGADO al nombre, a su misma altura: [escudo] [nombre],
+    // como un lockup. Antes iba suelto en la esquina opuesta y se leían
+    // como dos cosas sin relación.
     const nombre = side.name.toUpperCase();
-    const tam = fitText(ctx, nombre, (v) => `${v}px ${display}`, ancho - 240, 104, 46);
+    const margenTexto = margen + 40;
+    const anchoDisponible = ancho - 80;
+
+    // Se mide el escudo contra el tamaño de letra, así que hay que
+    // resolver los dos juntos: se prueba el tamaño y se descuenta.
+    let tam = 64;
+    let anchoEscudo = 0;
+    const hueco = 20;
+    for (; tam >= 32; tam -= 2) {
+      anchoEscudo = crest ? (crest.width / crest.height) * (tam * 1.15) : 0;
+      ctx.font = `${tam}px ${display}`;
+      if (
+        ctx.measureText(nombre).width + anchoEscudo + (crest ? hueco : 0) <=
+        anchoDisponible
+      ) {
+        break;
+      }
+    }
     ctx.font = `${tam}px ${display}`;
-    const nombreY = y + panelAlto - (invertido ? 46 : 118);
-    const x = invertido ? L.w - margen - 40 : margen + 40;
-    ctx.textAlign = invertido ? "right" : "left";
+    const anchoTexto = ctx.measureText(nombre).width;
+    const anchoGrupo = anchoEscudo + (crest ? hueco : 0) + anchoTexto;
 
-    // Contorno oscuro y relleno claro: se lee sobre cualquier foto, sin
-    // la sombra desplazada que se veía sucia.
-    ctx.lineJoin = "round";
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = "rgba(0,0,0,0.75)";
-    ctx.strokeText(nombre, x, nombreY);
-    ctx.fillStyle = PAPER;
-    ctx.fillText(nombre, x, nombreY);
-
-    // Subrayado del color del equipo, del ancho del nombre.
-    const anchoNombre = Math.min(ctx.measureText(nombre).width, ancho - 240);
-    ctx.fillStyle = accent;
-    ctx.fillRect(
-      invertido ? x - anchoNombre : x,
-      nombreY + 18,
-      anchoNombre,
-      6,
-    );
+    const nombreY = y + panelAlto - (invertido ? 44 : 104);
+    const inicioX = invertido
+      ? L.w - margenTexto - anchoGrupo
+      : margenTexto;
 
     if (crest) {
-      const t = 118;
-      const w = (crest.width / crest.height) * t;
-      ctx.drawImage(
-        crest,
-        invertido ? margen + 44 : L.w - margen - 44 - w,
-        y + panelAlto - t - 30,
-        w,
-        t,
-      );
+      const alto = tam * 1.15;
+      ctx.drawImage(crest, inicioX, nombreY - alto * 0.82, anchoEscudo, alto);
     }
+
+    // Contorno oscuro y relleno claro: se lee sobre cualquier foto.
+    ctx.textAlign = "left";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(0,0,0,0.78)";
+    const textoX = inicioX + anchoEscudo + (crest ? hueco : 0);
+    ctx.strokeText(nombre, textoX, nombreY);
+    ctx.fillStyle = PAPER;
+    ctx.fillText(nombre, textoX, nombreY);
+
+    // Subrayado del color del equipo, bajo todo el conjunto.
+    ctx.fillStyle = accent;
+    ctx.fillRect(inicioX, nombreY + 16, anchoGrupo, 5);
   }
 
   // VS en el corte entre los dos paneles.
