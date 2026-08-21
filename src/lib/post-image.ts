@@ -1469,19 +1469,18 @@ function tintarMarco(
 
   c.drawImage(marco, 0, 0, L.w, L.h);
 
+  // Degradado en vez de corte recto: con dos rectángulos, el VS —que
+  // cae justo en la costura— salía partido mitad y mitad, como dos
+  // piezas pegadas. La banda de mezcla hace que se funda.
   c.globalCompositeOperation = "multiply";
-  for (const [color, y0, y1] of [
-    [colorArriba, 0, seam],
-    [colorAbajo, seam, L.h],
-  ] as const) {
-    c.save();
-    c.beginPath();
-    c.rect(0, y0, L.w, y1 - y0);
-    c.clip();
-    c.fillStyle = color;
-    c.fillRect(0, y0, L.w, y1 - y0);
-    c.restore();
-  }
+  const banda = L.h * 0.085;
+  const g = c.createLinearGradient(0, 0, 0, L.h);
+  g.addColorStop(0, colorArriba);
+  g.addColorStop(Math.max(0, (seam - banda) / L.h), colorArriba);
+  g.addColorStop(Math.min(1, (seam + banda) / L.h), colorAbajo);
+  g.addColorStop(1, colorAbajo);
+  c.fillStyle = g;
+  c.fillRect(0, 0, L.w, L.h);
 
   // El multiply apaga bastante; se recupera brillo con un screen del
   // propio marco, que devuelve los blancos puros de las luces.
@@ -1656,12 +1655,12 @@ function drawDueloConMarco(
     const arriba = i === 0;
     // Solo hasta antes del VS, que va centrado: los nombres quedan a la
     // altura de la costura y con el ancho completo se le metían debajo.
-    const anchoDisponible = L.w * 0.47;
+    const anchoDisponible = L.w * 0.52;
     const hueco = 22;
 
     // El escudo pesa más que antes: es la identidad del equipo y a 1.15
     // del tamaño de letra se perdía.
-    const razonEscudo = 2.8;
+    const razonEscudo = 3.6;
 
     let tam = 82;
     let ladoEscudo = 0;
