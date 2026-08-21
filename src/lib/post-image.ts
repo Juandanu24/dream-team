@@ -1221,12 +1221,48 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
     ]);
 
     if (marco) {
-      // Con marco, el lienzo toma SU proporción. El marco generado es 2:3
-      // y el feed pide 4:5: estirarlo achataría el VS un 20%, y recortarlo
-      // se comería uno de los huecos de las fotos.
-      const LD: Layout = { ...L, h: Math.round((L.w * marco.height) / marco.width) };
-      canvas.height = LD.h;
-      drawDueloConMarco(ctx, data, LD, [fh, fa], [ch, ca], marco, [nh, na], display, sans);
+      // La composición del marco se arma en su propia proporción y luego
+      // se monta DENTRO del marco de la marca, que aporta las barras del
+      // barrido y un pie con el logo y los datos del partido. Antes la
+      // foto llegaba hasta el borde y se comía la barra inferior del
+      // marco generado, y la pieza salía sin logo ni info.
+      const pieAlto = 168;
+      const total = 1620;
+      const areaAlto = total - pieAlto - 34;
+      const areaAncho = Math.round((areaAlto * marco.width) / marco.height);
+      const LD: Layout = { ...L, w: areaAncho, h: areaAlto };
+
+      const dentro = document.createElement("canvas");
+      dentro.width = areaAncho;
+      dentro.height = areaAlto;
+      const dctx = dentro.getContext("2d");
+      if (dctx) {
+        drawDueloConMarco(dctx, data, LD, [fh, fa], [ch, ca], marco, [nh, na], display);
+      }
+
+      canvas.height = total;
+      ctx.fillStyle = INK;
+      ctx.fillRect(0, 0, L.w, total);
+      ctx.drawImage(dentro, Math.round((L.w - areaAncho) / 2), 22, areaAncho, areaAlto);
+
+      // Barras del barrido, arriba y abajo de todo.
+      ctx.fillStyle = sweepGradient(ctx, 0, L.w);
+      ctx.fillRect(0, 0, L.w, 12);
+      ctx.fillRect(0, total - 12, L.w, 12);
+
+      // Pie: monograma y datos del partido.
+      if (logo) {
+        const h = 62;
+        const w = (logo.width / logo.height) * h;
+        ctx.drawImage(logo, L.w / 2 - w / 2, total - pieAlto + 14, w, h);
+      }
+      ctx.textAlign = "center";
+      ctx.font = `600 26px ${sans}`;
+      ctx.fillStyle = VOLT;
+      tracked(ctx, data.footer.toUpperCase(), L.w / 2, total - 62, 5);
+      ctx.font = `500 22px ${sans}`;
+      ctx.fillStyle = "#8A8A8A";
+      tracked(ctx, "DREAMTEAMCOLOMBIA.VERCEL.APP", L.w / 2, total - 30, 3);
     } else {
       ctx.fillStyle = INK;
       ctx.fillRect(0, 0, L.w, L.h);
@@ -1522,7 +1558,6 @@ function drawDueloConMarco(
   marco: HTMLImageElement,
   nombres: [HTMLImageElement | null, HTMLImageElement | null],
   display: string,
-  sans: string,
 ) {
   const x0 = L.w * HUECO.margenX;
   const ancho = L.w - x0 * 2;
@@ -1621,14 +1656,14 @@ function drawDueloConMarco(
     const arriba = i === 0;
     // Solo hasta antes del VS, que va centrado: los nombres quedan a la
     // altura de la costura y con el ancho completo se le metían debajo.
-    const anchoDisponible = L.w * 0.44;
+    const anchoDisponible = L.w * 0.47;
     const hueco = 22;
 
     // El escudo pesa más que antes: es la identidad del equipo y a 1.15
     // del tamaño de letra se perdía.
-    const razonEscudo = 2.1;
+    const razonEscudo = 2.8;
 
-    let tam = 68;
+    let tam = 82;
     let ladoEscudo = 0;
     for (; tam >= 30; tam -= 2) {
       ladoEscudo = crest ? tam * razonEscudo : 0;
@@ -1642,7 +1677,7 @@ function drawDueloConMarco(
 
     // Con imagen de brocha, el alto manda y el ancho sale de su
     // proporción; el ajuste de tamaño de letra ya no aplica.
-    const altoNombre = nombreImg ? tam * 1.55 : 0;
+    const altoNombre = nombreImg ? tam * 1.9 : 0;
     const anchoTexto = nombreImg
       ? (nombreImg.width / nombreImg.height) * altoNombre
       : ctx.measureText(nombre).width + tam * 0.22;
@@ -1700,10 +1735,6 @@ function drawDueloConMarco(
     ctx.fillRect(inicioX, nombreY + 20, anchoGrupo, 6);
   }
 
-  ctx.textAlign = "center";
-  ctx.font = `600 24px ${sans}`;
-  ctx.fillStyle = VOLT;
-  tracked(ctx, data.footer.toUpperCase(), L.w / 2, L.h - 40, 5);
 }
 
 function drawDueloBody(

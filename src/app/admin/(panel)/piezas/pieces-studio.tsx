@@ -309,9 +309,10 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
               ? `/nombre-${slugEquipo(match.away.name)}.webp`
               : null,
           },
-          footer: match.finished
-            ? `Semana ${match.week} · ${match.home.score ?? 0} - ${match.away.score ?? 0}`
-            : `Semana ${match.week} · 1er Torneo Amistoso`,
+          // El duelo presenta el enfrentamiento, no lo resume: va sin
+          // marcador aunque el partido ya se haya jugado. Para el
+          // resultado está la pieza "Resultado".
+          footer: `Semana ${match.week} · ${match.when}`,
           overlayUrl: conMarco ? "/marco-duelo.webp" : null,
         };
       }
@@ -364,9 +365,6 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       }
       case "duelo": {
         if (!match) return "";
-        if (match.finished) {
-          return `⚔️ ${match.home.name} ${match.home.score ?? 0} - ${match.away.score ?? 0} ${match.away.name}\n\nAsí quedaron parados los dos equipos en la Cancha F8.\n\nTabla y goleadores en la web, link en la bio.\n\n${TAGS}`;
-        }
         return `⚔️ ${match.home.name} 🆚 ${match.away.name}\n\n🗓️ ${match.when}\n📍 ${match.venue}\n\nSe viene el duelo. ¿Quién se lo lleva?\n\n🔗 ${SITE} (Link en la bio)\n\n${TAGS}`;
       }
       case "figura": {
