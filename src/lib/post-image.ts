@@ -1473,7 +1473,10 @@ const HUECO = {
   abajoY0: 0.602,
   abajoY1: 0.945,
   costura: 0.482,
-  margenX: 0.045,
+  // Medido: el negro utilizable llega hasta x 0.145. Con un margen menor
+  // la foto tapaba los cristales y las luces laterales del marco, que es
+  // justo lo que le da profundidad.
+  margenX: 0.115,
 } as const;
 
 /** Duelo con marco generado: las fotos van DEBAJO y el marco encima en
@@ -1504,24 +1507,58 @@ function drawDueloConMarco(
 
   for (const { side, foto, y, alto } of huecos) {
     if (!foto) continue;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x0, y, ancho, alto);
-    ctx.clip();
+
+    // La foto se arma aparte para poder desvanecerle los bordes. Dibujada
+    // directo salía con borde recto y duro, y se leía como una calcomanía
+    // pegada encima del marco en vez de estar dentro de la escena.
+    const capa = document.createElement("canvas");
+    capa.width = Math.round(ancho);
+    capa.height = Math.round(alto);
+    const c = capa.getContext("2d");
+    if (!c) continue;
+
     const zoom = Math.max(1, side.photoZoom ?? 1);
     const escala = Math.max(ancho / foto.width, alto / foto.height) * zoom;
     const w = foto.width * escala;
     const h = foto.height * escala;
     const sobraX = Math.max(0, w - ancho) / 2;
     const sobraY = Math.max(0, h - alto) / 2;
-    ctx.drawImage(
+    c.drawImage(
       foto,
-      L.w / 2 - w / 2 + (side.photoX ?? 0) * sobraX,
-      y + alto / 2 - h / 2 + (side.photoY ?? 0) * sobraY,
+      ancho / 2 - w / 2 + (side.photoX ?? 0) * sobraX,
+      alto / 2 - h / 2 + (side.photoY ?? 0) * sobraY,
       w,
       h,
     );
-    ctx.restore();
+
+    // Se come el alfa de los bordes con degradados: así la foto muere en
+    // el negro del marco en vez de cortarse en seco.
+    c.globalCompositeOperation = "destination-out";
+    const fx = ancho * 0.13;
+    const fy = alto * 0.16;
+    const borde = (
+      x: number,
+      yy: number,
+      bw: number,
+      bh: number,
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+    ) => {
+      const g = c.createLinearGradient(x1, y1, x2, y2);
+      g.addColorStop(0, "rgba(0,0,0,1)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      c.fillStyle = g;
+      c.fillRect(x, yy, bw, bh);
+    };
+    borde(0, 0, fx, alto, 0, 0, fx, 0);
+    borde(ancho - fx, 0, fx, alto, ancho, 0, ancho - fx, 0);
+    borde(0, 0, ancho, fy, 0, 0, 0, fy);
+    borde(0, alto - fy, ancho, fy, 0, alto, 0, alto - fy);
+    c.globalCompositeOperation = "source-over";
+
+    ctx.drawImage(capa, x0, y, ancho, alto);
   }
 
   // ---- El marco encima, teñido por equipo ----
