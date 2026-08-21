@@ -129,5 +129,11 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   `HUECO` se midieron analizando el brillo fila por fila del archivo: si
   se cambia el marco, hay que volver a medirlas. Y el lienzo toma la
   proporción del marco (2:3), porque estirarlo a 4:5 achataría el VS.
+- `public/nombre-<slug-del-equipo>.webp` son los nombres en letra de
+  brocha, también en BLANCO sobre transparente y teñidos por código. El
+  slug sale del nombre del equipo, así que agregar un equipo es dejar
+  caer el archivo. Si no existe, `loadImage` falla en silencio y se cae
+  al texto en Bebas inclinada: por eso un equipo puede quedarse sin el
+  suyo sin romper nada.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

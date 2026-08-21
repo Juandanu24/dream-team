@@ -36,6 +36,9 @@ export interface TeamSide {
  *  un borde vacío por más que se muevan. */
 export interface DueloFoto {
   photoUrl?: string | null;
+  /** Nombre en letra de brocha, blanco sobre transparente. Se tiñe con
+   *  el color del equipo, así el archivo no se rehace si cambia. */
+  nameImageUrl?: string | null;
   photoZoom?: number;
   photoX?: number;
   photoY?: number;
@@ -1207,12 +1210,14 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
 
   if (data.kind === "duelo") {
     // El duelo va a sangre: sin encabezado ni barras, la foto manda.
-    const [fh, fa, ch, ca, marco] = await Promise.all([
+    const [fh, fa, ch, ca, marco, nh, na] = await Promise.all([
       data.home.photoUrl ? loadImage(data.home.photoUrl) : null,
       data.away.photoUrl ? loadImage(data.away.photoUrl) : null,
       data.home.crestUrl ? loadImage(data.home.crestUrl) : null,
       data.away.crestUrl ? loadImage(data.away.crestUrl) : null,
       data.overlayUrl ? loadImage(data.overlayUrl) : null,
+      data.home.nameImageUrl ? loadImage(data.home.nameImageUrl) : null,
+      data.away.nameImageUrl ? loadImage(data.away.nameImageUrl) : null,
     ]);
 
     if (marco) {
@@ -1221,7 +1226,7 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
       // se comería uno de los huecos de las fotos.
       const LD: Layout = { ...L, h: Math.round((L.w * marco.height) / marco.width) };
       canvas.height = LD.h;
-      drawDueloConMarco(ctx, data, LD, [fh, fa], [ch, ca], marco, display, sans);
+      drawDueloConMarco(ctx, data, LD, [fh, fa], [ch, ca], marco, [nh, na], display, sans);
     } else {
       ctx.fillStyle = INK;
       ctx.fillRect(0, 0, L.w, L.h);
@@ -1392,6 +1397,27 @@ export async function renderPlayerPost(
  *  humo blanco se vuelve del color del equipo y el negro se queda negro
  *  —y en "screen" el negro es invisible, así que las fotos de abajo
  *  aparecen solas sin necesidad de recortar nada a mano. */
+/** Pinta una imagen blanca con un color, conservando su alfa. */
+function tintarImagen(
+  img: HTMLImageElement,
+  ancho: number,
+  alto: number,
+  color: string,
+): HTMLCanvasElement | null {
+  const lienzo = document.createElement("canvas");
+  lienzo.width = Math.round(ancho);
+  lienzo.height = Math.round(alto);
+  const c = lienzo.getContext("2d");
+  if (!c) return null;
+  c.drawImage(img, 0, 0, ancho, alto);
+  // source-in pinta solo donde ya hay tinta, así que el trazo de brocha
+  // conserva su textura y sus bordes rotos.
+  c.globalCompositeOperation = "source-in";
+  c.fillStyle = color;
+  c.fillRect(0, 0, ancho, alto);
+  return lienzo;
+}
+
 function tintarMarco(
   marco: HTMLImageElement,
   L: Layout,
@@ -1473,10 +1499,13 @@ const HUECO = {
   // Metida y achicada se leía flotando sobre el degradado, que era el
   // problema: el inset no hacía falta, porque los brillos del marco se
   // superponen igual.
-  arribaY0: 0.055,
-  arribaY1: 0.425,
-  abajoY0: 0.555,
-  abajoY1: 0.945,
+  // Las fotos casi se tocan en la costura y llegan hasta arriba y abajo:
+  // con más separación quedaban bandas negras planas, que era lo único
+  // que delataba el montaje.
+  arribaY0: 0.022,
+  arribaY1: 0.478,
+  abajoY0: 0.488,
+  abajoY1: 0.962,
   costura: 0.482,
   margenX: 0,
 } as const;
@@ -1491,6 +1520,7 @@ function drawDueloConMarco(
   fotos: [HTMLImageElement | null, HTMLImageElement | null],
   crests: [HTMLImageElement | null, HTMLImageElement | null],
   marco: HTMLImageElement,
+  nombres: [HTMLImageElement | null, HTMLImageElement | null],
   display: string,
   sans: string,
 ) {
@@ -1537,7 +1567,7 @@ function drawDueloConMarco(
     // lienzo, así que no hay borde que disimular.
     c.globalCompositeOperation = "destination-out";
     const fx = 0;
-    const fy = alto * 0.2;
+    const fy = alto * 0.12;
     const borde = (
       x: number,
       yy: number,
@@ -1582,14 +1612,16 @@ function drawDueloConMarco(
   // El de arriba va [escudo][nombre] y el de abajo [nombre][escudo]: el
   // escudo queda siempre del lado de afuera, como en los carteles de
   // enfrentamiento, y los dos bloques se espejan.
-  for (const [i, { side, crest }] of [
-    { side: data.home, crest: crests[0] },
-    { side: data.away, crest: crests[1] },
+  for (const [i, { side, crest, nombreImg }] of [
+    { side: data.home, crest: crests[0], nombreImg: nombres[0] },
+    { side: data.away, crest: crests[1], nombreImg: nombres[1] },
   ].entries()) {
     const accent = readableAccent(side.color);
     const nombre = side.name.toUpperCase();
     const arriba = i === 0;
-    const anchoDisponible = L.w - 120;
+    // Solo hasta antes del VS, que va centrado: los nombres quedan a la
+    // altura de la costura y con el ancho completo se le metían debajo.
+    const anchoDisponible = L.w * 0.44;
     const hueco = 22;
 
     // El escudo pesa más que antes: es la identidad del equipo y a 1.15
@@ -1607,7 +1639,13 @@ function drawDueloConMarco(
     }
     ctx.font = `${tam}px ${display}`;
     const anchoEscudo = crest ? (crest.width / crest.height) * ladoEscudo : 0;
-    const anchoTexto = ctx.measureText(nombre).width + tam * 0.22;
+
+    // Con imagen de brocha, el alto manda y el ancho sale de su
+    // proporción; el ajuste de tamaño de letra ya no aplica.
+    const altoNombre = nombreImg ? tam * 1.55 : 0;
+    const anchoTexto = nombreImg
+      ? (nombreImg.width / nombreImg.height) * altoNombre
+      : ctx.measureText(nombre).width + tam * 0.22;
     const anchoGrupo = anchoEscudo + (crest ? hueco : 0) + anchoTexto;
 
     const nombreY = arriba
@@ -1632,20 +1670,31 @@ function drawDueloConMarco(
     // Inclinación tipo cartel deportivo: le da el empuje que a Bebas
     // recta le falta. Se hace con transform porque canvas no tiene
     // cursiva sintética.
-    ctx.save();
-    ctx.translate(textoX, nombreY);
-    ctx.transform(1, 0, -0.16, 1, 0, 0);
-    ctx.textAlign = "left";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = 11;
-    ctx.strokeStyle = "rgba(0,0,0,0.85)";
-    ctx.strokeText(nombre, 0, 0);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = accent;
-    ctx.strokeText(nombre, 0, 0);
-    ctx.fillStyle = PAPER;
-    ctx.fillText(nombre, 0, 0);
-    ctx.restore();
+    if (nombreImg) {
+      const tenidoNombre = tintarImagen(nombreImg, anchoTexto, altoNombre, PAPER);
+      const y = nombreY - altoNombre * 0.82;
+      // Sombra por detrás para que despegue de la foto.
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.85)";
+      ctx.shadowBlur = 18;
+      ctx.drawImage(tenidoNombre ?? nombreImg, textoX, y, anchoTexto, altoNombre);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(textoX, nombreY);
+      ctx.transform(1, 0, -0.16, 1, 0, 0);
+      ctx.textAlign = "left";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 11;
+      ctx.strokeStyle = "rgba(0,0,0,0.85)";
+      ctx.strokeText(nombre, 0, 0);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = accent;
+      ctx.strokeText(nombre, 0, 0);
+      ctx.fillStyle = PAPER;
+      ctx.fillText(nombre, 0, 0);
+      ctx.restore();
+    }
 
     ctx.fillStyle = accent;
     ctx.fillRect(inicioX, nombreY + 20, anchoGrupo, 6);

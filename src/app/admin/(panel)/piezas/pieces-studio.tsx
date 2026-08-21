@@ -276,6 +276,16 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       }
       case "duelo": {
         if (!match) return null;
+        // El nombre de brocha se busca por el nombre del equipo. Si el
+        // archivo no existe, loadImage falla en silencio y se cae al
+        // texto: por eso Colombia puede seguir sin el suyo.
+        const slugEquipo = (n: string) =>
+          n
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
         return {
           ...common,
           kind,
@@ -285,6 +295,9 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
             photoZoom: encuadre.home.zoom,
             photoX: encuadre.home.x,
             photoY: encuadre.home.y,
+            nameImageUrl: conMarco
+              ? `/nombre-${slugEquipo(match.home.name)}.webp`
+              : null,
           },
           away: {
             ...match.away,
@@ -292,6 +305,9 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
             photoZoom: encuadre.away.zoom,
             photoX: encuadre.away.x,
             photoY: encuadre.away.y,
+            nameImageUrl: conMarco
+              ? `/nombre-${slugEquipo(match.away.name)}.webp`
+              : null,
           },
           footer: match.finished
             ? `Semana ${match.week} · ${match.home.score ?? 0} - ${match.away.score ?? 0}`
