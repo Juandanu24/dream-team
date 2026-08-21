@@ -365,7 +365,11 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       }
       case "duelo": {
         if (!match) return "";
-        return `⚔️ ${match.home.name} 🆚 ${match.away.name}\n\n🗓️ ${match.when}\n📍 ${match.venue}\n\nSe viene el duelo. ¿Quién se lo lleva?\n\n🔗 ${SITE} (Link en la bio)\n\n${TAGS}`;
+        // El duelo es la PORTADA de un carrusel de lo que se vivió:
+        // videos, jugadas, la gente que acompañó. No anuncia el partido
+        // —eso es la pieza "Anuncio"— ni da el marcador —eso es
+        // "Resultado"—, así que el texto no revela nada.
+        return `⚔️ ASÍ SE VIVIÓ\n\n${match.home.name} 🆚 ${match.away.name} en la Cancha F8.\n\nDesliza 👉 y míralo: las jugadas, el ambiente y todos los que se pegaron la rodada para acompañarnos.\n\nEl resultado y la tabla están en la web. Link en la bio.\n\n${TAGS}`;
       }
       case "figura": {
         if (!mvp) return "";
