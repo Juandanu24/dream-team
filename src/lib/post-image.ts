@@ -1578,6 +1578,10 @@ function drawDueloConMarco(
   ctx.globalCompositeOperation = "source-over";
 
   // ---- Nombres con su escudo ----
+  //
+  // El de arriba va [escudo][nombre] y el de abajo [nombre][escudo]: el
+  // escudo queda siempre del lado de afuera, como en los carteles de
+  // enfrentamiento, y los dos bloques se espejan.
   for (const [i, { side, crest }] of [
     { side: data.home, crest: crests[0] },
     { side: data.away, crest: crests[1] },
@@ -1585,45 +1589,66 @@ function drawDueloConMarco(
     const accent = readableAccent(side.color);
     const nombre = side.name.toUpperCase();
     const arriba = i === 0;
-    const anchoDisponible = ancho - 40;
+    const anchoDisponible = L.w - 120;
+    const hueco = 22;
 
-    let tam = 60;
-    let anchoEscudo = 0;
-    const hueco = 18;
+    // El escudo pesa más que antes: es la identidad del equipo y a 1.15
+    // del tamaño de letra se perdía.
+    const razonEscudo = 2.1;
+
+    let tam = 68;
+    let ladoEscudo = 0;
     for (; tam >= 30; tam -= 2) {
-      anchoEscudo = crest ? (crest.width / crest.height) * (tam * 1.15) : 0;
+      ladoEscudo = crest ? tam * razonEscudo : 0;
       ctx.font = `${tam}px ${display}`;
-      if (
-        ctx.measureText(nombre).width + anchoEscudo + (crest ? hueco : 0) <=
-        anchoDisponible
-      ) {
-        break;
-      }
+      // El skew ensancha el texto, así que se descuenta al medir.
+      const anchoTexto = ctx.measureText(nombre).width + tam * 0.22;
+      if (anchoTexto + ladoEscudo + (crest ? hueco : 0) <= anchoDisponible) break;
     }
     ctx.font = `${tam}px ${display}`;
-    const anchoGrupo =
-      anchoEscudo + (crest ? hueco : 0) + ctx.measureText(nombre).width;
+    const anchoEscudo = crest ? (crest.width / crest.height) * ladoEscudo : 0;
+    const anchoTexto = ctx.measureText(nombre).width + tam * 0.22;
+    const anchoGrupo = anchoEscudo + (crest ? hueco : 0) + anchoTexto;
 
-    // Pegados al borde interior de su hueco, hacia el centro de la pieza.
     const nombreY = arriba
-      ? L.h * HUECO.arribaY1 - 18
-      : L.h * HUECO.abajoY1 - 18;
-    const inicioX = arriba ? x0 + 20 : L.w - x0 - 20 - anchoGrupo;
+      ? L.h * HUECO.arribaY1 - 26
+      : L.h * HUECO.abajoY1 - 26;
+    const inicioX = arriba ? 60 : L.w - 60 - anchoGrupo;
+
+    // Orden espejado según la mitad.
+    const escudoX = arriba ? inicioX : inicioX + anchoTexto + hueco;
+    const textoX = arriba ? inicioX + anchoEscudo + (crest ? hueco : 0) : inicioX;
 
     if (crest) {
-      const alto = tam * 1.15;
-      ctx.drawImage(crest, inicioX, nombreY - alto * 0.82, anchoEscudo, alto);
+      ctx.drawImage(
+        crest,
+        escudoX,
+        nombreY - ladoEscudo * 0.78,
+        anchoEscudo,
+        ladoEscudo,
+      );
     }
+
+    // Inclinación tipo cartel deportivo: le da el empuje que a Bebas
+    // recta le falta. Se hace con transform porque canvas no tiene
+    // cursiva sintética.
+    ctx.save();
+    ctx.translate(textoX, nombreY);
+    ctx.transform(1, 0, -0.16, 1, 0, 0);
     ctx.textAlign = "left";
     ctx.lineJoin = "round";
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = "rgba(0,0,0,0.8)";
-    const textoX = inicioX + anchoEscudo + (crest ? hueco : 0);
-    ctx.strokeText(nombre, textoX, nombreY);
+    ctx.lineWidth = 11;
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.strokeText(nombre, 0, 0);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = accent;
+    ctx.strokeText(nombre, 0, 0);
     ctx.fillStyle = PAPER;
-    ctx.fillText(nombre, textoX, nombreY);
+    ctx.fillText(nombre, 0, 0);
+    ctx.restore();
+
     ctx.fillStyle = accent;
-    ctx.fillRect(inicioX, nombreY + 14, anchoGrupo, 5);
+    ctx.fillRect(inicioX, nombreY + 20, anchoGrupo, 6);
   }
 
   ctx.textAlign = "center";
