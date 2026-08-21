@@ -136,6 +136,9 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     away: null,
   });
   // Encuadre por foto: zoom y posición dentro del panel.
+  // El marco generado con IA es opcional: sin él sale la plantilla
+  // dibujada en canvas, que es más sobria pero no depende de nada.
+  const [conMarco, setConMarco] = useState(true);
   const [encuadre, setEncuadre] = useState<
     Record<"home" | "away", { zoom: number; x: number; y: number }>
   >({
@@ -293,6 +296,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           footer: match.finished
             ? `Semana ${match.week} · ${match.home.score ?? 0} - ${match.away.score ?? 0}`
             : `Semana ${match.week} · 1er Torneo Amistoso`,
+          overlayUrl: conMarco ? "/marco-duelo.webp" : null,
         };
       }
       case "equipo":
@@ -311,7 +315,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         // dibuja en dos pasos (carta y luego marco), fuera de este switch.
         return null;
     }
-  }, [kind, format, match, team, data, missing, cuantos, fotos, encuadre]);
+  }, [kind, format, match, team, data, missing, cuantos, fotos, encuadre, conMarco]);
 
   const caption = useMemo(() => {
     switch (kind) {
@@ -389,7 +393,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const esFigura = kind === "figura" && Boolean(mvp) && !missing;
   const dibujable = Boolean(piece) || esFigura;
   const key = dibujable
-    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}:${JSON.stringify(encuadre)}`
+    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}:${JSON.stringify(encuadre)}:${conMarco}`
     : "";
   const busy = dibujable && rendered?.key !== key;
   const preview = dibujable && rendered?.key === key ? rendered.url : null;
@@ -505,7 +509,13 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
             <div
               className={cn(
                 "relative w-full overflow-hidden rounded-md bg-[#0a0a0a]",
-                format === "feed" ? "aspect-[1080/1350]" : "aspect-[1080/1920]",
+                // El duelo con marco toma la proporción del PNG (2:3), no
+                // la del formato.
+                kind === "duelo" && conMarco
+                  ? "aspect-[1080/1623]"
+                  : format === "feed"
+                    ? "aspect-[1080/1350]"
+                    : "aspect-[1080/1920]",
               )}
             >
               {preview ? (
@@ -530,7 +540,11 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           </CardContent>
         </Card>
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          {format === "feed" ? "1080 × 1350 · feed" : "1080 × 1920 · story"}
+          {kind === "duelo" && conMarco
+            ? "1080 × 1623 · el marco es 2:3"
+            : format === "feed"
+              ? "1080 × 1350 · feed"
+              : "1080 × 1920 · story"}
         </p>
       </div>
 
@@ -613,6 +627,21 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
               </Select>
             )}
             {kind === "duelo" && match ? (
+              <>
+              <label className="mb-2 flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={conMarco}
+                  onChange={(e) => setConMarco(e.target.checked)}
+                  className="size-4 accent-[var(--dt-blue)]"
+                />
+                <span>
+                  Marco cinematográfico
+                  <span className="ml-1 text-muted-foreground">
+                    (se tiñe con el color de cada equipo)
+                  </span>
+                </span>
+              </label>
               <div className="grid gap-2 sm:grid-cols-2">
                 {(["home", "away"] as const).map((lado) => {
                   const equipo = lado === "home" ? match.home : match.away;
@@ -692,6 +721,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                   );
                 })}
               </div>
+              </>
             ) : null}
             {kind === "resultado" && match && !match.finished ? (
               <p className="text-xs text-muted-foreground">

@@ -126,6 +126,10 @@ export type PostImageData = Common &
         away: TeamSide & DueloFoto;
         /** "CANCHA F8 · MONTERÍA" o el marcador si ya se jugó. */
         footer: string;
+        /** Marco generado con IA que se superpone a las fotos. Viene en
+         *  blanco y negro y se tiñe por equipo, así una sola plantilla
+         *  sirve para los seis cruces del torneo. */
+        overlayUrl?: string | null;
       }
     | (ConMarco & {
         kind: "alineacion";
@@ -160,7 +164,12 @@ const LAYOUT = {
   story: { w: 1080, h: 1920, eyebrowY: 350, headY: 470, bodyTop: 570, footerY: 1610 },
 } as const;
 
-export type Layout = (typeof LAYOUT)[PieceFormat];
+export type Layout = Omit<(typeof LAYOUT)[PieceFormat], "w" | "h"> & {
+  w: number;
+  /** El duelo con marco lo calcula desde la proporción del PNG, así que
+   *  no puede ser uno de los dos literales de LAYOUT. */
+  h: number;
+};
 
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
@@ -1198,18 +1207,29 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
 
   if (data.kind === "duelo") {
     // El duelo va a sangre: sin encabezado ni barras, la foto manda.
-    const [fh, fa, ch, ca] = await Promise.all([
+    const [fh, fa, ch, ca, marco] = await Promise.all([
       data.home.photoUrl ? loadImage(data.home.photoUrl) : null,
       data.away.photoUrl ? loadImage(data.away.photoUrl) : null,
       data.home.crestUrl ? loadImage(data.home.crestUrl) : null,
       data.away.crestUrl ? loadImage(data.away.crestUrl) : null,
+      data.overlayUrl ? loadImage(data.overlayUrl) : null,
     ]);
-    ctx.fillStyle = INK;
-    ctx.fillRect(0, 0, L.w, L.h);
-    ctx.fillStyle = sweepGradient(ctx, 0, L.w);
-    ctx.fillRect(0, 0, L.w, 12);
-    ctx.fillRect(0, L.h - 12, L.w, 12);
-    drawDueloBody(ctx, data, L, [fh, fa], [ch, ca], logo, display, sans);
+
+    if (marco) {
+      // Con marco, el lienzo toma SU proporción. El marco generado es 2:3
+      // y el feed pide 4:5: estirarlo achataría el VS un 20%, y recortarlo
+      // se comería uno de los huecos de las fotos.
+      const LD: Layout = { ...L, h: Math.round((L.w * marco.height) / marco.width) };
+      canvas.height = LD.h;
+      drawDueloConMarco(ctx, data, LD, [fh, fa], [ch, ca], marco, display, sans);
+    } else {
+      ctx.fillStyle = INK;
+      ctx.fillRect(0, 0, L.w, L.h);
+      ctx.fillStyle = sweepGradient(ctx, 0, L.w);
+      ctx.fillRect(0, 0, L.w, 12);
+      ctx.fillRect(0, L.h - 12, L.w, 12);
+      drawDueloBody(ctx, data, L, [fh, fa], [ch, ca], logo, display, sans);
+    }
     return new Promise((resolve, reject) => {
       canvas.toBlob(
         (blob) => (blob ? resolve(blob) : reject(new Error("No se pudo exportar la pieza"))),
@@ -1365,6 +1385,53 @@ export async function renderPlayerPost(
 
 // ── Duelo: las dos fotos de equipo enfrentadas ──────────────────────
 
+/** Tiñe un marco blanco y negro con el color de cada equipo y lo deja
+ *  listo para mezclarse en "screen".
+ *
+ *  Multiplicar solo puede oscurecer, que es justo lo que se quiere: el
+ *  humo blanco se vuelve del color del equipo y el negro se queda negro
+ *  —y en "screen" el negro es invisible, así que las fotos de abajo
+ *  aparecen solas sin necesidad de recortar nada a mano. */
+function tintarMarco(
+  marco: HTMLImageElement,
+  L: Layout,
+  seam: number,
+  colorArriba: string,
+  colorAbajo: string,
+): HTMLCanvasElement | null {
+  const lienzo = document.createElement("canvas");
+  lienzo.width = L.w;
+  lienzo.height = L.h;
+  const c = lienzo.getContext("2d");
+  if (!c) return null;
+
+  c.drawImage(marco, 0, 0, L.w, L.h);
+
+  c.globalCompositeOperation = "multiply";
+  for (const [color, y0, y1] of [
+    [colorArriba, 0, seam],
+    [colorAbajo, seam, L.h],
+  ] as const) {
+    c.save();
+    c.beginPath();
+    c.rect(0, y0, L.w, y1 - y0);
+    c.clip();
+    c.fillStyle = color;
+    c.fillRect(0, y0, L.w, y1 - y0);
+    c.restore();
+  }
+
+  // El multiply apaga bastante; se recupera brillo con un screen del
+  // propio marco, que devuelve los blancos puros de las luces.
+  c.globalCompositeOperation = "screen";
+  c.globalAlpha = 0.35;
+  c.drawImage(marco, 0, 0, L.w, L.h);
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = "source-over";
+
+  return lienzo;
+}
+
 /** Panel con las esquinas cortadas en diagonal, tipo cartel de esports.
  *  Es lo que separa "una foto pegada" de "una pieza". */
 function panelDiagonal(
@@ -1393,6 +1460,135 @@ function panelDiagonal(
     ctx.lineTo(x, y + corte);
   }
   ctx.closePath();
+}
+
+// Dónde caen los dos huecos negros del marco generado, en fracción del
+// alto. Se miden sobre el PNG real; si se cambia el marco hay que
+// volver a medirlos.
+// Medidos sobre el PNG real analizando el brillo fila por fila. Si se
+// cambia el marco, hay que volver a medirlos.
+const HUECO = {
+  arribaY0: 0.095,
+  arribaY1: 0.375,
+  abajoY0: 0.602,
+  abajoY1: 0.945,
+  costura: 0.482,
+  margenX: 0.045,
+} as const;
+
+/** Duelo con marco generado: las fotos van DEBAJO y el marco encima en
+ *  "screen", que vuelve invisible su negro. Así no hay que recortar los
+ *  paneles a mano ni acertar los píxeles del marco. */
+function drawDueloConMarco(
+  ctx: CanvasRenderingContext2D,
+  data: Extract<PostImageData, { kind: "duelo" }>,
+  L: Layout,
+  fotos: [HTMLImageElement | null, HTMLImageElement | null],
+  crests: [HTMLImageElement | null, HTMLImageElement | null],
+  marco: HTMLImageElement,
+  display: string,
+  sans: string,
+) {
+  const x0 = L.w * HUECO.margenX;
+  const ancho = L.w - x0 * 2;
+  const seam = L.h * HUECO.costura;
+
+  ctx.fillStyle = INK;
+  ctx.fillRect(0, 0, L.w, L.h);
+
+  // ---- Fotos en sus huecos ----
+  const huecos = [
+    { side: data.home, foto: fotos[0], y: L.h * HUECO.arribaY0, alto: L.h * (HUECO.arribaY1 - HUECO.arribaY0) },
+    { side: data.away, foto: fotos[1], y: L.h * HUECO.abajoY0, alto: L.h * (HUECO.abajoY1 - HUECO.abajoY0) },
+  ];
+
+  for (const { side, foto, y, alto } of huecos) {
+    if (!foto) continue;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x0, y, ancho, alto);
+    ctx.clip();
+    const zoom = Math.max(1, side.photoZoom ?? 1);
+    const escala = Math.max(ancho / foto.width, alto / foto.height) * zoom;
+    const w = foto.width * escala;
+    const h = foto.height * escala;
+    const sobraX = Math.max(0, w - ancho) / 2;
+    const sobraY = Math.max(0, h - alto) / 2;
+    ctx.drawImage(
+      foto,
+      L.w / 2 - w / 2 + (side.photoX ?? 0) * sobraX,
+      y + alto / 2 - h / 2 + (side.photoY ?? 0) * sobraY,
+      w,
+      h,
+    );
+    ctx.restore();
+  }
+
+  // ---- El marco encima, teñido por equipo ----
+  const tenido = tintarMarco(
+    marco,
+    L,
+    seam,
+    readableAccent(data.home.color),
+    readableAccent(data.away.color),
+  );
+  ctx.globalCompositeOperation = "screen";
+  ctx.drawImage(tenido ?? marco, 0, 0, L.w, L.h);
+  ctx.globalCompositeOperation = "source-over";
+
+  // ---- Nombres con su escudo ----
+  for (const [i, { side, crest }] of [
+    { side: data.home, crest: crests[0] },
+    { side: data.away, crest: crests[1] },
+  ].entries()) {
+    const accent = readableAccent(side.color);
+    const nombre = side.name.toUpperCase();
+    const arriba = i === 0;
+    const anchoDisponible = ancho - 40;
+
+    let tam = 60;
+    let anchoEscudo = 0;
+    const hueco = 18;
+    for (; tam >= 30; tam -= 2) {
+      anchoEscudo = crest ? (crest.width / crest.height) * (tam * 1.15) : 0;
+      ctx.font = `${tam}px ${display}`;
+      if (
+        ctx.measureText(nombre).width + anchoEscudo + (crest ? hueco : 0) <=
+        anchoDisponible
+      ) {
+        break;
+      }
+    }
+    ctx.font = `${tam}px ${display}`;
+    const anchoGrupo =
+      anchoEscudo + (crest ? hueco : 0) + ctx.measureText(nombre).width;
+
+    // Pegados al borde interior de su hueco, hacia el centro de la pieza.
+    const nombreY = arriba
+      ? L.h * HUECO.arribaY1 - 18
+      : L.h * HUECO.abajoY1 - 18;
+    const inicioX = arriba ? x0 + 20 : L.w - x0 - 20 - anchoGrupo;
+
+    if (crest) {
+      const alto = tam * 1.15;
+      ctx.drawImage(crest, inicioX, nombreY - alto * 0.82, anchoEscudo, alto);
+    }
+    ctx.textAlign = "left";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(0,0,0,0.8)";
+    const textoX = inicioX + anchoEscudo + (crest ? hueco : 0);
+    ctx.strokeText(nombre, textoX, nombreY);
+    ctx.fillStyle = PAPER;
+    ctx.fillText(nombre, textoX, nombreY);
+    ctx.fillStyle = accent;
+    ctx.fillRect(inicioX, nombreY + 14, anchoGrupo, 5);
+  }
+
+  ctx.textAlign = "center";
+  ctx.font = `600 24px ${sans}`;
+  ctx.fillStyle = VOLT;
+  tracked(ctx, data.footer.toUpperCase(), L.w / 2, L.h - 40, 5);
 }
 
 function drawDueloBody(

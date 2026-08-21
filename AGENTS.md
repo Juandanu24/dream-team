@@ -120,5 +120,14 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   (solo el formato) de `ConMarco` (encabezado y titular), y el duelo no
   lleva el segundo: pedirle un eyebrow sería un campo muerto. Sus fotos
   las sube el admin, no salen de la base.
+- `public/marco-duelo.webp` es un marco generado con IA, en BLANCO Y
+  NEGRO a propósito: `tintarMarco()` lo multiplica por el color de cada
+  equipo (arriba el local, abajo el visitante), así una sola plantilla
+  sirve para los seis cruces. Se dibuja encima de las fotos en modo
+  `screen`, que vuelve invisible su negro — por eso no hay que recortar
+  los huecos a mano ni acertar los píxeles del PNG. Las fracciones de
+  `HUECO` se midieron analizando el brillo fila por fila del archivo: si
+  se cambia el marco, hay que volver a medirlas. Y el lienzo toma la
+  proporción del marco (2:3), porque estirarlo a 4:5 achataría el VS.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
