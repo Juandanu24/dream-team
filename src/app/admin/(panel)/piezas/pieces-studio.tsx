@@ -515,9 +515,9 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   }
 
   return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
       {/* Vista previa */}
-      <div className="lg:order-2">
+      <div className="min-w-0 lg:order-2">
         <Card className="overflow-hidden border-border/60 bg-card/70 py-0">
           <CardContent className="p-3">
             <div
@@ -553,6 +553,67 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
             </div>
           </CardContent>
         </Card>
+        {kind === "duelo" && (fotos.home || fotos.away) ? (
+          <div className="mt-3 space-y-3 rounded-md border border-border/60 p-3">
+            <p className="text-xs text-muted-foreground">
+              Ajusta mirando la vista previa de arriba.
+            </p>
+            {(["home", "away"] as const).map((lado) => {
+              if (!fotos[lado] || !match) return null;
+              const equipo = lado === "home" ? match.home : match.away;
+              return (
+                <div key={lado} className="min-w-0 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="truncate text-xs font-medium">
+                      {equipo.name}
+                    </span>
+                    <button
+                      type="button"
+                      className="shrink-0 text-[11px] text-dt-blue underline-offset-2 hover:underline"
+                      onClick={() =>
+                        setEncuadre((prev) => ({
+                          ...prev,
+                          [lado]: { zoom: 1, x: 0, y: 0 },
+                        }))
+                      }
+                    >
+                      Reiniciar
+                    </button>
+                  </div>
+                  {(
+                    [
+                      { k: "zoom", label: "Zoom", min: 1, max: 3, step: 0.05 },
+                      { k: "x", label: "Izq/Der", min: -1, max: 1, step: 0.02 },
+                      { k: "y", label: "Arr/Aba", min: -1, max: 1, step: 0.02 },
+                    ] as const
+                  ).map((c) => (
+                    <label
+                      key={c.k}
+                      className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground"
+                    >
+                      <span className="w-14 shrink-0">{c.label}</span>
+                      <input
+                        type="range"
+                        min={c.min}
+                        max={c.max}
+                        step={c.step}
+                        value={encuadre[lado][c.k]}
+                        className="h-1 w-full min-w-0 accent-[var(--dt-blue)]"
+                        onChange={(e) =>
+                          setEncuadre((prev) => ({
+                            ...prev,
+                            [lado]: { ...prev[lado], [c.k]: Number(e.target.value) },
+                          }))
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
         <p className="mt-2 text-center text-xs text-muted-foreground">
           {kind === "duelo" && conMarco
             ? "1080 × 1623 · el marco es 2:3"
@@ -563,7 +624,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       </div>
 
       {/* Controles */}
-      <div className="space-y-6 lg:order-1">
+      <div className="min-w-0 space-y-6 lg:order-1">
         <div className="space-y-2">
           <Label>Tipo de pieza</Label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -656,7 +717,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                   </span>
                 </span>
               </label>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid min-w-0 gap-2 sm:grid-cols-2">
                 {(["home", "away"] as const).map((lado) => {
                   const equipo = lado === "home" ? match.home : match.away;
                   return (
@@ -671,7 +732,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                         id={`foto-${lado}`}
                         type="file"
                         accept="image/*"
-                        className="w-full text-xs file:mr-2 file:rounded-md file:border file:border-input file:bg-transparent file:px-2 file:py-1 file:text-xs"
+                        className="w-full min-w-0 max-w-full text-xs file:mr-2 file:rounded-md file:border file:border-input file:bg-transparent file:px-2 file:py-1 file:text-xs"
                         onChange={(e) => {
                           const archivo = e.target.files?.[0];
                           if (!archivo?.type.startsWith("image/")) return;
@@ -684,53 +745,6 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                           });
                         }}
                       />
-                      {fotos[lado] ? (
-                        <div className="space-y-1 rounded-md border border-border/60 p-2">
-                          {(
-                            [
-                              { k: "zoom", label: "Zoom", min: 1, max: 3, step: 0.05 },
-                              { k: "x", label: "Izq/Der", min: -1, max: 1, step: 0.02 },
-                              { k: "y", label: "Arr/Aba", min: -1, max: 1, step: 0.02 },
-                            ] as const
-                          ).map((c) => (
-                            <label
-                              key={c.k}
-                              className="flex items-center gap-2 text-[11px] text-muted-foreground"
-                            >
-                              <span className="w-14 shrink-0">{c.label}</span>
-                              <input
-                                type="range"
-                                min={c.min}
-                                max={c.max}
-                                step={c.step}
-                                value={encuadre[lado][c.k]}
-                                className="h-1 w-full accent-[var(--dt-blue)]"
-                                onChange={(e) =>
-                                  setEncuadre((prev) => ({
-                                    ...prev,
-                                    [lado]: {
-                                      ...prev[lado],
-                                      [c.k]: Number(e.target.value),
-                                    },
-                                  }))
-                                }
-                              />
-                            </label>
-                          ))}
-                          <button
-                            type="button"
-                            className="text-[11px] text-dt-blue underline-offset-2 hover:underline"
-                            onClick={() =>
-                              setEncuadre((prev) => ({
-                                ...prev,
-                                [lado]: { zoom: 1, x: 0, y: 0 },
-                              }))
-                            }
-                          >
-                            Reiniciar encuadre
-                          </button>
-                        </div>
-                      ) : null}
                     </div>
                   );
                 })}
