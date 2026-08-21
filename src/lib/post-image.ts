@@ -19,7 +19,8 @@ export type PieceKind =
   | "asistencias"
   | "equipo"
   | "penales"
-  | "alineacion";
+  | "alineacion"
+  | "duelo";
 
 export type PieceFormat = "feed" | "story";
 
@@ -67,6 +68,12 @@ export interface RankLite {
 
 interface Common {
   format: PieceFormat;
+}
+
+/** Las piezas que se dibujan con el marco común llevan encabezado. El
+ *  duelo no: va a sangre, con las fotos ocupando todo el lienzo, así que
+ *  pedirle un eyebrow sería un campo muerto que nadie lee. */
+interface ConMarco {
   /** "SEMANA 1 · FASE DE GRUPOS" */
   eyebrow: string;
   /** "HOY JUGAMOS", "TABLA DE POSICIONES" */
@@ -75,7 +82,7 @@ interface Common {
 
 export type PostImageData = Common &
   (
-    | {
+    | (ConMarco & {
         kind: "anuncio" | "resultado";
         home: TeamSide;
         away: TeamSide;
@@ -88,29 +95,36 @@ export type PostImageData = Common &
          *  en cuanto el partido pasaba de tres o cuatro goles. */
         homeScorers?: ScorerLine[];
         awayScorers?: ScorerLine[];
-      }
-    | { kind: "posiciones"; rows: StandingLite[] }
-    | {
+      })
+    | (ConMarco & { kind: "posiciones"; rows: StandingLite[] })
+    | (ConMarco & {
         kind: "goleadores" | "asistencias" | "penales";
         rows: RankLite[];
         unit: string;
         /** "+4 más con 1 gol", cuando el corte parte un empate. */
         footnote?: string;
-      }
-    | {
+      })
+    | (ConMarco & {
         kind: "equipo";
         team: TeamSide;
         captain?: string;
         players: string[];
-      }
+      })
     | {
+        kind: "duelo";
+        home: TeamSide & { photoUrl?: string | null };
+        away: TeamSide & { photoUrl?: string | null };
+        /** "CANCHA F8 · MONTERÍA" o el marcador si ya se jugó. */
+        footer: string;
+      }
+    | (ConMarco & {
         kind: "alineacion";
         team: TeamSide;
         formation: string;
         /** De arquero a delantera; se dibuja de abajo hacia arriba. */
         rows: LineupRow[];
         bench: string[];
-      }
+      })
   );
 
 // El barrido del logo: azul profundo → cian → aqua → lima → amarillo.
@@ -413,7 +427,7 @@ function drawAvatar(
 
 function drawChrome(
   ctx: CanvasRenderingContext2D,
-  data: PostImageData,
+  data: PostImageData & ConMarco,
   L: Layout,
   logo: HTMLImageElement | null,
   display: string,
@@ -1172,6 +1186,28 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
     glows = [{ x: L.w * 0.5, color: data.kind === "penales" ? BLUE : VOLT }];
   }
 
+  if (data.kind === "duelo") {
+    // El duelo va a sangre: sin encabezado ni barras, la foto manda.
+    const [fh, fa, ch, ca] = await Promise.all([
+      data.home.photoUrl ? loadImage(data.home.photoUrl) : null,
+      data.away.photoUrl ? loadImage(data.away.photoUrl) : null,
+      data.home.crestUrl ? loadImage(data.home.crestUrl) : null,
+      data.away.crestUrl ? loadImage(data.away.crestUrl) : null,
+    ]);
+    ctx.fillStyle = INK;
+    ctx.fillRect(0, 0, L.w, L.h);
+    ctx.fillStyle = sweepGradient(ctx, 0, L.w);
+    ctx.fillRect(0, 0, L.w, 12);
+    ctx.fillRect(0, L.h - 12, L.w, 12);
+    drawDueloBody(ctx, data, L, [fh, fa], [ch, ca], logo, display, sans);
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("No se pudo exportar la pieza"))),
+        "image/png",
+      );
+    });
+  }
+
   drawChrome(ctx, data, L, logo, display, sans, glows);
 
   if (data.kind === "anuncio" || data.kind === "resultado") {
@@ -1211,7 +1247,9 @@ export function postFileName(data: PostImageData) {
   const detail =
     data.kind === "anuncio" || data.kind === "resultado"
       ? `-${slug(data.home.name)}-vs-${slug(data.away.name)}`
-      : data.kind === "equipo" || data.kind === "alineacion"
+      : data.kind === "duelo"
+        ? `-${slug(data.home.name)}-vs-${slug(data.away.name)}`
+        : data.kind === "equipo" || data.kind === "alineacion"
         ? `-${slug(data.team.name)}`
         : "";
   return `dt-${data.kind}${detail}-${data.format}.png`;
@@ -1313,4 +1351,192 @@ export async function renderPlayerPost(
       "image/png",
     );
   });
+}
+
+// ── Duelo: las dos fotos de equipo enfrentadas ──────────────────────
+
+/** Panel con las esquinas cortadas en diagonal, tipo cartel de esports.
+ *  Es lo que separa "una foto pegada" de "una pieza". */
+function panelDiagonal(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  corte: number,
+  invertido: boolean,
+) {
+  ctx.beginPath();
+  if (invertido) {
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w - corte, y);
+    ctx.lineTo(x + w, y + corte);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x + corte, y + h);
+    ctx.lineTo(x, y + h - corte);
+  } else {
+    ctx.moveTo(x + corte, y);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + h - corte);
+    ctx.lineTo(x + w - corte, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.lineTo(x, y + corte);
+  }
+  ctx.closePath();
+}
+
+function drawDueloBody(
+  ctx: CanvasRenderingContext2D,
+  data: Extract<PostImageData, { kind: "duelo" }>,
+  L: Layout,
+  fotos: [HTMLImageElement | null, HTMLImageElement | null],
+  crests: [HTMLImageElement | null, HTMLImageElement | null],
+  logo: HTMLImageElement | null,
+  display: string,
+  sans: string,
+) {
+  const margen = 40;
+  const corte = 56;
+  const ancho = L.w - margen * 2;
+
+  // El logo arriba, y el pie abajo: entre los dos queda la banda de los
+  // paneles, que se reparte en dos mitades con el VS al medio.
+  const logoAlto = 96;
+  const logoY = 34;
+  const pieY = L.h - 96;
+  const bandaTop = logoY + logoAlto + 28;
+  const bandaAlto = pieY - 40 - bandaTop;
+  const panelAlto = (bandaAlto - 26) / 2;
+
+  if (logo) {
+    const w = (logo.width / logo.height) * logoAlto;
+    ctx.drawImage(logo, L.w / 2 - w / 2, logoY, w, logoAlto);
+  }
+
+  const lados = [
+    {
+      side: data.home,
+      foto: fotos[0],
+      crest: crests[0],
+      y: bandaTop,
+      invertido: false,
+    },
+    {
+      side: data.away,
+      foto: fotos[1],
+      crest: crests[1],
+      y: bandaTop + panelAlto + 26,
+      invertido: true,
+    },
+  ];
+
+  for (const { side, foto, crest, y, invertido } of lados) {
+    const accent = readableAccent(side.color);
+
+    ctx.save();
+    panelDiagonal(ctx, margen, y, ancho, panelAlto, corte, invertido);
+    ctx.clip();
+
+    if (foto) {
+      // Recorte "cover": la foto llena el panel sin deformarse.
+      const escala = Math.max(ancho / foto.width, panelAlto / foto.height);
+      const w = foto.width * escala;
+      const h = foto.height * escala;
+      ctx.drawImage(foto, L.w / 2 - w / 2, y + panelAlto / 2 - h / 2, w, h);
+    } else {
+      ctx.fillStyle = "#141414";
+      ctx.fillRect(margen, y, ancho, panelAlto);
+    }
+
+    // Velo hacia abajo, para que el nombre se lea sobre cualquier foto.
+    const velo = ctx.createLinearGradient(0, y + panelAlto * 0.35, 0, y + panelAlto);
+    velo.addColorStop(0, "transparent");
+    velo.addColorStop(1, "rgba(0,0,0,0.82)");
+    ctx.fillStyle = velo;
+    ctx.fillRect(margen, y, ancho, panelAlto);
+
+    // Tinte del color del equipo desde su borde.
+    const tinte = ctx.createLinearGradient(
+      invertido ? L.w : 0,
+      0,
+      invertido ? 0 : L.w,
+      0,
+    );
+    tinte.addColorStop(0, `${accent}3A`);
+    tinte.addColorStop(0.6, "transparent");
+    ctx.fillStyle = tinte;
+    ctx.fillRect(margen, y, ancho, panelAlto);
+    ctx.restore();
+
+    // Marco del color del equipo.
+    panelDiagonal(ctx, margen, y, ancho, panelAlto, corte, invertido);
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    // Nombre y escudo, alineados hacia el lado del corte.
+    //
+    // El de arriba va MÁS SEPARADO del borde inferior que el de abajo: el
+    // VS se dibuja justo en la costura entre los dos paneles y, con la
+    // misma separación, se le montaba encima.
+    const nombre = side.name.toUpperCase();
+    const tam = fitText(ctx, nombre, (v) => `${v}px ${display}`, ancho - 240, 104, 46);
+    ctx.font = `${tam}px ${display}`;
+    const nombreY = y + panelAlto - (invertido ? 46 : 118);
+    const x = invertido ? L.w - margen - 40 : margen + 40;
+    ctx.textAlign = invertido ? "right" : "left";
+
+    // Contorno oscuro y relleno claro: se lee sobre cualquier foto, sin
+    // la sombra desplazada que se veía sucia.
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "rgba(0,0,0,0.75)";
+    ctx.strokeText(nombre, x, nombreY);
+    ctx.fillStyle = PAPER;
+    ctx.fillText(nombre, x, nombreY);
+
+    // Subrayado del color del equipo, del ancho del nombre.
+    const anchoNombre = Math.min(ctx.measureText(nombre).width, ancho - 240);
+    ctx.fillStyle = accent;
+    ctx.fillRect(
+      invertido ? x - anchoNombre : x,
+      nombreY + 18,
+      anchoNombre,
+      6,
+    );
+
+    if (crest) {
+      const t = 118;
+      const w = (crest.width / crest.height) * t;
+      ctx.drawImage(
+        crest,
+        invertido ? margen + 44 : L.w - margen - 44 - w,
+        y + panelAlto - t - 30,
+        w,
+        t,
+      );
+    }
+  }
+
+  // VS en el corte entre los dos paneles.
+  const vsY = bandaTop + panelAlto + 13;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `120px ${display}`;
+  ctx.lineWidth = 12;
+  ctx.strokeStyle = INK;
+  ctx.strokeText("VS", L.w / 2, vsY);
+  ctx.fillStyle = PAPER;
+  ctx.fillText("VS", L.w / 2, vsY);
+  ctx.textBaseline = "alphabetic";
+
+  // Pie con el barrido de marca a los lados.
+  ctx.textAlign = "center";
+  ctx.font = `600 26px ${sans}`;
+  ctx.fillStyle = VOLT;
+  tracked(ctx, data.footer.toUpperCase(), L.w / 2, pieY, 5);
+
+  ctx.font = `500 22px ${sans}`;
+  ctx.fillStyle = "#8A8A8A";
+  tracked(ctx, "DREAMTEAMCOLOMBIA.VERCEL.APP", L.w / 2, pieY + 38, 3);
 }

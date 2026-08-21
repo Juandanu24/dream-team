@@ -93,6 +93,7 @@ const KINDS: { value: StudioKind; label: string; hint: string }[] = [
   { value: "goleadores", label: "Goleadores", hint: "Los que la rompen" },
   { value: "asistencias", label: "Asistencias", hint: "Los que la sirven" },
   { value: "figura", label: "Figura", hint: "El mejor del partido" },
+  { value: "duelo", label: "Duelo", hint: "Las fotos de los dos equipos" },
   { value: "equipo", label: "Equipo", hint: "Escudo y nómina" },
   { value: "penales", label: "Penales", hint: "Ranking del reto" },
 ];
@@ -113,7 +114,8 @@ function needsPicker(kind: StudioKind) {
     kind === "anuncio" ||
     kind === "resultado" ||
     kind === "equipo" ||
-    kind === "figura"
+    kind === "figura" ||
+    kind === "duelo"
   );
 }
 
@@ -128,6 +130,11 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const [matchId, setMatchId] = useState(data.matches[firstPending]?.id ?? "");
   const [teamId, setTeamId] = useState(data.teams[0]?.id ?? "");
   const [mvpId, setMvpId] = useState(data.mvps[0]?.matchId ?? "");
+  // Fotos del duelo: las sube el admin, no salen de la base.
+  const [fotos, setFotos] = useState<{ home: string | null; away: string | null }>({
+    home: null,
+    away: null,
+  });
   // 0 = todos. Seis alcanza cuando el torneo avanza y hay diferencias;
   // al principio, con muchos empatados, conviene mostrarlos a todos.
   const [cuantos, setCuantos] = useState(6);
@@ -164,8 +171,12 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       return "Todavía no hay equipos. Ármalos en Equipos.";
     if (kind === "figura" && !mvp)
       return "Todavía no has elegido ninguna figura. Se escoge en Resultados.";
+    if (kind === "duelo" && !match)
+      return "Escoge el partido del duelo.";
+    if (kind === "duelo" && !fotos.home && !fotos.away)
+      return "Sube la foto de cada equipo para armar el duelo.";
     return null;
-  }, [kind, match, team, mvp, data]);
+  }, [kind, match, team, mvp, data, fotos]);
 
   const piece = useMemo<PostImageData | null>(() => {
     if (missing) return null;
@@ -253,6 +264,18 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           footnote,
         };
       }
+      case "duelo": {
+        if (!match) return null;
+        return {
+          ...common,
+          kind,
+          home: { ...match.home, photoUrl: fotos.home },
+          away: { ...match.away, photoUrl: fotos.away },
+          footer: match.finished
+            ? `Semana ${match.week} · ${match.home.score ?? 0} - ${match.away.score ?? 0}`
+            : `Semana ${match.week} · 1er Torneo Amistoso`,
+        };
+      }
       case "equipo":
         if (!team) return null;
         return {
@@ -269,7 +292,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         // dibuja en dos pasos (carta y luego marco), fuera de este switch.
         return null;
     }
-  }, [kind, format, match, team, data, missing, cuantos]);
+  }, [kind, format, match, team, data, missing, cuantos, fotos]);
 
   const caption = useMemo(() => {
     switch (kind) {
@@ -299,6 +322,13 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           ? `\n\nEl pichichi por ahora es ${top.name} (${top.detail}) con ${top.value} ${top.value === 1 ? "gol" : "goles"}. 🔥`
           : "";
         return `⚽ LOS QUE LA ESTÁN ROMPIENDO\n\nTabla de goleadores del torneo.${lider}\n\nLa lista completa y las cartas de cada jugador están en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Quién se lleva la bota de oro? 👇\n\n${TAGS}`;
+      }
+      case "duelo": {
+        if (!match) return "";
+        if (match.finished) {
+          return `⚔️ ${match.home.name} ${match.home.score ?? 0} - ${match.away.score ?? 0} ${match.away.name}\n\nAsí quedaron parados los dos equipos en la Cancha F8.\n\nTabla y goleadores en la web, link en la bio.\n\n${TAGS}`;
+        }
+        return `⚔️ ${match.home.name} 🆚 ${match.away.name}\n\n🗓️ ${match.when}\n📍 ${match.venue}\n\nSe viene el duelo. ¿Quién se lo lleva?\n\n🔗 ${SITE} (Link en la bio)\n\n${TAGS}`;
       }
       case "figura": {
         if (!mvp) return "";
@@ -340,7 +370,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const esFigura = kind === "figura" && Boolean(mvp) && !missing;
   const dibujable = Boolean(piece) || esFigura;
   const key = dibujable
-    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}`
+    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}`
     : "";
   const busy = dibujable && rendered?.key !== key;
   const preview = dibujable && rendered?.key === key ? rendered.url : null;
@@ -563,6 +593,40 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                 </SelectContent>
               </Select>
             )}
+            {kind === "duelo" && match ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(["home", "away"] as const).map((lado) => {
+                  const equipo = lado === "home" ? match.home : match.away;
+                  return (
+                    <div key={lado} className="space-y-1.5">
+                      <Label
+                        htmlFor={`foto-${lado}`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        Foto de {equipo.name}
+                      </Label>
+                      <input
+                        id={`foto-${lado}`}
+                        type="file"
+                        accept="image/*"
+                        className="w-full text-xs file:mr-2 file:rounded-md file:border file:border-input file:bg-transparent file:px-2 file:py-1 file:text-xs"
+                        onChange={(e) => {
+                          const archivo = e.target.files?.[0];
+                          if (!archivo?.type.startsWith("image/")) return;
+                          const url = URL.createObjectURL(archivo);
+                          setFotos((prev) => {
+                            // Se suelta la anterior al reemplazarla, para no
+                            // dejar blobs colgando en memoria.
+                            if (prev[lado]) URL.revokeObjectURL(prev[lado]!);
+                            return { ...prev, [lado]: url };
+                          });
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
             {kind === "resultado" && match && !match.finished ? (
               <p className="text-xs text-muted-foreground">
                 Este partido todavía no tiene marcador cargado: la pieza saldrá

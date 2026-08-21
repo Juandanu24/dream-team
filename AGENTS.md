@@ -115,5 +115,10 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   falta y no hay forma de moverlo de posición sin querer.
 - La figura del partido es POR PARTIDO (columna en `matches`), no por
   semana: en una semana hay dos partidos y por tanto dos figuras.
+- La pieza `duelo` es la única que NO usa `drawChrome`: va a sangre, con
+  las fotos ocupando el lienzo. Por eso `PostImageData` separa `Common`
+  (solo el formato) de `ConMarco` (encabezado y titular), y el duelo no
+  lleva el segundo: pedirle un eyebrow sería un campo muerto. Sus fotos
+  las sube el admin, no salen de la base.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
