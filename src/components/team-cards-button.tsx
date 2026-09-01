@@ -75,7 +75,9 @@ export function TeamCardsButton({
         const pieza: PostImageData = {
           kind: "perfil",
           format: "feed",
-          eyebrow: `Conoce a ${teamName}`,
+          // Solo el nombre del equipo: "Conoce a X" envejece mal, y a
+          // estas alturas del torneo ya nadie los está conociendo.
+          eyebrow: teamName,
           headline: "",
           team,
           playerName: c.name,
@@ -100,7 +102,7 @@ export function TeamCardsButton({
       // justo lo que pide un carrusel.
       if (canShareFiles && navigator.canShare({ files: archivos })) {
         try {
-          await navigator.share({ files: archivos, title: `Conoce a ${teamName}` });
+          await navigator.share({ files: archivos, title: `${teamName}, uno por uno` });
           return;
         } catch (error) {
           if ((error as Error)?.name === "AbortError") return;

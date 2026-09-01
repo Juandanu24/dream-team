@@ -179,9 +179,6 @@ export default async function PiezasPage() {
   // se buscan por id, en vez de recorrer las listas por jugador.
   const golesPor = new Map(scorers.map((r) => [r.player_id, r.goals]));
   const asistPor = new Map(assists.map((r) => [r.player_id, r.assists]));
-  const penalPor = new Map(
-    penaltyLeaderboard.map((r) => [r.player_id, r.best_score]),
-  );
   const amarillasPor = new Map(cards.map((r) => [r.player_id, r.yellow_cards]));
   const figurasPor = new Map<string, number>();
   for (const m of matches) {
@@ -271,19 +268,14 @@ export default async function PiezasPage() {
             // Solo entran los números que el jugador TIENE. Un "0 goles ·
             // 0 asistencias" no informa nada y encima deja al jugador
             // como si no hubiera hecho nada; sin números, la pieza le da
-            // ese espacio a la foto.
+            // ese espacio a la foto. El reto de penales queda fuera a
+            // propósito: es un juego de la web, no algo que se hizo en la
+            // cancha, y puesto al lado de los goles se lee como si lo
+            // fuera. Sigue teniendo su propia pieza de ranking.
             stats: [
               ...contar(golesPor.get(r.player_id), "Gol", "Goles"),
               ...contar(asistPor.get(r.player_id), "Asist.", "Asist."),
               ...contar(figurasPor.get(r.player_id), "Figura", "Figuras"),
-              ...(penalPor.get(r.player_id)
-                ? [
-                    {
-                      label: "Penales",
-                      value: `${penalPor.get(r.player_id)}/5`,
-                    },
-                  ]
-                : []),
               ...contar(amarillasPor.get(r.player_id), "Amarilla", "Amarillas"),
             ].slice(0, 4),
             detail: [

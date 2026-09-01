@@ -396,7 +396,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           return {
             ...common,
             kind: "perfil",
-            eyebrow: `Conoce a ${team.team.name}`,
+            eyebrow: team.team.name,
             headline: "",
             team: team.team,
             playerName: jugador.name,
@@ -488,7 +488,10 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           team.players.length > 0
             ? `\n\n👥 Nómina:\n${team.players.map((p) => `• ${p}`).join("\n")}`
             : "";
-        return `⚽ CONOCE A ${team.team.name.toUpperCase()}\n\nEstos son los que van a dejar el alma en la cancha por el primer título del Dream Team.${cap}${nomina}\n\nLas cartas tipo FIFA de cada uno están en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Le tienes fe a este combo? 👇\n\n${TAGS}`;
+        // A media fase de grupos ya nadie está "conociendo" a los equipos:
+        // presentarlos como nuevos suena a relleno. El carrusel es la
+        // nómina uno por uno, y el copy dice eso y ya.
+        return `⚽ ${team.team.name.toUpperCase()}, UNO POR UNO\n\nDesliza 👉 y míralos a todos.${cap}${nomina}\n\nTabla y estadísticas al día en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Quién va a ser la figura de este equipo? 👇\n\n${TAGS}`;
       }
       default:
         return "";
