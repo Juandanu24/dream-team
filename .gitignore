@@ -43,3 +43,10 @@ next-env.d.ts
 
 # Imágenes de trabajo, no versionar
 scratch/
+
+# Copias del render fuera del navegador, que vive en el scratchpad.
+# Se colaron una vez al fallar un cd y tumbaron el deploy.
+/*.mts
+/*.mjs
+/crest-*.png
+/foto-*.jpg
