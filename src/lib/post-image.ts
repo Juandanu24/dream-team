@@ -32,17 +32,27 @@ export interface TeamSide {
   score?: number | null;
 }
 
-/** Encuadre de la foto dentro de su panel. `x`/`y` van de -1 a 1 y se
- *  miden sobre el sobrante que deja el recorte, así que nunca destapan
- *  un borde vacío por más que se muevan. */
+/** Cómo se acomoda una foto dentro de su marco.
+ *
+ *  `zoom` parte de 1 = la foto justo cubre el marco. `x`/`y` van de -1 a
+ *  1 y se miden sobre el sobrante que deja el recorte, no en píxeles:
+ *  así el extremo del control es exactamente el borde de la foto y por
+ *  más que se mueva nunca destapa un vacío, sea cual sea la proporción
+ *  del original. Es la misma convención en todas las piezas. */
+export interface Encuadre {
+  zoom: number;
+  x: number;
+  y: number;
+}
+
 export interface DueloFoto {
   photoUrl?: string | null;
   /** Nombre en letra de brocha, blanco sobre transparente. Se tiñe con
    *  el color del equipo, así el archivo no se rehace si cambia. */
   nameImageUrl?: string | null;
-  photoZoom?: number;
-  photoX?: number;
-  photoY?: number;
+  /** Lo elige el admin en el estudio: el recorte automático suele
+   *  cortar cabezas en una foto de grupo. */
+  encuadre?: Encuadre | null;
 }
 
 /** Números de un jugador en el torneo, para su pieza de perfil. */
@@ -129,8 +139,13 @@ export type PostImageData = Common &
         team: TeamSide;
         playerName: string;
         photoUrl?: string | null;
+        /** Encuadre guardado del jugador. Nulo = sin ajustar, y la pieza
+         *  aplica el suyo por defecto. */
+        encuadre?: Encuadre | null;
         /** "MEDIOCAMPISTA · PIE DERECHO · 29 AÑOS" */
         detail: string;
+        /** Solo los números que el jugador TIENE. Puede venir vacío: una
+         *  fila de ceros no dice nada y la pieza se acomoda sin ella. */
         stats: PerfilStat[];
         isCaptain?: boolean;
       })
@@ -184,6 +199,13 @@ const LAYOUT = {
   story: { w: 1080, h: 1920, eyebrowY: 350, headY: 470, bodyTop: 570, footerY: 1610 },
 } as const;
 
+/** Encuadre de arranque de la pieza de perfil, para la foto que todavía
+ *  nadie ajustó. No es centrado: corre la foto un poco hacia abajo para
+ *  que se vea más de la parte de arriba, que es donde está la cara.
+ *  Reproduce exactamente el recorte que tenía la pieza antes de que el
+ *  encuadre fuera ajustable, así ninguna foto ya publicada se movió. */
+export const ENCUADRE_PERFIL: Encuadre = { zoom: 1, x: 0, y: 0.16 };
+
 export type Layout = Omit<(typeof LAYOUT)[PieceFormat], "w" | "h"> & {
   w: number;
   /** El duelo con marco lo calcula desde la proporción del PNG, así que
@@ -200,6 +222,35 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+/** Dibuja la foto cubriendo el rectángulo —como `object-fit: cover`— y
+ *  le aplica el encuadre elegido. Vive en un solo sitio porque el duelo,
+ *  el perfil y cualquier pieza futura tienen que mover la foto igual: si
+ *  cada una hace su cuenta, el mismo control termina significando cosas
+ *  distintas según la pieza. */
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  enc?: Encuadre | null,
+) {
+  const zoom = Math.max(1, enc?.zoom ?? 1);
+  const escala = Math.max(w / img.width, h / img.height) * zoom;
+  const iw = img.width * escala;
+  const ih = img.height * escala;
+  const sobraX = Math.max(0, iw - w) / 2;
+  const sobraY = Math.max(0, ih - h) / 2;
+  ctx.drawImage(
+    img,
+    x + w / 2 - iw / 2 + (enc?.x ?? 0) * sobraX,
+    y + h / 2 - ih / 2 + (enc?.y ?? 0) * sobraY,
+    iw,
+    ih,
+  );
 }
 
 function fontStack(variable: string, fallback: string) {
@@ -1617,19 +1668,7 @@ function drawDueloConMarco(
     const c = capa.getContext("2d");
     if (!c) continue;
 
-    const zoom = Math.max(1, side.photoZoom ?? 1);
-    const escala = Math.max(ancho / foto.width, alto / foto.height) * zoom;
-    const w = foto.width * escala;
-    const h = foto.height * escala;
-    const sobraX = Math.max(0, w - ancho) / 2;
-    const sobraY = Math.max(0, h - alto) / 2;
-    c.drawImage(
-      foto,
-      ancho / 2 - w / 2 + (side.photoX ?? 0) * sobraX,
-      alto / 2 - h / 2 + (side.photoY ?? 0) * sobraY,
-      w,
-      h,
-    );
+    drawCover(c, foto, 0, 0, ancho, alto, side.encuadre);
 
     // Solo se desvanecen arriba y abajo: a los lados la foto se sale del
     // lienzo, así que no hay borde que disimular.
@@ -1823,19 +1862,7 @@ function drawDueloBody(
     ctx.clip();
 
     if (foto) {
-      // Recorte "cover" más el encuadre que eligió el admin: en una foto
-      // de grupo vertical, el recorte automático suele cortar cabezas.
-      const zoom = Math.max(1, side.photoZoom ?? 1);
-      const escala = Math.max(ancho / foto.width, panelAlto / foto.height) * zoom;
-      const w = foto.width * escala;
-      const h = foto.height * escala;
-      // El desplazamiento se mide sobre el sobrante, no en píxeles: así
-      // el extremo del control es justo el borde de la foto.
-      const sobraX = Math.max(0, w - ancho) / 2;
-      const sobraY = Math.max(0, h - panelAlto) / 2;
-      const dx = L.w / 2 - w / 2 + (side.photoX ?? 0) * sobraX;
-      const dy = y + panelAlto / 2 - h / 2 + (side.photoY ?? 0) * sobraY;
-      ctx.drawImage(foto, dx, dy, w, h);
+      drawCover(ctx, foto, margen, y, ancho, panelAlto, side.encuadre);
     } else {
       ctx.fillStyle = "#141414";
       ctx.fillRect(margen, y, ancho, panelAlto);
@@ -1967,7 +1994,10 @@ function drawPerfilBody(
   // Arranca justo bajo la etiqueta, no bajo el titular: esta pieza no
   // lleva titular porque el nombre va sobre la foto.
   const top = L.eyebrowY + 44;
-  const altoFoto = (L.footerY - top) * 0.66;
+  // Al jugador que todavía no tiene números no se le dibuja una fila de
+  // ceros: ese espacio se lo queda la foto, que es lo que sí dice algo.
+  const conNumeros = data.stats.length > 0;
+  const altoFoto = (L.footerY - top) * (conNumeros ? 0.66 : 0.82);
   const corte = 70;
 
   // ---- Foto con corte diagonal ----
@@ -1981,12 +2011,11 @@ function drawPerfilBody(
   ctx.clip();
 
   if (foto) {
-    const escala = Math.max(L.w / foto.width, altoFoto / foto.height);
-    const w = foto.width * escala;
-    const h = foto.height * escala;
-    // Encuadre hacia arriba: en una foto de cuerpo entero la cara está
-    // en el tercio superior, y centrarla dejaba la cabeza fuera.
-    ctx.drawImage(foto, L.w / 2 - w / 2, top + altoFoto * 0.42 - h * 0.42, w, h);
+    // Sin ajuste guardado se encuadra un poco hacia arriba: en una foto
+    // de cuerpo entero la cara está en el tercio superior y centrarla
+    // dejaba la cabeza fuera. Pero cada foto viene como viene, así que
+    // el ajuste del jugador manda sobre este valor de arranque.
+    drawCover(ctx, foto, 0, top, L.w, altoFoto, data.encuadre ?? ENCUADRE_PERFIL);
   } else {
     ctx.fillStyle = "#141414";
     ctx.fillRect(0, top, L.w, altoFoto);
@@ -2070,6 +2099,11 @@ function drawPerfilBody(
   if (crest) {
     const alto = 92;
     const w = (crest.width / crest.height) * alto;
-    ctx.drawImage(crest, L.w / 2 - w / 2, statsTop + 130, w, alto);
+    // Con números el escudo cuelga de ellos; sin números se centra en el
+    // hueco que queda bajo la foto, que es otro y mucho más grande.
+    const y = conNumeros
+      ? statsTop + 130
+      : top + altoFoto + (L.footerY - top - altoFoto - alto) / 2;
+    ctx.drawImage(crest, L.w / 2 - w / 2, y, w, alto);
   }
 }

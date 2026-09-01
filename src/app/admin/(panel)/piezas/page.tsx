@@ -6,8 +6,10 @@ import {
   POSITION_SHORT,
   STAGE_LABELS,
   type Match,
+  type Player,
   type Team,
 } from "@/lib/types";
+import type { Encuadre, PerfilStat } from "@/lib/post-image";
 import { PiecesStudio, type PiecesData } from "./pieces-studio";
 import { WeekPack } from "./week-pack";
 
@@ -32,6 +34,31 @@ function formatWhen(iso: string | null): string {
     parts.find((p) => p.type === type)?.value ?? "";
   const period = get("dayPeriod").replace(/[.\s]/g, "").toUpperCase();
   return `${get("weekday")} ${get("day")} de ${get("month")} · ${get("hour")}:${get("minute")} ${period}`;
+}
+
+/** Un número solo entra en la pieza si es mayor que cero. Devuelve una
+ *  lista para poder esparcirla y que el caso "no tiene" desaparezca. */
+function contar(
+  valor: number | undefined,
+  singular: string,
+  plural: string,
+): PerfilStat[] {
+  if (!valor) return [];
+  return [{ label: valor === 1 ? singular : plural, value: String(valor) }];
+}
+
+/** El encuadre guardado del jugador, o null si nunca lo ajustaron. Antes
+ *  de la migración 00012 las columnas ni existen, y `players(*)` las
+ *  devuelve ausentes: ese caso también cae en null. */
+function encuadreDe(p: Player): Encuadre | null {
+  if (p.photo_zoom == null && p.photo_offset_x == null && p.photo_offset_y == null) {
+    return null;
+  }
+  return {
+    zoom: p.photo_zoom ?? 1,
+    x: p.photo_offset_x ?? 0,
+    y: p.photo_offset_y ?? 0,
+  };
 }
 
 function teamSide(teams: Team[], id: string | null) {
@@ -229,6 +256,7 @@ export default async function PiezasPage() {
           .slice()
           .sort((a, b) => a.players.full_name.localeCompare(b.players.full_name))
           .map((r) => ({
+            playerId: r.player_id,
             name: r.players.full_name,
             age: r.players.age,
             positionShort: POSITION_SHORT[r.players.position],
@@ -239,24 +267,16 @@ export default async function PiezasPage() {
             teamColor: team.color,
             crestUrl: team.crest_url ?? null,
             isCaptain: Boolean(r.is_captain),
-            // Solo entran los números que el jugador TIENE: una fila de
-            // ceros no dice nada y le quita espacio a lo que sí importa.
+            encuadre: encuadreDe(r.players),
+            // Solo entran los números que el jugador TIENE. Un "0 goles ·
+            // 0 asistencias" no informa nada y encima deja al jugador
+            // como si no hubiera hecho nada; sin números, la pieza le da
+            // ese espacio a la foto.
             stats: [
-              { label: "Goles", value: String(golesPor.get(r.player_id) ?? 0) },
-              {
-                label: "Asist.",
-                value: String(asistPor.get(r.player_id) ?? 0),
-              },
-              ...(figurasPor.get(r.player_id)
-                ? [
-                    {
-                      label:
-                        figurasPor.get(r.player_id) === 1 ? "Figura" : "Figuras",
-                      value: String(figurasPor.get(r.player_id)),
-                    },
-                  ]
-                : []),
-              ...(penalPor.get(r.player_id) !== undefined
+              ...contar(golesPor.get(r.player_id), "Gol", "Goles"),
+              ...contar(asistPor.get(r.player_id), "Asist.", "Asist."),
+              ...contar(figurasPor.get(r.player_id), "Figura", "Figuras"),
+              ...(penalPor.get(r.player_id)
                 ? [
                     {
                       label: "Penales",
@@ -264,14 +284,7 @@ export default async function PiezasPage() {
                     },
                   ]
                 : []),
-              ...(amarillasPor.get(r.player_id)
-                ? [
-                    {
-                      label: "Amarillas",
-                      value: String(amarillasPor.get(r.player_id)),
-                    },
-                  ]
-                : []),
+              ...contar(amarillasPor.get(r.player_id), "Amarilla", "Amarillas"),
             ].slice(0, 4),
             detail: [
               POSITION_LABELS[r.players.position],

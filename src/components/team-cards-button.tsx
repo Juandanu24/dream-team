@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { CardImageData } from "@/lib/card-image";
 import {
   renderPostImage,
+  type Encuadre,
   type PerfilStat,
   type PostImageData,
   type TeamSide,
@@ -14,8 +15,11 @@ import {
 
 /** Un jugador con todo lo que necesita su pieza de perfil. */
 export interface PlayerPiece extends CardImageData {
+  playerId: string;
   detail: string;
   stats: PerfilStat[];
+  /** Cómo recortar su foto. Nulo = sin ajustar. */
+  encuadre: Encuadre | null;
 }
 
 /** Exporta el multipost de un equipo: primero el escudo con la nómina y
@@ -76,6 +80,7 @@ export function TeamCardsButton({
           team,
           playerName: c.name,
           photoUrl: c.photoUrl,
+          encuadre: c.encuadre,
           detail: c.detail,
           stats: c.stats,
           isCaptain: c.isCaptain,

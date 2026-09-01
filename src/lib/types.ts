@@ -30,6 +30,13 @@ export interface Player {
   position: PlayerPosition;
   member_since: string;
   photo_url: string | null;
+  /** Encuadre de la foto: cuánto acercarla y hacia dónde correrla dentro
+   *  del marco de cada pieza. Opcionales porque llegaron en la migración
+   *  00012: sin ella las filas no traen las columnas y todo cae al
+   *  encuadre por defecto. Nulo = sin ajustar. */
+  photo_zoom?: number | null;
+  photo_offset_x?: number | null;
+  photo_offset_y?: number | null;
   created_at: string;
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, Download, Loader2, Share2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, Copy, Download, Loader2, Save, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,8 +16,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  ENCUADRE_PERFIL,
   postFileName,
   renderPostImage,
+  type Encuadre,
   type PieceFormat,
   type PieceKind,
   type PostImageData,
@@ -25,6 +28,7 @@ import {
   type StandingLite,
   type TeamSide,
 } from "@/lib/post-image";
+import { clearPhotoFraming, savePhotoFraming } from "./actions";
 import {
   TeamCardsButton,
   type PlayerPiece,
@@ -106,6 +110,45 @@ const FORMATS: { value: PieceFormat; label: string; hint: string }[] = [
   { value: "story", label: "Story", hint: "1080 × 1920" },
 ];
 
+/** Los tres ejes del encuadre. El duelo y el perfil usan los mismos
+ *  controles porque usan la misma convención: si cada pieza inventara la
+ *  suya, el mismo deslizador significaría cosas distintas. */
+const EJES = [
+  { k: "zoom", label: "Zoom", min: 1, max: 3, step: 0.05 },
+  { k: "x", label: "Izq/Der", min: -1, max: 1, step: 0.02 },
+  { k: "y", label: "Arr/Aba", min: -1, max: 1, step: 0.02 },
+] as const;
+
+function ControlesEncuadre({
+  valor,
+  onChange,
+}: {
+  valor: Encuadre;
+  onChange: (v: Encuadre) => void;
+}) {
+  return (
+    <>
+      {EJES.map((c) => (
+        <label
+          key={c.k}
+          className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground"
+        >
+          <span className="w-14 shrink-0">{c.label}</span>
+          <input
+            type="range"
+            min={c.min}
+            max={c.max}
+            step={c.step}
+            value={valor[c.k]}
+            className="h-1 w-full min-w-0 accent-[var(--dt-blue)]"
+            onChange={(e) => onChange({ ...valor, [c.k]: Number(e.target.value) })}
+          />
+        </label>
+      ))}
+    </>
+  );
+}
+
 /** Los rankings dejan escoger cuántos entran en la pieza. */
 function esRanking(kind: StudioKind) {
   return kind === "goleadores" || kind === "asistencias" || kind === "penales";
@@ -142,12 +185,18 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   // El marco generado con IA es opcional: sin él sale la plantilla
   // dibujada en canvas, que es más sobria pero no depende de nada.
   const [conMarco, setConMarco] = useState(true);
-  const [encuadre, setEncuadre] = useState<
-    Record<"home" | "away", { zoom: number; x: number; y: number }>
-  >({
+  const [encuadre, setEncuadre] = useState<Record<"home" | "away", Encuadre>>({
     home: { zoom: 1, x: 0, y: 0 },
     away: { zoom: 1, x: 0, y: 0 },
   });
+  // Encuadre de la foto de cada jugador. El del servidor es el que vale;
+  // esto guarda lo que se está moviendo ahora, antes de guardarlo.
+  const [encuadres, setEncuadres] = useState<Record<string, Encuadre>>({});
+  // Jugador cuya pieza de perfil se está viendo (y ajustando). Null = la
+  // portada del equipo.
+  const [ajustando, setAjustando] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const router = useRouter();
   // 0 = todos. Seis alcanza cuando el torneo avanza y hay diferencias;
   // al principio, con muchos empatados, conviene mostrarlos a todos.
   const [cuantos, setCuantos] = useState(6);
@@ -167,6 +216,15 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     () => data.mvps.find((m) => m.matchId === mvpId),
     [data.mvps, mvpId],
   );
+  // Se busca dentro del equipo actual: así, al cambiar de equipo, la
+  // selección caduca sola en vez de tener que limpiarla en un efecto.
+  const jugador = useMemo(
+    () => team?.cards.find((c) => c.playerId === ajustando) ?? null,
+    [team, ajustando],
+  );
+  const encActual = jugador
+    ? (encuadres[jugador.playerId] ?? jugador.encuadre ?? ENCUADRE_PERFIL)
+    : ENCUADRE_PERFIL;
 
   // Un tipo sin datos no se puede dibujar; el aviso explica qué falta.
   const missing = useMemo(() => {
@@ -190,6 +248,21 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       return "Sube la foto de cada equipo para armar el duelo.";
     return null;
   }, [kind, match, team, mvp, data, fotos]);
+
+  // La portada del equipo se arma aparte porque el multipost la necesita
+  // siempre, incluso mientras la vista previa está mostrando un perfil.
+  const portada = useMemo<PostImageData | null>(() => {
+    if (!team) return null;
+    return {
+      format,
+      kind: "equipo",
+      eyebrow: team.eyebrow,
+      headline: team.team.name,
+      team: team.team,
+      captain: team.captain,
+      players: team.players,
+    };
+  }, [team, format]);
 
   const piece = useMemo<PostImageData | null>(() => {
     if (missing) return null;
@@ -295,9 +368,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           home: {
             ...match.home,
             photoUrl: fotos.home,
-            photoZoom: encuadre.home.zoom,
-            photoX: encuadre.home.x,
-            photoY: encuadre.home.y,
+            encuadre: encuadre.home,
             nameImageUrl: conMarco
               ? `/nombre-${slugEquipo(match.home.name)}.webp`
               : null,
@@ -305,9 +376,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           away: {
             ...match.away,
             photoUrl: fotos.away,
-            photoZoom: encuadre.away.zoom,
-            photoX: encuadre.away.x,
-            photoY: encuadre.away.y,
+            encuadre: encuadre.away,
             nameImageUrl: conMarco
               ? `/nombre-${slugEquipo(match.away.name)}.webp`
               : null,
@@ -319,23 +388,47 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           overlayUrl: conMarco ? "/marco-duelo.webp" : null,
         };
       }
-      case "equipo":
-        if (!team) return null;
-        return {
-          ...common,
-          kind,
-          eyebrow: team.eyebrow,
-          headline: team.team.name,
-          team: team.team,
-          captain: team.captain,
-          players: team.players,
-        };
+      case "equipo": {
+        // Con un jugador escogido la vista previa pasa a ser SU perfil:
+        // es la única forma de encuadrar la foto viendo el recorte
+        // diagonal y el velo que va a tener de verdad la pieza.
+        if (jugador && team) {
+          return {
+            ...common,
+            kind: "perfil",
+            eyebrow: `Conoce a ${team.team.name}`,
+            headline: "",
+            team: team.team,
+            playerName: jugador.name,
+            photoUrl: jugador.photoUrl,
+            encuadre: encActual,
+            detail: jugador.detail,
+            stats: jugador.stats,
+            isCaptain: jugador.isCaptain,
+          };
+        }
+        return portada;
+      }
       default:
         // "alineacion" se arma desde /admin/alineaciones, y "figura" se
         // dibuja en dos pasos (carta y luego marco), fuera de este switch.
         return null;
     }
-  }, [kind, format, match, team, data, missing, cuantos, fotos, encuadre, conMarco]);
+  }, [
+    kind,
+    format,
+    match,
+    team,
+    data,
+    missing,
+    cuantos,
+    fotos,
+    encuadre,
+    conMarco,
+    portada,
+    jugador,
+    encActual,
+  ]);
 
   const caption = useMemo(() => {
     switch (kind) {
@@ -414,7 +507,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const esFigura = kind === "figura" && Boolean(mvp) && !missing;
   const dibujable = Boolean(piece) || esFigura;
   const key = dibujable
-    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}:${JSON.stringify(encuadre)}:${conMarco}`
+    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}:${JSON.stringify(encuadre)}:${conMarco}:${ajustando ?? ""}:${JSON.stringify(encActual)}`
     : "";
   const busy = dibujable && rendered?.key !== key;
   const preview = dibujable && rendered?.key === key ? rendered.url : null;
@@ -511,6 +604,43 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     toast.success("Pieza descargada");
   }
 
+  async function guardarEncuadre() {
+    if (!jugador) return;
+    setGuardando(true);
+    try {
+      await savePhotoFraming({ playerId: jugador.playerId, ...encActual });
+      // Refresca para que el ✓ del selector salga del servidor y no de un
+      // estado paralelo que pueda quedar mintiendo.
+      router.refresh();
+      toast.success(`Encuadre de ${jugador.name} guardado`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo guardar el encuadre",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function restablecerEncuadre() {
+    if (!jugador) return;
+    setGuardando(true);
+    try {
+      await clearPhotoFraming(jugador.playerId);
+      // Se deja el valor de arranque puesto a mano para que la vista
+      // previa vuelva ya, sin esperar a que el refresco traiga el nulo.
+      setEncuadres((prev) => ({ ...prev, [jugador.playerId]: ENCUADRE_PERFIL }));
+      router.refresh();
+      toast.success(`${jugador.name} vuelve al encuadre por defecto`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "No se pudo restablecer",
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   async function copyCaption() {
     try {
       await navigator.clipboard.writeText(text);
@@ -587,37 +717,62 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                       Reiniciar
                     </button>
                   </div>
-                  {(
-                    [
-                      { k: "zoom", label: "Zoom", min: 1, max: 3, step: 0.05 },
-                      { k: "x", label: "Izq/Der", min: -1, max: 1, step: 0.02 },
-                      { k: "y", label: "Arr/Aba", min: -1, max: 1, step: 0.02 },
-                    ] as const
-                  ).map((c) => (
-                    <label
-                      key={c.k}
-                      className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground"
-                    >
-                      <span className="w-14 shrink-0">{c.label}</span>
-                      <input
-                        type="range"
-                        min={c.min}
-                        max={c.max}
-                        step={c.step}
-                        value={encuadre[lado][c.k]}
-                        className="h-1 w-full min-w-0 accent-[var(--dt-blue)]"
-                        onChange={(e) =>
-                          setEncuadre((prev) => ({
-                            ...prev,
-                            [lado]: { ...prev[lado], [c.k]: Number(e.target.value) },
-                          }))
-                        }
-                      />
-                    </label>
-                  ))}
+                  <ControlesEncuadre
+                    valor={encuadre[lado]}
+                    onChange={(v) =>
+                      setEncuadre((prev) => ({ ...prev, [lado]: v }))
+                    }
+                  />
                 </div>
               );
             })}
+          </div>
+        ) : null}
+
+        {kind === "equipo" && jugador ? (
+          <div className="mt-3 space-y-3 rounded-md border border-border/60 p-3">
+            {jugador.photoUrl ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Ajusta mirando la vista previa de arriba. El encuadre se
+                  guarda en el jugador, no en la pieza: se hace una vez y
+                  vale para el multipost y para lo que venga.
+                </p>
+                <ControlesEncuadre
+                  valor={encActual}
+                  onChange={(v) =>
+                    setEncuadres((prev) => ({ ...prev, [jugador.playerId]: v }))
+                  }
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    size="sm"
+                    onClick={guardarEncuadre}
+                    disabled={guardando}
+                  >
+                    {guardando ? (
+                      <Loader2 className="animate-spin" aria-hidden />
+                    ) : (
+                      <Save aria-hidden />
+                    )}
+                    Guardar encuadre
+                  </Button>
+                  <button
+                    type="button"
+                    className="shrink-0 text-[11px] text-dt-blue underline-offset-2 hover:underline disabled:opacity-50"
+                    disabled={guardando}
+                    onClick={restablecerEncuadre}
+                  >
+                    Restablecer
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {jugador.name} no subió foto: su pieza sale con las
+                iniciales y no hay nada que encuadrar.
+              </p>
+            )}
           </div>
         ) : null}
 
@@ -708,6 +863,31 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                 </SelectContent>
               </Select>
             )}
+            {kind === "equipo" && team ? (
+              <div className="space-y-1.5 pt-1">
+                <Label htmlFor="ajustar" className="text-xs text-muted-foreground">
+                  Qué se ve en la vista previa
+                </Label>
+                <select
+                  id="ajustar"
+                  className="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover"
+                  value={ajustando ?? ""}
+                  onChange={(e) => setAjustando(e.target.value || null)}
+                >
+                  <option value="">Portada · escudo y nómina</option>
+                  {team.cards.map((c) => (
+                    <option key={c.playerId} value={c.playerId}>
+                      {c.name}
+                      {!c.photoUrl ? " · sin foto" : c.encuadre ? " ✓" : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Escoge un jugador para ver su pieza y encuadrarle la foto.
+                  El ✓ es el que ya tiene encuadre guardado.
+                </p>
+              </div>
+            ) : null}
             {kind === "duelo" && match ? (
               <>
               <label className="mb-2 flex items-center gap-2 text-xs">
@@ -814,13 +994,19 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           </div>
         </div>
 
-        {kind === "equipo" && team && piece ? (
+        {kind === "equipo" && team && portada ? (
           <TeamCardsButton
             teamName={team.team.name}
             teamColor={team.team.color}
             crestUrl={team.team.crestUrl ?? null}
-            cards={team.cards}
-            portada={piece}
+            // Lo que se esté moviendo ahora entra en el multipost aunque
+            // todavía no se haya guardado: así se puede probar y exportar
+            // sin dar el paso intermedio.
+            cards={team.cards.map((c) => ({
+              ...c,
+              encuadre: encuadres[c.playerId] ?? c.encuadre,
+            }))}
+            portada={portada}
           />
         ) : null}
 

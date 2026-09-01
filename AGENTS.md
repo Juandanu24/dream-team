@@ -139,5 +139,25 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   caer el archivo. Si no existe, `loadImage` falla en silencio y se cae
   al texto en Bebas inclinada: por eso un equipo puede quedarse sin el
   suyo sin romper nada.
+- **El encuadre de la foto es del jugador, no de la pieza.** Las fotos las
+  manda cada quien desde el celular —unas de cuerpo entero, otras primer
+  plano, otras horizontales—, así que un recorte fijo que le sirve a una le
+  corta la cabeza a la siguiente. `players.photo_zoom / photo_offset_x /
+  photo_offset_y` (migración 00012) guardan cómo recortar ESA foto; se
+  ajusta una vez en `/admin/piezas` y sirve para todas las piezas. Nulo =
+  sin ajustar, y cada pieza aplica su valor de arranque.
+  La convención es única: el zoom parte de 1 = la foto justo cubre el
+  marco, y `x`/`y` van de -1 a 1 **medidos sobre lo que sobra**, no en
+  píxeles, de modo que ±1 pega la foto contra el borde y nunca deja un
+  vacío, sea cual sea la proporción del original. Esa cuenta vive solo en
+  `drawCover()`: si cada pieza hiciera la suya, el mismo deslizador
+  significaría cosas distintas según dónde se use. `ENCUADRE_PERFIL`
+  (y = 0.16) reproduce exactamente el recorte que tenía la pieza de perfil
+  antes de que el encuadre fuera ajustable, para que nada ya publicado se
+  moviera.
+- En la pieza de perfil **solo entran los números mayores que cero**. Un
+  "0 goles · 0 asistencias" no informa nada y encima deja al jugador como
+  si no hubiera hecho nada; hoy son 30 de 51. Sin números la foto crece y
+  el escudo se centra en el hueco que queda, en vez de dejar un vacío.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

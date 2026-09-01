@@ -49,6 +49,9 @@ verificarlo. Estas cinco reglas son la respuesta a errores que YA ocurrieron:
 - **Solo 8 suscritos a push de 52.** Es el canal directo y está al 15%.
 
 Migraciones aplicadas hasta `00011_figura_y_once_ideal.sql`.
+**`00012_encuadre_de_foto.sql` está escrita pero sin correr**: hasta que
+Juan la corra, el estudio deja ajustar el encuadre y verlo en la vista
+previa, pero guardarlo falla con el aviso de que falta la migración.
 
 ---
 
@@ -113,6 +116,14 @@ Se pueden bajar las fuentes reales de Google Fonts con user-agent `Mozilla/5.0`
   la pieza cae al texto en Bebas, que ya funciona.
 
 ### Listo para implementar
+
+- **Llevar el encuadre guardado a las demás piezas.** Ya está en
+  `players` y `drawCover()` lo aplica; hoy solo lo usa la pieza de
+  perfil. La carta FIFA (`card-image.ts`, recorte circular centrado) y
+  los círculos de la cancha de alineaciones (`drawAvatar`) tienen el
+  mismo problema y resolverlo es pasarles el `Encuadre` del jugador. El
+  trabajo real es enhebrarlo por `CardImageData`, que se arma en varios
+  sitios (inscripción, /torneo, figura).
 
 - **Valla menos vencida.** Se destrabó al construir alineaciones: ahora se sabe
   quién atajó cada partido (`lineup_players` con `line = 'gk'` e `is_starter`),
