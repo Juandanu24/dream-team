@@ -15,6 +15,10 @@ inscripción de jugadores con carta estilo FIFA, panel admin para aprobar inscri
 armar equipos y cargar resultados, y vista pública del torneo. **Comunicarse en español;
 todo el copy de cara al usuario va en español colombiano (tuteo, nunca voseo).**
 
+**Si vas a implementar algo acá, lee también `ORQUESTACION.md`**: tiene el
+estado del torneo, el backlog, los puertos, cómo verificar las piezas de
+imagen y las decisiones que ya están tomadas.
+
 ## Stack
 
 Next.js (App Router) + TypeScript + Tailwind 4 + shadcn/ui + Supabase (Postgres, Storage,

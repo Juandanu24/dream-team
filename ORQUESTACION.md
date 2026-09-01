@@ -1,0 +1,155 @@
+# ORQUESTACION.md — Cómo se trabaja este proyecto entre varias sesiones
+
+Este archivo es para **sesiones que implementan**. Lo mantiene la sesión que
+orquesta. `AGENTS.md` explica *cómo está hecho* el proyecto; este explica
+*cómo se trabaja en él* y *qué falta*.
+
+**Leer los dos antes de tocar código.**
+
+---
+
+## Lo primero: la disciplina que hace que esto funcione
+
+Este proyecto está en producción y lo usa gente real todas las semanas. Casi
+todos los errores que costaron tiempo salieron de dar por bueno algo sin
+verificarlo. Estas cinco reglas son la respuesta a errores que YA ocurrieron:
+
+1. **Verificar contra la base real, no contra el tipo.** Antes de dar por buena
+   una feature con datos, consultar Supabase por REST y comprobar el camino
+   completo: insertar, leer, que los constraints rechacen lo que deben, y
+   **limpiar lo que se creó**. Así se detectaron los 409 de casillas duplicadas
+   y el `on conflict` de las alineaciones.
+
+2. **`pnpm build` local pasa con caché; Vercel compila desde cero.** Un deploy
+   ya se cayó porque unos archivos de prueba quedaron dentro del repo y el
+   type check de CI los vio. Si el deploy importa, `rm -rf .next && pnpm build`.
+
+3. **Las piezas de imagen se miran, no se suponen.** Hay un render fuera del
+   navegador (ver más abajo). Varias veces el código compilaba y la pieza
+   salía mal: el VS partido a la mitad, la etiqueta del arquero fuera de la
+   cancha, el panel de goleadores montado sobre el pie.
+
+4. **Medir antes de ajustar.** Cuando algo "se ve corrido", medir la tinta del
+   PNG por columnas en vez de mover números a ojo. Así se descubrió que la
+   pieza estaba centrada y el problema era otro: el desbalance de masa visual.
+
+5. **Nada de push sin confirmación explícita** (convención del repo). Y nunca
+   disparar push notifications de prueba: hay 8 personas suscritas y les suena
+   el teléfono. Ya pasó una vez.
+
+---
+
+## Estado del torneo (al 1 de septiembre de 2026)
+
+- **4 equipos**, 52 inscritos aprobados, 51 con equipo.
+- **Fase de grupos**: semanas 1 y 2 jugadas, semana 3 pendiente. Después
+  semifinales (S4) y tercer puesto + final (S5).
+- **Tabla**: Teletubbies 6 · Máquina 3 · Colombia 3 · Irreverentes 0.
+- Las 4 figuras de partido están elegidas; hay 7 alineaciones y 2 onces ideales.
+- **Solo 8 suscritos a push de 52.** Es el canal directo y está al 15%.
+
+Migraciones aplicadas hasta `00011_figura_y_once_ideal.sql`.
+
+---
+
+## Puertos
+
+Bloque **3020+** (los otros contextos de Juan usan 3000/4000/5173 y 3010-3012).
+
+```bash
+pnpm dev --port 3020                                        # torneo de prueba
+NEXT_PUBLIC_TOURNAMENT_SLUG=relampago-2026 pnpm dev --port 3020   # datos reales
+```
+
+Con el slug real, **el admin toca producción**. Avisarlo siempre.
+
+---
+
+## Render de piezas fuera del navegador
+
+`src/lib/post-image.ts` dibuja en canvas del navegador, así que no se puede
+ver desde Node sin ayuda. El harness vive en el **scratchpad**, nunca en el
+repo (ya se coló una vez y tumbó el deploy; `.gitignore` ahora lo bloquea).
+
+Montarlo:
+
+```bash
+mkdir -p "$SCRATCHPAD/render" && cd "$SCRATCHPAD/render"
+npm init -y && npm i @napi-rs/canvas
+# copiar post-image.ts y team-color.ts como .mts, quitarles "use client"
+# y apuntar el import a ./tc.mts
+```
+
+Necesita stubs de `document`, `getComputedStyle`, `Image`, `URL.createObjectURL`
+y `canvas.toBlob`, más un parche de `drawImage` que desenvuelva el FakeImage.
+Las fuentes no estarán (sale una serif), pero **la geometría sí es fiel** —
+que es lo que se quiere verificar.
+
+Se pueden bajar las fuentes reales de Google Fonts con user-agent `Mozilla/5.0`
+(sirve TTF; con user-agent de IE6 sirve EOT, que ImageMagick no lee).
+
+---
+
+## Cómo entregar trabajo
+
+1. Leer `AGENTS.md` y este archivo.
+2. Implementar, con comentarios que expliquen **por qué**, no qué.
+3. `pnpm lint && pnpm build`.
+4. Verificar contra datos reales lo que aplique.
+5. Commit en español, mensaje que explique la decisión y el problema que
+   resuelve. Terminar con `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
+6. **Preguntar antes de hacer push.**
+7. Si se agrega una convención nueva o un gotcha, escribirlo en `AGENTS.md`.
+
+---
+
+## Backlog
+
+### Con dependencia externa (esperan a Juan)
+
+- **Nombre de brocha de Colombia.** Faltan los otros tres ya están en
+  `public/nombre-<slug>.webp`. Cuando llegue el PNG blanco sobre transparente:
+  recortar, `-resize x260`, webp, y dejarlo como `nombre-colombia.webp`. Sin él
+  la pieza cae al texto en Bebas, que ya funciona.
+
+### Listo para implementar
+
+- **Valla menos vencida.** Se destrabó al construir alineaciones: ahora se sabe
+  quién atajó cada partido (`lineup_players` con `line = 'gk'` e `is_starter`),
+  y se puede cruzar con los goles recibidos del partido. Es una vista SQL nueva
+  más una pieza de ranking (el motor `drawRankBody` ya existe).
+
+- **Push automático el día del partido.** Hoy el aviso solo sale cuando el admin
+  publica. Un cron diario que revise si hay partido hoy y mande recordatorio
+  subiría la asistencia. Vercel permite un cron diario en el plan gratis.
+
+- **Campaña para subir suscriptores a push.** 8 de 52. Vale más que cualquier
+  pieza nueva: Instagram muestra a quien quiere, el push llega a todos. Una
+  pieza/historia con instrucciones de instalar la PWA y activar avisos.
+
+### Ideas no comprometidas
+
+- Confirmación de asistencia por partido (los jugadores no tienen login: habría
+  que resolverlo con un enlace público y selección de nombre).
+- Récords automáticos al cierre del torneo (goleador, asistidor, fair play).
+- Publicación directa a Instagram por la API de Meta — **evaluado y descartado
+  por ahora**: exige App Review y verificación de negocio, semanas de trámite,
+  para ahorrar dos toques. El camino actual (generar y compartir con
+  `navigator.share`) cubre el 95%.
+
+---
+
+## Lo que NO hay que rehacer
+
+Decisiones ya tomadas con razón. Cambiarlas necesita un motivo nuevo:
+
+- **Las piezas se dibujan en canvas del navegador**, no en el servidor, porque
+  ahí están las fuentes reales de `next/font`.
+- **El marco del duelo es blanco y negro y se tiñe por código.** Un solo archivo
+  sirve para los seis cruces. Si se pide uno con color, se casa con un equipo.
+- **La figura del partido es a dedo, no calculada.** El que más corrió no sale
+  en ninguna estadística.
+- **El duelo no lleva marcador**: es la portada del carrusel de "así se vivió".
+  El marcador va en la pieza de resultado.
+- **Los jugadores no tienen login.** El filtro contra colados es la aprobación
+  del admin.
