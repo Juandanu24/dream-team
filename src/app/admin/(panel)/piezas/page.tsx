@@ -2,6 +2,7 @@ import { getTournamentData, type EventWithPlayer } from "@/lib/data";
 import { tallyScorers } from "@/lib/match-summary";
 import {
   FOOT_LABELS,
+  POSITION_LABELS,
   POSITION_SHORT,
   STAGE_LABELS,
   type Match,
@@ -78,6 +79,7 @@ export default async function PiezasPage() {
     standings,
     scorers,
     assists,
+    cards,
     roster,
     penaltyLeaderboard,
   } = data;
@@ -145,6 +147,20 @@ export default async function PiezasPage() {
       };
     })
     .filter((m): m is NonNullable<typeof m> => m !== null);
+
+  // Números de cada jugador, para su pieza de perfil. Se arman una vez y
+  // se buscan por id, en vez de recorrer las listas por jugador.
+  const golesPor = new Map(scorers.map((r) => [r.player_id, r.goals]));
+  const asistPor = new Map(assists.map((r) => [r.player_id, r.assists]));
+  const penalPor = new Map(
+    penaltyLeaderboard.map((r) => [r.player_id, r.best_score]),
+  );
+  const amarillasPor = new Map(cards.map((r) => [r.player_id, r.yellow_cards]));
+  const figurasPor = new Map<string, number>();
+  for (const m of matches) {
+    if (!m.mvp_player_id) continue;
+    figurasPor.set(m.mvp_player_id, (figurasPor.get(m.mvp_player_id) ?? 0) + 1);
+  }
 
   const pieces: PiecesData = {
     matches: matchOptions,
@@ -223,6 +239,45 @@ export default async function PiezasPage() {
             teamColor: team.color,
             crestUrl: team.crest_url ?? null,
             isCaptain: Boolean(r.is_captain),
+            // Solo entran los números que el jugador TIENE: una fila de
+            // ceros no dice nada y le quita espacio a lo que sí importa.
+            stats: [
+              { label: "Goles", value: String(golesPor.get(r.player_id) ?? 0) },
+              {
+                label: "Asist.",
+                value: String(asistPor.get(r.player_id) ?? 0),
+              },
+              ...(figurasPor.get(r.player_id)
+                ? [
+                    {
+                      label:
+                        figurasPor.get(r.player_id) === 1 ? "Figura" : "Figuras",
+                      value: String(figurasPor.get(r.player_id)),
+                    },
+                  ]
+                : []),
+              ...(penalPor.get(r.player_id) !== undefined
+                ? [
+                    {
+                      label: "Penales",
+                      value: `${penalPor.get(r.player_id)}/5`,
+                    },
+                  ]
+                : []),
+              ...(amarillasPor.get(r.player_id)
+                ? [
+                    {
+                      label: "Amarillas",
+                      value: String(amarillasPor.get(r.player_id)),
+                    },
+                  ]
+                : []),
+            ].slice(0, 4),
+            detail: [
+              POSITION_LABELS[r.players.position],
+              `Pie ${FOOT_LABELS[r.players.dominant_foot].toLowerCase()}`,
+              `${r.players.age} años`,
+            ].join(" · "),
           })),
       };
     }),

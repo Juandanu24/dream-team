@@ -1,6 +1,4 @@
-"use client";
-
-import { readableAccent } from "@/lib/team-color";
+import { readableAccent } from "./tc.mts";
 
 // Dibuja las piezas de Instagram en un canvas, con las mismas fuentes y
 // colores de la web. Se dibuja a mano en vez de capturar el DOM por la
@@ -497,19 +495,14 @@ function drawChrome(
   ctx.font = `600 26px ${sans}`;
   tracked(ctx, data.eyebrow.toUpperCase(), L.w / 2, L.eyebrowY, 5);
 
-  // Una pieza puede no llevar titular —el perfil pone el nombre sobre la
-  // foto—: ahí no se reserva su espacio ni se dibuja la regla, si no
-  // queda una banda negra vacía arriba.
   const headline = data.headline.toUpperCase();
-  if (headline) {
-    const size = fitText(ctx, headline, (s) => `${s}px ${display}`, L.w - 140, 128, 60);
-    ctx.fillStyle = PAPER;
-    ctx.font = `${size}px ${display}`;
-    ctx.fillText(headline, L.w / 2, L.headY);
+  const size = fitText(ctx, headline, (s) => `${s}px ${display}`, L.w - 140, 128, 60);
+  ctx.fillStyle = PAPER;
+  ctx.font = `${size}px ${display}`;
+  ctx.fillText(headline, L.w / 2, L.headY);
 
-    ctx.fillStyle = VOLT;
-    ctx.fillRect(L.w / 2 - 60, L.headY + 32, 120, 5);
-  }
+  ctx.fillStyle = VOLT;
+  ctx.fillRect(L.w / 2 - 60, L.headY + 32, 120, 5);
 
   // Pie: monograma y dirección de la web.
   if (logo) {
@@ -1964,10 +1957,8 @@ function drawPerfilBody(
   sans: string,
 ) {
   const accent = readableAccent(data.team.color);
-  // Arranca justo bajo la etiqueta, no bajo el titular: esta pieza no
-  // lleva titular porque el nombre va sobre la foto.
-  const top = L.eyebrowY + 44;
-  const altoFoto = (L.footerY - top) * 0.66;
+  const top = L.bodyTop - 40;
+  const altoFoto = (L.footerY - top) * 0.62;
   const corte = 70;
 
   // ---- Foto con corte diagonal ----

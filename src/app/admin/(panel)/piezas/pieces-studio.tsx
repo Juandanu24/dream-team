@@ -25,7 +25,10 @@ import {
   type StandingLite,
   type TeamSide,
 } from "@/lib/post-image";
-import { TeamCardsButton } from "@/components/team-cards-button";
+import {
+  TeamCardsButton,
+  type PlayerPiece,
+} from "@/components/team-cards-button";
 import { renderCardImage } from "@/lib/card-image";
 import { renderPlayerPost } from "@/lib/post-image";
 import type { CardImageData } from "@/lib/card-image";
@@ -59,7 +62,7 @@ export interface TeamPiece {
   team: TeamSide;
   captain?: string;
   players: string[];
-  cards: CardImageData[];
+  cards: PlayerPiece[];
 }
 
 export interface MvpPiece {
@@ -811,11 +814,13 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           </div>
         </div>
 
-        {kind === "equipo" && team ? (
+        {kind === "equipo" && team && piece ? (
           <TeamCardsButton
             teamName={team.team.name}
             teamColor={team.team.color}
+            crestUrl={team.team.crestUrl ?? null}
             cards={team.cards}
+            portada={piece}
           />
         ) : null}
 
