@@ -1735,23 +1735,30 @@ function drawDueloConMarco(
     // del tamaño de letra se perdía.
     const razonEscudo = 3.6;
 
+    // El bucle mide lo que de verdad se va a dibujar. Cuando hay imagen
+    // de brocha eso es la imagen, no el texto: midiendo el texto, un
+    // nombre corto como COLOMBIA no achicaba nada, dejaba un escudo
+    // enorme y a la imagen —que es ancha— sin espacio.
+    const razonNombre = nombreImg ? nombreImg.width / nombreImg.height : 0;
     let tam = 82;
     let ladoEscudo = 0;
     for (; tam >= 30; tam -= 2) {
       ladoEscudo = crest ? tam * razonEscudo : 0;
       ctx.font = `${tam}px ${display}`;
-      // El skew ensancha el texto, así que se descuenta al medir.
-      const anchoTexto = ctx.measureText(nombre).width + tam * 0.22;
-      if (anchoTexto + ladoEscudo + (crest ? hueco : 0) <= anchoDisponible) break;
+      const anchoNombre = nombreImg
+        ? razonNombre * tam * 1.9
+        : // El skew ensancha el texto, así que se descuenta al medir.
+          ctx.measureText(nombre).width + tam * 0.22;
+      if (anchoNombre + ladoEscudo + (crest ? hueco : 0) <= anchoDisponible) break;
     }
     ctx.font = `${tam}px ${display}`;
     const anchoEscudo = crest ? (crest.width / crest.height) * ladoEscudo : 0;
 
-    // Con imagen de brocha, el alto manda y el ancho sale de su
-    // proporción; el ajuste de tamaño de letra ya no aplica.
+    // Con imagen de brocha el alto manda y el ancho sale de su
+    // proporción; el bucle de arriba ya se encargó de que quepa.
     const altoNombre = nombreImg ? tam * 1.9 : 0;
     const anchoTexto = nombreImg
-      ? (nombreImg.width / nombreImg.height) * altoNombre
+      ? razonNombre * altoNombre
       : ctx.measureText(nombre).width + tam * 0.22;
     const anchoGrupo = anchoEscudo + (crest ? hueco : 0) + anchoTexto;
 
