@@ -139,6 +139,12 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   caer el archivo. Si no existe, `loadImage` falla en silencio y se cae
   al texto en Bebas inclinada: por eso un equipo puede quedarse sin el
   suyo sin romper nada.
+  El bloque escudo+nombre se ajusta midiendo **lo que se va a dibujar**:
+  si hay imagen de brocha, su ancho a partir de la proporción, no el
+  texto en Bebas. Midiendo el texto, un nombre corto (COLOMBIA) no
+  achicaba nada, dejaba un escudo enorme y a la imagen —de una sola
+  línea, razón 3.1 contra 1.8 de las de dos— sin espacio, y se le metía
+  debajo al VS. Los archivos van recortados y a 260 de alto.
 - **El encuadre de la foto es del jugador, no de la pieza.** Las fotos las
   manda cada quien desde el celular —unas de cuerpo entero, otras primer
   plano, otras horizontales—, así que un recorte fijo que le sirve a una le

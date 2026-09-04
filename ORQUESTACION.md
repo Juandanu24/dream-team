@@ -85,11 +85,30 @@ npm init -y && npm i @napi-rs/canvas
 
 Necesita stubs de `document`, `getComputedStyle`, `Image`, `URL.createObjectURL`
 y `canvas.toBlob`, más un parche de `drawImage` que desenvuelva el FakeImage.
-Las fuentes no estarán (sale una serif), pero **la geometría sí es fiel** —
-que es lo que se quiere verificar.
 
-Se pueden bajar las fuentes reales de Google Fonts con user-agent `Mozilla/5.0`
-(sirve TTF; con user-agent de IE6 sirve EOT, que ImageMagick no lee).
+**Registrar las fuentes reales no es opcional.** Sin ellas sale una serif, y
+donde el tamaño de un bloque se deriva de `measureText` el harness miente
+justo en lo que se está verificando: Bebas es mucho más angosta, así que los
+tamaños salen distintos. Ya pasó con el nombre de brocha del duelo.
+
+```bash
+# El endpoint css (v1) con un UA viejo sirve TTF; css2 sirve woff2.
+curl -s -A "Mozilla/5.0" "https://fonts.googleapis.com/css?family=Bebas+Neue"
+curl -s -A "Mozilla/5.0" "https://fonts.googleapis.com/css?family=Archivo:400,600,700"
+```
+
+Después, en el harness:
+
+```js
+GlobalFonts.registerFromPath("./BebasNeue.ttf", "Bebas Neue");
+globalThis.getComputedStyle = () => ({ getPropertyValue: (v) =>
+  v === "--font-bebas" ? "'Bebas Neue'" : v === "--font-archivo" ? "Archivo" : "" });
+```
+
+**Ojo con la precedencia de `&&`/`||` al montarlo.** Un `mkdir -p X && cd X &&
+[ -d node_modules ] || (npm init -y)` corre el `npm init` en el directorio
+actual cuando el `mkdir` falla — o sea, dentro del repo. Ya pasó: le metió
+`"type": "commonjs"` a `package.json` y tumbó el build con 159 errores.
 
 ---
 
@@ -107,13 +126,6 @@ Se pueden bajar las fuentes reales de Google Fonts con user-agent `Mozilla/5.0`
 ---
 
 ## Backlog
-
-### Con dependencia externa (esperan a Juan)
-
-- **Nombre de brocha de Colombia.** Faltan los otros tres ya están en
-  `public/nombre-<slug>.webp`. Cuando llegue el PNG blanco sobre transparente:
-  recortar, `-resize x260`, webp, y dejarlo como `nombre-colombia.webp`. Sin él
-  la pieza cae al texto en Bebas, que ya funciona.
 
 ### Listo para implementar
 
