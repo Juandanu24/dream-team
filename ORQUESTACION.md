@@ -48,10 +48,11 @@ verificarlo. Estas cinco reglas son la respuesta a errores que YA ocurrieron:
 - Las 4 figuras de partido están elegidas; hay 7 alineaciones y 2 onces ideales.
 - **Solo 8 suscritos a push de 52.** Es el canal directo y está al 15%.
 
-Migraciones aplicadas hasta `00011_figura_y_once_ideal.sql`.
-**`00012_encuadre_de_foto.sql` está escrita pero sin correr**: hasta que
-Juan la corra, el estudio deja ajustar el encuadre y verlo en la vista
-previa, pero guardarlo falla con el aviso de que falta la migración.
+Migraciones aplicadas hasta `00012_encuadre_de_foto.sql`.
+**`00013_amistosos.sql` está escrita pero sin correr**: hasta que Juan la
+corra, `/admin/amistosos` muestra "Falta correr la migración 00013" en vez
+de reventar.
+
 
 ---
 
@@ -128,6 +129,7 @@ actual cuando el `mkdir` falla — o sea, dentro del repo. Ya pasó: le metió
 ## Backlog
 
 ### Listo para implementar
+
 
 - **Llevar el encuadre guardado a las demás piezas.** Ya está en
   `players` y `drawCover()` lo aplica; hoy solo lo usa la pieza de

@@ -165,5 +165,21 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   "0 goles · 0 asistencias" no informa nada y encima deja al jugador como
   si no hubiera hecho nada; hoy son 30 de 51. Sin números la foto crece y
   el escudo se centra en el hueco que queda, en vez de dejar un vacío.
+- **Los amistosos no cuelgan del torneo** (`friendlies`, `friendly_sides`,
+  `friendly_players`, migración 00013). No es duplicación por pereza: todo lo
+  del torneo tiene `tournament_id` not null, y `team_players` tiene
+  `unique (tournament_id, player_id)` —un jugador en un solo equipo por
+  torneo—, que con lados que rotan cada semana se rompe al segundo partido.
+  En `friendly_players`, `player_id` es NULABLE y va con `guest_name`: así
+  entra quien no está inscrito sin inventarle un correo en `players`, que
+  exige email único, edad, pie y posición. El `check` obliga a que haya uno
+  de los dos. Y el `friendly_id` repetido con clave foránea compuesta es lo
+  que permite el índice único que impide jugar para los dos lados: mismo
+  truco que `team_players` con `(team_id, tournament_id)`.
+  No hay `published_at` ni push: es una herramienta del admin para mandar la
+  alineación al grupo, y los suscritos a push lo son del torneo.
+- Ojo con los códigos de error al detectar "falta la migración":
+  **PostgREST devuelve `PGRST205`**, no el `42P01` de Postgres. Hay que mirar
+  los dos según por dónde entre la consulta.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

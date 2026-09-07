@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   Star,
   LayoutDashboard,
+  Swords,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export const ADMIN_NAV = [
   { href: "/admin/equipos", label: "Equipos", icon: Users },
   { href: "/admin/partidos", label: "Calendario", icon: CalendarDays },
   { href: "/admin/alineaciones", label: "Alineaciones", icon: ClipboardCheck },
+  { href: "/admin/amistosos", label: "Amistosos", icon: Swords },
   { href: "/admin/resultados", label: "Resultados", icon: ListChecks },
   { href: "/admin/once-ideal", label: "Once ideal", icon: Star },
   { href: "/admin/piezas", label: "Piezas", icon: ImageIcon },

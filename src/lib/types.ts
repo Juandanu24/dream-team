@@ -175,6 +175,44 @@ export function formationLines(formation: string): Record<
   };
 }
 
+// ---------- Amistosos (fuera del torneo) ----------
+
+export interface Friendly {
+  id: string;
+  title: string;
+  kickoff_at: string | null;
+  venue: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FriendlySide {
+  id: string;
+  friendly_id: string;
+  name: string;
+  color: string | null;
+  crest_url: string | null;
+  formation: string;
+  notes: string | null;
+  /** 0 = local, 1 = visitante. */
+  slot: number;
+  created_at: string;
+}
+
+export interface FriendlyPlayer {
+  id: string;
+  side_id: string;
+  friendly_id: string;
+  /** Nulo cuando es un invitado que no está inscrito. */
+  player_id: string | null;
+  /** Solo para invitados; los de la base traen su nombre de players. */
+  guest_name: string | null;
+  line: LineupLine;
+  slot: number;
+  is_starter: boolean;
+  created_at: string;
+}
+
 export const LINE_LABELS: Record<LineupLine, string> = {
   gk: "Arquero",
   def: "Defensa",
