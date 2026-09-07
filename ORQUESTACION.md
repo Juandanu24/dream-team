@@ -129,6 +129,11 @@ actual cuando el `mkdir` falla — o sea, dentro del repo. Ya pasó: le metió
 
 ### Listo para implementar
 
+- **Alineaciones de partidos amistosos.** Los que juega la gente del Dream Team
+  por fuera del torneo, donde puede entrar quien no está inscrito. El encargo
+  completo está en **`AMISTOSOS.md`**: modelo de datos, qué reutilizar, qué no
+  tocar y cómo verificarlo.
+
 - **Llevar el encuadre guardado a las demás piezas.** Ya está en
   `players` y `drawCover()` lo aplica; hoy solo lo usa la pieza de
   perfil. La carta FIFA (`card-image.ts`, recorte circular centrado) y
