@@ -1,10 +1,19 @@
 # ORQUESTACION.md — Cómo se trabaja este proyecto entre varias sesiones
 
 Este archivo es para **sesiones que implementan**. Lo mantiene la sesión que
-orquesta. `AGENTS.md` explica *cómo está hecho* el proyecto; este explica
-*cómo se trabaja en él* y *qué falta*.
+orquesta.
 
-**Leer los dos antes de tocar código.**
+Son tres documentos y cada uno responde una pregunta distinta:
+
+| Documento | Responde |
+|---|---|
+| `AGENTS.md` | **Cómo está hecho**: arquitectura, convenciones, gotchas |
+| `ORQUESTACION.md` (este) | **Cómo se trabaja y qué falta**: disciplina, estado, backlog |
+| `CONTENIDO.md` | **Para qué existe cada pieza**: criterio editorial, copys, assets |
+
+**Leer los tres antes de tocar código.** El tercero importa aunque el cambio
+parezca solo técnico: casi todo lo de este proyecto termina siendo una imagen
+que se publica.
 
 ---
 
@@ -39,19 +48,20 @@ verificarlo. Estas cinco reglas son la respuesta a errores que YA ocurrieron:
 
 ---
 
-## Estado del torneo (al 1 de septiembre de 2026)
+## Estado del torneo (al 11 de septiembre de 2026)
 
-- **4 equipos**, 52 inscritos aprobados, 51 con equipo.
-- **Fase de grupos**: semanas 1 y 2 jugadas, semana 3 pendiente. Después
-  semifinales (S4) y tercer puesto + final (S5).
-- **Tabla**: Teletubbies 6 · Máquina 3 · Colombia 3 · Irreverentes 0.
-- Las 4 figuras de partido están elegidas; hay 7 alineaciones y 2 onces ideales.
-- **Solo 8 suscritos a push de 52.** Es el canal directo y está al 15%.
+- **4 equipos**, 82 personas en `players`, 54 inscritos aprobados, 53 con
+  equipo.
+- **Fase de grupos CERRADA**: las 3 semanas jugadas, 6 partidos. Quedan
+  semifinales (S4) y tercer puesto + final (S5), los 4 partidos ya creados.
+- **Tabla final de grupos**: Teletubbies 6 pts (+7) · Colombia 6 (+5) ·
+  Irreverentes 3 (−3) · Máquina 3 (−9).
+- Las 6 figuras de partido elegidas; 11 alineaciones y 2 onces ideales.
+- 26 jugadores con encuadre de foto guardado.
+- 1 amistoso creado ("Champions league Martes").
+- **Siguen 8 suscritos a push de 54.** Es el canal directo y está al 15%.
 
-Migraciones aplicadas hasta `00012_encuadre_de_foto.sql`.
-**`00013_amistosos.sql` está escrita pero sin correr**: hasta que Juan la
-corra, `/admin/amistosos` muestra "Falta correr la migración 00013" en vez
-de reventar.
+Migraciones aplicadas hasta **`00013_amistosos.sql`**, todas corridas.
 
 
 ---
@@ -115,7 +125,7 @@ actual cuando el `mkdir` falla — o sea, dentro del repo. Ya pasó: le metió
 
 ## Cómo entregar trabajo
 
-1. Leer `AGENTS.md` y este archivo.
+1. Leer `AGENTS.md`, `CONTENIDO.md` y este archivo.
 2. Implementar, con comentarios que expliquen **por qué**, no qué.
 3. `pnpm lint && pnpm build`.
 4. Verificar contra datos reales lo que aplique.
@@ -123,13 +133,15 @@ actual cuando el `mkdir` falla — o sea, dentro del repo. Ya pasó: le metió
    resuelve. Terminar con `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`.
 6. **Preguntar antes de hacer push.**
 7. Si se agrega una convención nueva o un gotcha, escribirlo en `AGENTS.md`.
+   Si cambia el estado o el backlog, acá. Si cambia el criterio de una pieza o
+   un copy, en `CONTENIDO.md`. **Un documento desactualizado hace más daño que
+   no tenerlo**: la otra sesión le cree.
 
 ---
 
 ## Backlog
 
 ### Listo para implementar
-
 
 - **Llevar el encuadre guardado a las demás piezas.** Ya está en
   `players` y `drawCover()` lo aplica; hoy solo lo usa la pieza de
@@ -148,7 +160,7 @@ actual cuando el `mkdir` falla — o sea, dentro del repo. Ya pasó: le metió
   publica. Un cron diario que revise si hay partido hoy y mande recordatorio
   subiría la asistencia. Vercel permite un cron diario en el plan gratis.
 
-- **Campaña para subir suscriptores a push.** 8 de 52. Vale más que cualquier
+- **Campaña para subir suscriptores a push.** 8 de 54. Vale más que cualquier
   pieza nueva: Instagram muestra a quien quiere, el push llega a todos. Una
   pieza/historia con instrucciones de instalar la PWA y activar avisos.
 
@@ -178,3 +190,8 @@ Decisiones ya tomadas con razón. Cambiarlas necesita un motivo nuevo:
   El marcador va en la pieza de resultado.
 - **Los jugadores no tienen login.** El filtro contra colados es la aprobación
   del admin.
+- **Los amistosos no cuelgan del torneo** y tienen tablas propias. El porqué
+  está en `AGENTS.md`; el resumen es que `team_players` solo admite un equipo
+  por jugador y por torneo, y `players` exige correo único.
+- **Los números en cero no salen en la pieza de perfil**, y el reto de penales
+  no cuenta como estadística del torneo. El criterio está en `CONTENIDO.md`.
