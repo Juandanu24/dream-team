@@ -81,10 +81,11 @@ export interface MvpPiece {
 
 export interface CampeonPiece {
   eyebrow: string;
+  /** El campeón, con su marcador de la final. */
   team: TeamSide;
-  rival: string;
-  /** "0-0" */
-  marker: string;
+  /** Contra quién la jugó, con su marcador. */
+  rival: TeamSide;
+  /** "2-1 en penales", contado desde el campeón. */
   shootout: string | null;
 }
 
@@ -428,9 +429,8 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           headline: "Gran Final",
           title: "Campeón",
           team: c.team,
-          detail: c.shootout
-            ? `Ganó la final ${c.marker} (${c.shootout}) contra ${c.rival}`
-            : `Ganó la final ${c.marker} contra ${c.rival}`,
+          rival: c.rival,
+          shootout: c.shootout,
           nameImageUrl: `/nombre-${slugEquipo(c.team.name)}.webp`,
         };
       }
@@ -540,9 +540,10 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       case "campeon": {
         const c = data.campeon;
         if (!c) return "";
+        const marker = `${c.team.score ?? 0}-${c.rival.score ?? 0}`;
         const como = c.shootout
-          ? `Ganó la final ${c.marker} y la definió desde el punto blanco, ${c.shootout}.`
-          : `Ganó la final ${c.marker} contra ${c.rival}.`;
+          ? `Ganó la final ${marker} contra ${c.rival.name} y la definió desde el punto blanco, ${c.shootout}.`
+          : `Ganó la final ${marker} contra ${c.rival.name}.`;
         return `🏆 ${c.team.name.toUpperCase()}, CAMPEÓN\n\n${como}\n\nSe acabó el primer torneo del Dream Team. Gracias a todos los que se pegaron la rodada, jugaron, gritaron y acompañaron.\n\nTodos los números del torneo están en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 Déjales algo en los comentarios 👇\n\n${TAGS}`;
       }
       case "podio": {
