@@ -1,5 +1,5 @@
 import { getTournamentData, type EventWithPlayer } from "@/lib/data";
-import { tallyScorers } from "@/lib/match-summary";
+import { matchWinner, shootoutLabel, tallyScorers } from "@/lib/match-summary";
 import {
   FOOT_LABELS,
   POSITION_LABELS,
@@ -100,6 +100,7 @@ export default async function PiezasPage() {
   }
 
   const {
+    tournament,
     teams,
     matches,
     events,
@@ -134,8 +135,68 @@ export default async function PiezasPage() {
         finished,
         homeScorers: scorers.home,
         awayScorers: scorers.away,
+        shootout: shootoutLabel(match),
       };
     });
+
+  // ---- Cierre del torneo ----
+  //
+  // El puesto final NO sale de la tabla de grupos: sale de la final y
+  // del partido por el tercer puesto. Colombia y Teletubbies terminaron
+  // la fase con los mismos puntos y quedaron en puestos distintos.
+  const finalMatch = matches.find(
+    (m) => m.stage === "final" && m.status === "finished",
+  );
+  const tercerPuesto = matches.find(
+    (m) => m.stage === "third_place" && m.status === "finished",
+  );
+
+  const ladosDe = (match: Match | undefined) => {
+    if (!match) return null;
+    const ganador = matchWinner(match);
+    if (!ganador) return null;
+    const home = teamSide(teams, match.home_team_id);
+    const away = teamSide(teams, match.away_team_id);
+    return ganador === "home"
+      ? { gana: home, pierde: away, match }
+      : { gana: away, pierde: home, match };
+  };
+
+  const laFinal = ladosDe(finalMatch);
+  const elTercero = ladosDe(tercerPuesto);
+
+  // Sin final jugada no hay campeón ni podio: el estudio lo avisa en vez
+  // de dibujar una pieza a medias.
+  const campeon = laFinal
+    ? {
+        eyebrow: tournament.name,
+        team: laFinal.gana,
+        rival: laFinal.pierde.name,
+        marker: `${finalMatch!.home_score ?? 0}-${finalMatch!.away_score ?? 0}`,
+        shootout: shootoutLabel(finalMatch!),
+      }
+    : null;
+
+  const podio = laFinal
+    ? {
+        eyebrow: tournament.name,
+        rows: [
+          { ...laFinal.gana, label: "Campeón" },
+          { ...laFinal.pierde, label: "Subcampeón" },
+          ...(elTercero
+            ? [
+                { ...elTercero.gana, label: "Tercer puesto" },
+                { ...elTercero.pierde, label: "Cuarto puesto" },
+              ]
+            : []),
+        ].map((r) => ({
+          teamName: r.name,
+          color: r.color,
+          crestUrl: r.crestUrl ?? null,
+          label: r.label,
+        })),
+      }
+    : null;
 
   const playedWeeks = new Set(
     matches.filter((m) => m.status === "finished").map((m) => m.week),
@@ -189,6 +250,8 @@ export default async function PiezasPage() {
   const pieces: PiecesData = {
     matches: matchOptions,
     mvps,
+    campeon,
+    podio,
     standings: {
       eyebrow: weekLabel,
       rows: standings.map((row) => ({

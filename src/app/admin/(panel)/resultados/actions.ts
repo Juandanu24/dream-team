@@ -21,16 +21,38 @@ function revalidateMatches() {
   revalidatePath("/torneo");
 }
 
-const scoreSchema = z.object({
-  home_score: z.coerce.number().int().min(0).max(99),
-  away_score: z.coerce.number().int().min(0).max(99),
-});
+// Un campo vacío del formulario llega como "" y no como null.
+const vacioEsNulo = z
+  .union([z.literal(""), z.coerce.number().int().min(0).max(30)])
+  .transform((v) => (v === "" ? null : v))
+  .nullable();
+
+const scoreSchema = z
+  .object({
+    home_score: z.coerce.number().int().min(0).max(99),
+    away_score: z.coerce.number().int().min(0).max(99),
+    home_penalties: vacioEsNulo,
+    away_penalties: vacioEsNulo,
+  })
+  // Se valida acá y no solo en la base para poder decir qué pasa. Los
+  // check de la migración 00014 son la red de abajo.
+  .refine((v) => (v.home_penalties === null) === (v.away_penalties === null), {
+    message: "Pon los dos marcadores de penales, o ninguno",
+  })
+  .refine((v) => v.home_penalties === null || v.home_penalties !== v.away_penalties, {
+    message: "Una tanda de penales no termina empatada",
+  })
+  .refine((v) => v.home_penalties === null || v.home_score === v.away_score, {
+    message: "Solo se va a penales si el partido terminó empatado",
+  });
 
 export async function saveResult(matchId: string, formData: FormData) {
   await requireAdmin();
   const parsed = scoreSchema.parse({
     home_score: formData.get("home_score"),
     away_score: formData.get("away_score"),
+    home_penalties: formData.get("home_penalties") ?? "",
+    away_penalties: formData.get("away_penalties") ?? "",
   });
 
   const supabase = createAdminClient();
@@ -61,9 +83,14 @@ export async function saveResult(matchId: string, formData: FormData) {
     const nameOf = (id: string | null) =>
       teams?.find((t) => t.id === id)?.name ?? "Por definir";
 
+    const penales =
+      parsed.home_penalties !== null
+        ? ` (${parsed.home_penalties}-${parsed.away_penalties} en penales)`
+        : "";
+
     await sendPushToAll({
       title: "⚽ Resultado del Dream Team",
-      body: `${nameOf(before.home_team_id)} ${parsed.home_score} - ${parsed.away_score} ${nameOf(before.away_team_id)}`,
+      body: `${nameOf(before.home_team_id)} ${parsed.home_score} - ${parsed.away_score} ${nameOf(before.away_team_id)}${penales}`,
       url: "/torneo?tab=posiciones",
       tag: "resultado",
     });

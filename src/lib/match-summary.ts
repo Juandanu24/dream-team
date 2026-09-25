@@ -148,6 +148,31 @@ export function formatPieceWhen(iso: string | null): string {
   return `${get("weekday")} ${get("day")} de ${get("month")} · ${get("hour")}:${get("minute")} ${period}`;
 }
 
+/** "2-1 en penales", o null si el partido no se definió así. Vive acá
+ *  para que la pieza, el WhatsApp y el panel digan lo mismo. */
+export function shootoutLabel(match: {
+  home_penalties?: number | null;
+  away_penalties?: number | null;
+}): string | null {
+  if (match.home_penalties == null || match.away_penalties == null) return null;
+  return `${match.home_penalties}-${match.away_penalties} en penales`;
+}
+
+/** Quién ganó, contando la tanda si la hubo. null si fue empate y no
+ *  hubo penales — que en fase de grupos es un resultado válido. */
+export function matchWinner(match: {
+  home_score: number | null;
+  away_score: number | null;
+  home_penalties?: number | null;
+  away_penalties?: number | null;
+}): "home" | "away" | null {
+  const { home_score: h, away_score: a } = match;
+  if (h == null || a == null) return null;
+  if (h !== a) return h > a ? "home" : "away";
+  if (match.home_penalties == null || match.away_penalties == null) return null;
+  return match.home_penalties > match.away_penalties ? "home" : "away";
+}
+
 /** Lugar fijo del torneo, usado en las piezas. */
 export const PIECE_VENUE = "Cancha F8 · Montería";
 

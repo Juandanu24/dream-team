@@ -15,9 +15,15 @@ inscripción de jugadores con carta estilo FIFA, panel admin para aprobar inscri
 armar equipos y cargar resultados, y vista pública del torneo. **Comunicarse en español;
 todo el copy de cara al usuario va en español colombiano (tuteo, nunca voseo).**
 
-**Si vas a implementar algo acá, lee también `ORQUESTACION.md`**: tiene el
-estado del torneo, el backlog, los puertos, cómo verificar las piezas de
-imagen y las decisiones que ya están tomadas.
+**Este archivo dice cómo está hecho el proyecto. Hay otros dos, y hay que
+leerlos antes de implementar:**
+
+- **`ORQUESTACION.md`** — cómo se trabaja y qué falta: la disciplina de
+  verificación, el estado del torneo, los puertos, el render de piezas fuera
+  del navegador y el backlog.
+- **`CONTENIDO.md`** — para qué existe cada pieza: el criterio editorial, cómo
+  se encadenan en una fecha, cómo se escriben los copys y de dónde salen los
+  assets de marca.
 
 ## Stack
 
@@ -58,8 +64,8 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
   posiciones, calendario, equipos, goleadores). Páginas con datos usan
   `force-dynamic` y degradan a estados vacíos si Supabase no responde.
 - `admin/login` + `admin/(panel)/` — panel, inscripciones (aprobar/rechazar),
-  equipos, partidos, `alineaciones`, resultados y `piezas` (generador de
-  imágenes para redes).
+  equipos, partidos, `alineaciones`, `amistosos`, `once-ideal`, resultados y
+  `piezas` (generador de imágenes para redes).
 - Las fotos van al bucket público `player-photos`, comprimidas en el cliente
   (webp ≤ 250 KB) antes de la server action.
 
@@ -69,8 +75,10 @@ Construido: landing, inscripción, `/torneo`, login admin, cola de aprobación,
 equipos (CRUD + escudos + asignación de aprobados), partidos (fixture, marcadores,
 goles/asistencias/tarjetas por jugador), PWA, `/penales` (reto arcade con
 ranking) y `/admin/piezas` (generador de imágenes para Instagram: anuncio,
-resultado, posiciones, goleadores, equipo y penales, en feed 1080×1350 y
-story 1080×1920, con el texto del post sugerido y editable) y
+resultado, posiciones, goleadores, asistencias, figura, duelo, equipo,
+perfil y penales, en feed 1080×1350 y story 1080×1920, con el texto del
+post sugerido y editable — el catálogo y el criterio de cada una están en
+`CONTENIDO.md`) y
 `/admin/alineaciones` (titular por equipo y partido, con push, WhatsApp e
 imagen de cancha). Desplegado en Vercel: dreamteamcolombia.vercel.app.
 
@@ -84,6 +92,9 @@ no sonarle el teléfono a todos dos veces.
 El reto de penales tiene la lógica pura en `src/lib/penalty-game.ts` (zonas,
 arquero adaptativo, resolución del disparo) separada de la UI: se puede simular
 con `node --experimental-strip-types` para rebalancear sin abrir el navegador.
+
+`/admin/amistosos` arma los picados por fuera del torneo (migración 00013),
+con la misma cancha, el mismo mensaje de WhatsApp y el mismo botón de imagen.
 
 El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migración,
 `.env.local`, usuario admin). Sin `.env.local` el sitio compila y muestra estados vacíos.
@@ -163,7 +174,7 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   moviera.
 - En la pieza de perfil **solo entran los números mayores que cero**. Un
   "0 goles · 0 asistencias" no informa nada y encima deja al jugador como
-  si no hubiera hecho nada; hoy son 30 de 51. Sin números la foto crece y
+  si no hubiera hecho nada; hoy son 26 de 53. Sin números la foto crece y
   el escudo se centra en el hueco que queda, en vez de dejar un vacío.
 - **Los amistosos no cuelgan del torneo** (`friendlies`, `friendly_sides`,
   `friendly_players`, migración 00013). No es duplicación por pereza: todo lo
@@ -181,5 +192,19 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
 - Ojo con los códigos de error al detectar "falta la migración":
   **PostgREST devuelve `PGRST205`**, no el `42P01` de Postgres. Hay que mirar
   los dos según por dónde entre la consulta.
+- **Una definición por penales no cambia el marcador.** `matches.home_penalties
+  / away_penalties` (migración 00014) guardan la tanda aparte: un 0-0 definido
+  desde el punto blanco sigue siendo 0-0 para la tabla y la diferencia de gol,
+  que es como lo cuenta el fútbol. Los `check` obligan a que estén los dos o
+  ninguno, a que no terminen empatados y a que solo existan si el partido
+  quedó empatado. Quién ganó lo resuelve `matchWinner()`, que mira primero el
+  marcador y después la tanda.
+- **`tracked()` CENTRA en la x que recibe, no alinea a la izquierda.** Pasarle
+  el borde izquierdo de un bloque corre media etiqueta hacia atrás — así se
+  montó sobre el escudo en el podio. Para anclar a la izquierda está
+  `trackedLeft()`.
+- El aviso de "faltan goles por asignar" **solo sale si hay alguno cargado**.
+  Cero goleadores en un 10-6 es una decisión válida, no un error; el aviso es
+  para la carga a medias, donde los nombres no cuadran con el marcador.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
