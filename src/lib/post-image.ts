@@ -23,7 +23,8 @@ export type PieceKind =
   | "duelo"
   | "perfil"
   | "campeon"
-  | "podio";
+  | "podio"
+  | "premio";
 
 export type PieceFormat = "feed" | "story";
 
@@ -180,6 +181,22 @@ export type PostImageData = Common &
         shootout?: string | null;
         /** Nombre en letra de brocha, si el equipo tiene el suyo. */
         nameImageUrl?: string | null;
+      })
+    | (ConMarco & {
+        kind: "premio";
+        /** El equipo del premiado: de ahí salen el color y el escudo. */
+        team: TeamSide;
+        playerName: string;
+        /** "LOS IRREVERENTES F.C · ARQUERO" */
+        detail: string;
+        /** La sube el admin, como en el duelo: estas fotos son de la
+         *  premiación, no la del formulario de inscripción. */
+        photoUrl?: string | null;
+        encuadre?: Encuadre | null;
+        /** Un solo número, opcional: "6" GOLES. Sin él la foto crece,
+         *  porque un premio sin cifra no tiene nada que mostrar ahí. */
+        statValue?: string | null;
+        statLabel?: string | null;
       })
     | (ConMarco & {
         kind: "podio";
@@ -1123,6 +1140,105 @@ function drawCampeonBody(
   );
 }
 
+function drawPremioBody(
+  ctx: CanvasRenderingContext2D,
+  data: Extract<PostImageData, { kind: "premio" }>,
+  L: Layout,
+  foto: HTMLImageElement | null,
+  display: string,
+  sans: string,
+) {
+  const accent = readableAccent(data.team.color);
+  const cx = L.w / 2;
+  const story = data.format === "story";
+  const conCifra = Boolean(data.statValue);
+
+  // Se arma de abajo hacia arriba: primero se reserva la cifra, después
+  // el bloque de nombre, y lo que sobre se lo queda la foto. Apilando
+  // desde arriba con offsets fijos, la cifra terminaba encima de la
+  // línea del equipo apenas la foto crecía.
+  const bloqueCifra = conCifra ? (story ? 190 : 165) : 0;
+  const cifraTop = L.footerY - bloqueCifra;
+  const bloqueNombre = story ? 150 : 128;
+
+  const size = Math.min(
+    story ? 640 : 560,
+    cifraTop - L.bodyTop - bloqueNombre - 16,
+    L.w - 180,
+  );
+  const cy = L.bodyTop + 16 + size / 2;
+  const abajoFoto = cy + size / 2;
+
+  // Resplandor del color del equipo detrás de la foto.
+  const halo = ctx.createRadialGradient(cx, cy, size * 0.35, cx, cy, size * 0.95);
+  halo.addColorStop(0, `${accent}38`);
+  halo.addColorStop(1, "transparent");
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, L.bodyTop - 40, L.w, L.footerY - L.bodyTop + 40);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
+  ctx.clip();
+  if (foto) {
+    drawCover(ctx, foto, cx - size / 2, cy - size / 2, size, size, data.encuadre);
+  } else {
+    ctx.fillStyle = "#141414";
+    ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
+    ctx.fillStyle = MUTED;
+    ctx.font = `${size * 0.3}px ${display}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(data.playerName.slice(0, 2).toUpperCase(), cx, cy);
+    ctx.textBaseline = "alphabetic";
+  }
+  ctx.restore();
+
+  // Aro del color del equipo, para que la foto no flote sobre el negro.
+  // Sin escudo encima: el equipo ya está en el aro y en la línea de
+  // abajo, y un escudo oscuro sobre una foto oscura no se ve.
+  ctx.beginPath();
+  ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
+  // Nombre y equipo, centrados en el hueco que quedó entre la foto y la
+  // cifra: así se acomodan solos cuando la foto tope por ancho.
+  const hueco = cifraTop - abajoFoto;
+  const nombreY = abajoFoto + hueco * 0.5 - 2;
+
+  const nombre = data.playerName.toUpperCase();
+  const tamNombre = fitText(ctx, nombre, (v) => `${v}px ${display}`, L.w - 160, story ? 92 : 78, 38);
+  ctx.font = `${tamNombre}px ${display}`;
+  ctx.fillStyle = PAPER;
+  ctx.textAlign = "center";
+  ctx.fillText(nombre, cx, nombreY);
+
+  ctx.font = `600 ${story ? 24 : 21}px ${sans}`;
+  ctx.fillStyle = accent;
+  tracked(
+    ctx,
+    truncate(ctx, data.detail.toUpperCase(), L.w - 200),
+    cx,
+    nombreY + (story ? 44 : 40),
+    4,
+  );
+
+  if (!conCifra) return;
+
+  ctx.font = `${story ? 132 : 112}px ${display}`;
+  ctx.fillStyle = VOLT;
+  ctx.textAlign = "center";
+  ctx.fillText(String(data.statValue), cx, L.footerY - (story ? 76 : 66));
+
+  if (data.statLabel) {
+    ctx.font = `600 ${story ? 28 : 24}px ${sans}`;
+    ctx.fillStyle = MUTED;
+    tracked(ctx, data.statLabel.toUpperCase(), cx, L.footerY - (story ? 30 : 24), 6);
+  }
+}
+
 function drawPodioBody(
   ctx: CanvasRenderingContext2D,
   data: Extract<PostImageData, { kind: "podio" }>,
@@ -1534,6 +1650,9 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
             : VOLT,
       },
     ];
+  } else if (data.kind === "premio") {
+    photos = [data.photoUrl ? await loadImage(data.photoUrl) : null];
+    glows = [{ x: L.w * 0.5, color: readableAccent(data.team.color) }];
   } else if (data.kind === "campeon") {
     const [c, cr, n] = await Promise.all([
       data.team.crestUrl ? loadImage(data.team.crestUrl) : null,
@@ -1667,6 +1786,8 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
     drawCampeonBody(ctx, data, L, crests[0], crests[1], photos[0], display, sans);
   } else if (data.kind === "podio") {
     drawPodioBody(ctx, data, L, crests, display, sans);
+  } else if (data.kind === "premio") {
+    drawPremioBody(ctx, data, L, photos[0], display, sans);
   } else if (data.kind === "alineacion") {
     drawLineupBody(ctx, data, L, crests[0], fotosPorUrl, display, sans);
   } else if (
@@ -1700,7 +1821,7 @@ export function postFileName(data: PostImageData) {
       ? `-${slug(data.home.name)}-vs-${slug(data.away.name)}`
       : data.kind === "duelo"
         ? `-${slug(data.home.name)}-vs-${slug(data.away.name)}`
-        : data.kind === "perfil"
+        : data.kind === "perfil" || data.kind === "premio"
         ? `-${slug(data.playerName)}`
         : data.kind === "equipo" ||
             data.kind === "alineacion" ||

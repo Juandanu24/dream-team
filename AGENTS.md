@@ -206,5 +206,11 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
 - El aviso de "faltan goles por asignar" **solo sale si hay alguno cargado**.
   Cero goleadores en un 10-6 es una decisión válida, no un error; el aviso es
   para la carga a medias, donde los nombres no cuadran con el marcador.
+- En la pieza `premio` (goleador y MVP del torneo) los bloques se calculan
+  **de abajo hacia arriba**: se reserva la cifra, después el nombre, y lo que
+  sobre se lo queda la foto. Apilando desde arriba con offsets fijos, la
+  cifra terminaba encima de la línea del equipo apenas la foto crecía. El
+  nombre va centrado en el hueco que queda, así se acomoda solo cuando la
+  foto tope por ancho en vez de por alto.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
