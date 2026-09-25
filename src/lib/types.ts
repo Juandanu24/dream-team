@@ -79,6 +79,11 @@ export interface Match {
   away_team_id: string | null;
   home_score: number | null;
   away_score: number | null;
+  /** Tanda de penales, solo si el partido terminó empatado. El marcador
+   *  NO cambia: un 0-0 definido por penales sigue siendo 0-0 para la
+   *  tabla y la diferencia de gol. Migración 00014. */
+  home_penalties?: number | null;
+  away_penalties?: number | null;
   status: MatchStatus;
   /** Cuándo se anunció esta semana del calendario; null = sin publicar. */
   announced_at?: string | null;

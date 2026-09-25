@@ -192,5 +192,19 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
 - Ojo con los códigos de error al detectar "falta la migración":
   **PostgREST devuelve `PGRST205`**, no el `42P01` de Postgres. Hay que mirar
   los dos según por dónde entre la consulta.
+- **Una definición por penales no cambia el marcador.** `matches.home_penalties
+  / away_penalties` (migración 00014) guardan la tanda aparte: un 0-0 definido
+  desde el punto blanco sigue siendo 0-0 para la tabla y la diferencia de gol,
+  que es como lo cuenta el fútbol. Los `check` obligan a que estén los dos o
+  ninguno, a que no terminen empatados y a que solo existan si el partido
+  quedó empatado. Quién ganó lo resuelve `matchWinner()`, que mira primero el
+  marcador y después la tanda.
+- **`tracked()` CENTRA en la x que recibe, no alinea a la izquierda.** Pasarle
+  el borde izquierdo de un bloque corre media etiqueta hacia atrás — así se
+  montó sobre el escudo en el podio. Para anclar a la izquierda está
+  `trackedLeft()`.
+- El aviso de "faltan goles por asignar" **solo sale si hay alguno cargado**.
+  Cero goleadores en un 10-6 es una decisión válida, no un error; el aviso es
+  para la carga a medias, donde los nombres no cuadran con el marcador.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

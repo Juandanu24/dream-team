@@ -22,6 +22,7 @@ export function MatchPieceButton({
   venue,
   homeScorers,
   awayScorers,
+  shootout,
 }: {
   eyebrow: string;
   home: TeamSide;
@@ -30,6 +31,8 @@ export function MatchPieceButton({
   venue: string;
   homeScorers: ScorerLine[];
   awayScorers: ScorerLine[];
+  /** "2-1 en penales", si el partido se definió así. */
+  shootout?: string | null;
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -41,6 +44,7 @@ export function MatchPieceButton({
     try {
       const piece: PostImageData = {
         kind: "resultado",
+        shootout,
         format: "feed",
         eyebrow,
         headline: "Resultado",

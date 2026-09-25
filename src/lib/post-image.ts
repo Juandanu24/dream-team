@@ -21,7 +21,9 @@ export type PieceKind =
   | "penales"
   | "alineacion"
   | "duelo"
-  | "perfil";
+  | "perfil"
+  | "campeon"
+  | "podio";
 
 export type PieceFormat = "feed" | "story";
 
@@ -59,6 +61,17 @@ export interface DueloFoto {
 export interface PerfilStat {
   label: string;
   value: string;
+}
+
+/** Un puesto final del torneo. A diferencia de `StandingLite`, acá no
+ *  hay puntos: el orden lo definen la final y el partido por el tercer
+ *  puesto, no la tabla de grupos. */
+export interface PodioRow {
+  teamName: string;
+  color: string | null;
+  crestUrl?: string | null;
+  /** "Campeón", "Subcampeón", "Tercer puesto"… */
+  label: string;
 }
 
 export interface StandingLite {
@@ -125,6 +138,10 @@ export type PostImageData = Common &
          *  en cuanto el partido pasaba de tres o cuatro goles. */
         homeScorers?: ScorerLine[];
         awayScorers?: ScorerLine[];
+        /** "2-1 EN PENALES", cuando el partido se definió desde el
+         *  punto blanco. El marcador de arriba no cambia: un 0-0 por
+         *  penales sigue siendo 0-0. */
+        shootout?: string | null;
       })
     | (ConMarco & { kind: "posiciones"; rows: StandingLite[] })
     | (ConMarco & {
@@ -148,6 +165,25 @@ export type PostImageData = Common &
          *  fila de ceros no dice nada y la pieza se acomoda sin ella. */
         stats: PerfilStat[];
         isCaptain?: boolean;
+      })
+    | (ConMarco & {
+        kind: "campeon";
+        team: TeamSide;
+        /** Lo que va dentro de la banda de color: "CAMPEÓN". Separado
+         *  de `headline`, que es el titular del marco: si fueran el
+         *  mismo campo, la palabra sale dos veces en la pieza. */
+        title: string;
+        /** "Ganó la final 0-0 (2-1 en penales)". Una línea, no un
+         *  resumen: la pieza celebra, no informa. */
+        detail: string;
+        /** Nombre en letra de brocha, si el equipo tiene el suyo. */
+        nameImageUrl?: string | null;
+      })
+    | (ConMarco & {
+        kind: "podio";
+        /** De primero a último. Cuatro en este torneo, pero no se
+         *  asume: el alto de fila sale del espacio disponible. */
+        rows: PodioRow[];
       })
     | (ConMarco & {
         kind: "equipo";
@@ -301,6 +337,47 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
  *  que forzar textAlign a "left" mientras se dibuja. Los llamadores dejan
  *  "center" activo, y con eso cada glifo se centraba sobre su borde
  *  izquierdo: la línea entera quedaba descentrada. */
+/** Cuánto mide el texto con ese espaciado entre letras. */
+function trackedWidth(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  spacing: number,
+) {
+  const chars = [...text];
+  return (
+    chars.reduce((sum, c) => sum + ctx.measureText(c).width, 0) +
+    spacing * (chars.length - 1)
+  );
+}
+
+/** Espaciado de letras anclado a la IZQUIERDA en `x`.
+ *
+ *  Dibuja letra por letra, así que tiene que forzar `textAlign` a left y
+ *  restaurarlo: con el "center" del llamador, cada glifo se centraba en
+ *  su propia posición y el bloque entero salía corrido. */
+function trackedLeft(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  spacing: number,
+) {
+  const alineacionPrevia = ctx.textAlign;
+  ctx.textAlign = "left";
+  let cursor = x;
+  for (const c of [...text]) {
+    ctx.fillText(c, cursor, y);
+    cursor += ctx.measureText(c).width + spacing;
+  }
+  ctx.textAlign = alineacionPrevia;
+}
+
+/** Espaciado de letras CENTRADO en `cx`.
+ *
+ *  Ojo: centra, no alinea a la izquierda. Pasarle el borde izquierdo de
+ *  un bloque le corre media etiqueta hacia atrás — ya pasó en el podio,
+ *  donde la etiqueta se montó sobre el escudo. Para anclar a la
+ *  izquierda está `trackedLeft`. */
 function tracked(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -308,19 +385,7 @@ function tracked(
   y: number,
   spacing: number,
 ) {
-  const chars = [...text];
-  const anchos = chars.map((c) => ctx.measureText(c).width);
-  const total =
-    anchos.reduce((sum, w) => sum + w, 0) + spacing * (chars.length - 1);
-
-  const alineacionPrevia = ctx.textAlign;
-  ctx.textAlign = "left";
-  let x = cx - total / 2;
-  chars.forEach((c, i) => {
-    ctx.fillText(c, x, y);
-    x += anchos[i] + spacing;
-  });
-  ctx.textAlign = alineacionPrevia;
+  trackedLeft(ctx, text, cx - trackedWidth(ctx, text, spacing) / 2, y, spacing);
 }
 
 /** Balón pequeño. Se dibuja a mano porque el emoji ⚽ en canvas depende
@@ -625,6 +690,13 @@ function drawMatchBody(
     ctx.font = `132px ${display}`;
     ctx.fillStyle = VOLT;
     ctx.fillText(`${data.home.score ?? 0}-${data.away.score ?? 0}`, L.w / 2, crestY + 46);
+    // Un 0-0 sin más deja la pieza sin ganador. La tanda va debajo, en
+    // chico: desempata sin competirle al marcador.
+    if (data.shootout) {
+      ctx.font = `600 26px ${sans}`;
+      ctx.fillStyle = BLUE;
+      tracked(ctx, data.shootout.toUpperCase(), L.w / 2, crestY + 86, 4);
+    }
   } else {
     ctx.font = `104px ${display}`;
     ctx.fillStyle = PAPER;
@@ -910,6 +982,141 @@ function drawRankBody(
     ctx.fillStyle = MUTED;
     ctx.fillText(data.footnote, L.w / 2, y + data.rows.length * rowH + 34);
   }
+}
+
+function drawCampeonBody(
+  ctx: CanvasRenderingContext2D,
+  data: Extract<PostImageData, { kind: "campeon" }>,
+  L: Layout,
+  crest: HTMLImageElement | null,
+  nombreImg: HTMLImageElement | null,
+  display: string,
+  sans: string,
+) {
+  const accent = readableAccent(data.team.color);
+  const cx = L.w / 2;
+
+  // Resplandor del color del equipo detrás de todo: es la única pieza
+  // que celebra, y el color del campeón manda sobre el negro de fondo.
+  const halo = ctx.createRadialGradient(cx, L.bodyTop + 260, 60, cx, L.bodyTop + 260, L.h * 0.55);
+  halo.addColorStop(0, `${accent}33`);
+  halo.addColorStop(1, "transparent");
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, L.eyebrowY, L.w, L.footerY - L.eyebrowY);
+
+  const crestSize = data.format === "story" ? 400 : 300;
+  const crestY = L.bodyTop + crestSize / 2 + 20;
+  drawCrest(ctx, crest, cx, crestY, crestSize, accent, display,
+    data.team.name.slice(0, 1));
+
+  // Nombre del equipo: la letra de brocha si la tiene, y si no, Bebas.
+  // Se cae solo, igual que en el duelo.
+  let y = crestY + crestSize / 2 + 46;
+  const anchoMax = L.w - 180;
+  if (nombreImg) {
+    const razon = nombreImg.width / nombreImg.height;
+    const alto = Math.min(data.format === "story" ? 150 : 120, anchoMax / razon);
+    const ancho = razon * alto;
+    const tenido = tintarImagen(nombreImg, ancho, alto, PAPER);
+    ctx.drawImage(tenido ?? nombreImg, cx - ancho / 2, y, ancho, alto);
+    y += alto + 34;
+  } else {
+    const name = data.team.name.toUpperCase();
+    const size = fitText(ctx, name, (v) => `${v}px ${display}`, anchoMax, 104, 44);
+    ctx.font = `${size}px ${display}`;
+    ctx.fillStyle = PAPER;
+    ctx.textAlign = "center";
+    ctx.fillText(name, cx, y + size * 0.8);
+    y += size + 40;
+  }
+
+  // Banda del título, con el color del equipo.
+  const titulo = data.title.toUpperCase();
+  const tamTitulo = fitText(ctx, titulo, (v) => `${v}px ${display}`, anchoMax - 80, 104, 52);
+  ctx.font = `${tamTitulo}px ${display}`;
+  const anchoTitulo = Math.min(ctx.measureText(titulo).width + 88, anchoMax);
+  const altoBanda = tamTitulo + 40;
+  ctx.fillStyle = accent;
+  roundRect(ctx, cx - anchoTitulo / 2, y, anchoTitulo, altoBanda, 16);
+  ctx.fill();
+  // Tinta oscura encima sin pensarlo: readableAccent garantiza
+  // luminancia >= 0.45, así que el acento nunca es un color oscuro.
+  ctx.fillStyle = INK;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(titulo, cx, y + altoBanda / 2 + 4);
+  ctx.textBaseline = "alphabetic";
+  y += altoBanda + 56;
+
+  // Cómo lo ganó. Una línea; si no cabe, se achica antes de recortar.
+  if (data.detail) {
+    const tam = fitText(ctx, data.detail, (v) => `600 ${v}px ${sans}`, anchoMax, 30, 20);
+    ctx.font = `600 ${tam}px ${sans}`;
+    ctx.fillStyle = MUTED;
+    ctx.textAlign = "center";
+    ctx.fillText(data.detail, cx, Math.min(y, L.footerY - 24));
+  }
+}
+
+function drawPodioBody(
+  ctx: CanvasRenderingContext2D,
+  data: Extract<PostImageData, { kind: "podio" }>,
+  L: Layout,
+  crests: (HTMLImageElement | null)[],
+  display: string,
+  sans: string,
+) {
+  const x0 = 90;
+  const width = L.w - 180;
+  const y = L.bodyTop + 40;
+
+  // El alto de fila sale del espacio libre, no de un número fijo: con
+  // cuatro equipos sobra, pero un torneo de seis no debería salirse del
+  // pie. Mismo criterio que el resto de las piezas.
+  const room = L.footerY - y - 20;
+  const rowH = Math.min(data.format === "story" ? 230 : 190, room / Math.max(1, data.rows.length));
+
+  data.rows.forEach((row, i) => {
+    const accent = readableAccent(row.color);
+    const top = y + i * rowH;
+    const esCampeon = i === 0;
+
+    // El campeón se despega: fondo con su color, borde grueso y el
+    // puesto en volt. Los demás quedan en una fila sobria.
+    ctx.fillStyle = esCampeon ? `${accent}1F` : "rgba(255,255,255,0.03)";
+    roundRect(ctx, x0, top, width, rowH - 18, 18);
+    ctx.fill();
+    ctx.fillStyle = esCampeon ? VOLT : "rgba(255,255,255,0.18)";
+    ctx.fillRect(x0, top, esCampeon ? 9 : 5, rowH - 18);
+
+    const medio = top + (rowH - 18) / 2;
+
+    ctx.textAlign = "left";
+    ctx.font = `${esCampeon ? 76 : 58}px ${display}`;
+    ctx.fillStyle = esCampeon ? VOLT : MUTED;
+    ctx.textBaseline = "middle";
+    ctx.fillText(`${i + 1}`, x0 + 34, medio);
+
+    const crestSize = esCampeon ? rowH * 0.62 : rowH * 0.5;
+    drawCrest(ctx, crests[i], x0 + 150, medio, crestSize, accent, display,
+      row.teamName.slice(0, 1), esCampeon);
+
+    const textoX = x0 + 150 + crestSize / 2 + 34;
+    const anchoTexto = x0 + width - 34 - textoX;
+
+    const nombre = row.teamName.toUpperCase();
+    const tamNombre = fitText(ctx, nombre, (v) => `${v}px ${display}`,
+      anchoTexto, esCampeon ? 62 : 50, 28);
+    ctx.font = `${tamNombre}px ${display}`;
+    ctx.fillStyle = PAPER;
+    ctx.fillText(nombre, textoX, medio - 16);
+
+    ctx.font = `600 ${esCampeon ? 26 : 22}px ${sans}`;
+    ctx.fillStyle = esCampeon ? VOLT : MUTED;
+    ctx.textBaseline = "alphabetic";
+    // Anclada a la izquierda, alineada con el nombre de arriba.
+    trackedLeft(ctx, row.label.toUpperCase(), textoX, medio + 34, 4);
+  });
 }
 
 function drawTeamBody(
@@ -1247,11 +1454,31 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
       { x: L.w * 0.16, color: readableAccent(data.home.color) },
       { x: L.w * 0.84, color: readableAccent(data.away.color) },
     ];
-  } else if (data.kind === "posiciones") {
+  } else if (data.kind === "posiciones" || data.kind === "podio") {
     crests = await Promise.all(
       data.rows.map((r) => (r.crestUrl ? loadImage(r.crestUrl) : null)),
     );
-    glows = [{ x: L.w * 0.5, color: VOLT }];
+    // El podio se tiñe con el color del campeón; la tabla de grupos no
+    // tiene dueño y se queda en volt.
+    glows = [
+      {
+        x: L.w * 0.5,
+        color:
+          data.kind === "podio" && data.rows[0]
+            ? readableAccent(data.rows[0].color)
+            : VOLT,
+      },
+    ];
+  } else if (data.kind === "campeon") {
+    const [c, n] = await Promise.all([
+      data.team.crestUrl ? loadImage(data.team.crestUrl) : null,
+      data.nameImageUrl ? loadImage(data.nameImageUrl) : null,
+    ]);
+    crests = [c];
+    // El nombre de brocha viaja en `photos` para no agregar otro arreglo
+    // solo por esta pieza.
+    photos = [n];
+    glows = [{ x: L.w * 0.5, color: readableAccent(data.team.color) }];
   } else if (data.kind === "perfil") {
     const [c, f] = await Promise.all([
       data.team.crestUrl ? loadImage(data.team.crestUrl) : null,
@@ -1370,6 +1597,10 @@ export async function renderPostImage(data: PostImageData): Promise<Blob> {
     drawPerfilBody(ctx, data, L, photos[0], crests[0], display, sans);
   } else if (data.kind === "equipo") {
     drawTeamBody(ctx, data, L, crests[0], display, sans);
+  } else if (data.kind === "campeon") {
+    drawCampeonBody(ctx, data, L, crests[0], photos[0], display, sans);
+  } else if (data.kind === "podio") {
+    drawPodioBody(ctx, data, L, crests, display, sans);
   } else if (data.kind === "alineacion") {
     drawLineupBody(ctx, data, L, crests[0], fotosPorUrl, display, sans);
   } else if (
@@ -1405,7 +1636,9 @@ export function postFileName(data: PostImageData) {
         ? `-${slug(data.home.name)}-vs-${slug(data.away.name)}`
         : data.kind === "perfil"
         ? `-${slug(data.playerName)}`
-        : data.kind === "equipo" || data.kind === "alineacion"
+        : data.kind === "equipo" ||
+            data.kind === "alineacion" ||
+            data.kind === "campeon"
           ? `-${slug(data.team.name)}`
         : "";
   return `dt-${data.kind}${detail}-${data.format}.png`;

@@ -42,6 +42,8 @@ duelo.
 | `equipo` | Escudo y nómina. Portada del multipost | Equipo + su plantel |
 | `perfil` | Un jugador con su foto y sus números | Plantel + vistas |
 | `penales` | Ranking del reto arcade de `/penales` | `penalty_leaderboard` |
+| `campeon` | **Cierre**: el que levantó la copa, con su escudo | Ganador de la final |
+| `podio` | **Cierre**: cómo terminó el torneo, de 1º a 4º | Final + 3º y 4º puesto |
 
 **El paquete de la fecha** (`week-pack.tsx`) arma de un golpe las cuatro que
 se repiten cada semana: resultado, anuncio, posiciones y goleadores.
@@ -63,6 +65,15 @@ El orden importa: cada pieza revela una cosa y no pisa a la siguiente.
    hay dos partidos y por tanto dos figuras.
 7. **`posiciones`** y **`goleadores`** al cerrar la fecha.
 8. **Once ideal** de la fecha, cuando se arma en `/admin/once-ideal`.
+
+Al cerrar el torneo van las dos de cierre, en este orden: primero el
+**`resultado`** de la final, después el **`campeon`** y por último el
+**`podio`**. Si el podio sale primero, revienta el final antes de contarlo.
+
+**El puesto final NO sale de la tabla de grupos.** Sale de la final y del
+partido por el tercer puesto: Colombia y Teletubbies terminaron la fase con
+los mismos puntos y quedaron en puestos distintos. La pieza `posiciones`
+sigue siendo la tabla de grupos; para el cierre está `podio`.
 
 El **multipost "conoce al equipo"** (`equipo` + un `perfil` por jugador) no va
 atado a una fecha: se publica cuando conviene llenar la parrilla.

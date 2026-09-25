@@ -22,6 +22,7 @@ import {
   type Encuadre,
   type PieceFormat,
   type PieceKind,
+  type PodioRow,
   type PostImageData,
   type RankLite,
   type ScorerLine,
@@ -58,6 +59,7 @@ export interface MatchPiece {
   finished: boolean;
   homeScorers: ScorerLine[];
   awayScorers: ScorerLine[];
+  shootout: string | null;
 }
 
 export interface TeamPiece {
@@ -77,9 +79,26 @@ export interface MvpPiece {
   card: CardImageData;
 }
 
+export interface CampeonPiece {
+  eyebrow: string;
+  team: TeamSide;
+  rival: string;
+  /** "0-0" */
+  marker: string;
+  shootout: string | null;
+}
+
+export interface PodioPiece {
+  eyebrow: string;
+  rows: PodioRow[];
+}
+
 export interface PiecesData {
   matches: MatchPiece[];
   mvps: MvpPiece[];
+  /** null hasta que la final se juegue. */
+  campeon: CampeonPiece | null;
+  podio: PodioPiece | null;
   standings: { eyebrow: string; rows: StandingLite[] };
   scorers: { eyebrow: string; rows: RankLite[] };
   assists: { eyebrow: string; rows: RankLite[] };
@@ -103,6 +122,8 @@ const KINDS: { value: StudioKind; label: string; hint: string }[] = [
   { value: "duelo", label: "Duelo", hint: "Las fotos de los dos equipos" },
   { value: "equipo", label: "Equipo", hint: "Escudo y nómina" },
   { value: "penales", label: "Penales", hint: "Ranking del reto" },
+  { value: "campeon", label: "Campeón", hint: "El que levantó la copa" },
+  { value: "podio", label: "Podio", hint: "Cómo terminó el torneo" },
 ];
 
 const FORMATS: { value: PieceFormat; label: string; hint: string }[] = [
@@ -147,6 +168,18 @@ function ControlesEncuadre({
       ))}
     </>
   );
+}
+
+/** El nombre de brocha se busca por el nombre del equipo. Si el archivo
+ *  no existe, `loadImage` falla en silencio y la pieza cae al texto en
+ *  Bebas. Lo usan el duelo y la pieza de campeón. */
+function slugEquipo(nombre: string) {
+  return nombre
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 /** Los rankings dejan escoger cuántos entran en la pieza. */
@@ -242,6 +275,10 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       return "Todavía no hay equipos. Ármalos en Equipos.";
     if (kind === "figura" && !mvp)
       return "Todavía no has elegido ninguna figura. Se escoge en Resultados.";
+    if (kind === "campeon" && !data.campeon)
+      return "La final todavía no se ha jugado. Carga su resultado en Resultados.";
+    if (kind === "podio" && !data.podio)
+      return "El podio sale de la final. Carga su resultado en Resultados.";
     if (kind === "duelo" && !match)
       return "Escoge el partido del duelo.";
     if (kind === "duelo" && !fotos.home && !fotos.away)
@@ -305,6 +342,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           venue: match.venue,
           homeScorers: kind === "resultado" ? match.homeScorers : undefined,
           awayScorers: kind === "resultado" ? match.awayScorers : undefined,
+          shootout: kind === "resultado" ? match.shootout : undefined,
         };
       case "posiciones":
         return {
@@ -352,16 +390,6 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       }
       case "duelo": {
         if (!match) return null;
-        // El nombre de brocha se busca por el nombre del equipo. Si el
-        // archivo no existe, loadImage falla en silencio y se cae al
-        // texto: por eso Colombia puede seguir sin el suyo.
-        const slugEquipo = (n: string) =>
-          n
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, "");
         return {
           ...common,
           kind,
@@ -386,6 +414,34 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           // resultado está la pieza "Resultado".
           footer: `Semana ${match.week} · ${match.when}`,
           overlayUrl: conMarco ? "/marco-duelo.webp" : null,
+        };
+      }
+      case "campeon": {
+        if (!data.campeon) return null;
+        const c = data.campeon;
+        return {
+          ...common,
+          kind,
+          eyebrow: c.eyebrow,
+          // El titular da el contexto y la banda da el veredicto: si
+          // los dos dijeran "campeón", la palabra sale dos veces.
+          headline: "Gran Final",
+          title: "Campeón",
+          team: c.team,
+          detail: c.shootout
+            ? `Ganó la final ${c.marker} (${c.shootout}) contra ${c.rival}`
+            : `Ganó la final ${c.marker} contra ${c.rival}`,
+          nameImageUrl: `/nombre-${slugEquipo(c.team.name)}.webp`,
+        };
+      }
+      case "podio": {
+        if (!data.podio) return null;
+        return {
+          ...common,
+          kind,
+          eyebrow: data.podio.eyebrow,
+          headline: "Así terminó",
+          rows: data.podio.rows,
         };
       }
       case "equipo": {
@@ -480,6 +536,21 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       }
       case "penales": {
         return `🥅 ¿CUÁNTOS LE METES AL ARQUERO?\n\nEste es el ranking del reto de penales. Son 5 tiros y el arquero te va aprendiendo las mañas: si repites palo, te la ataja.\n\n¿Te crees capaz de meter los 5? Entra y compite 👇\n\n🔗 ${SITE}/penales (Link en la bio)\n\n💬 Comenta tu puntaje 👇\n\n${TAGS}`;
+      }
+      case "campeon": {
+        const c = data.campeon;
+        if (!c) return "";
+        const como = c.shootout
+          ? `Ganó la final ${c.marker} y la definió desde el punto blanco, ${c.shootout}.`
+          : `Ganó la final ${c.marker} contra ${c.rival}.`;
+        return `🏆 ${c.team.name.toUpperCase()}, CAMPEÓN\n\n${como}\n\nSe acabó el primer torneo del Dream Team. Gracias a todos los que se pegaron la rodada, jugaron, gritaron y acompañaron.\n\nTodos los números del torneo están en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 Déjales algo en los comentarios 👇\n\n${TAGS}`;
+      }
+      case "podio": {
+        if (!data.podio) return "";
+        const puestos = data.podio.rows
+          .map((r, i) => `${["🥇", "🥈", "🥉", "4️⃣"][i] ?? "•"} ${r.teamName}`)
+          .join("\n");
+        return `🏁 ASÍ TERMINÓ EL TORNEO\n\n${puestos}\n\nTres semanas de fase de grupos, semifinales y una final que se fue hasta los penales. Quedó bueno.\n\nLa tabla, los goleadores y las cartas de cada jugador siguen en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Cuál fue el mejor partido del torneo? 👇\n\n${TAGS}`;
       }
       case "equipo": {
         if (!team) return "";

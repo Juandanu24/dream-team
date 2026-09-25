@@ -10,9 +10,10 @@ import {
   type RosterEntry,
 } from "@/lib/admin-matches";
 import {
+  PIECE_VENUE,
   buildWhatsAppMessage,
   formatPieceWhen,
-  PIECE_VENUE,
+  shootoutLabel,
   tallyScorers,
 } from "@/lib/match-summary";
 import { ShareTextButton } from "@/components/share-text-button";
@@ -184,11 +185,50 @@ function MatchResult({
             required
             className="w-14 text-center sm:order-4"
           />
+          {/* En eliminación directa un empate tiene que resolverse. En
+              fase de grupos no: ahí el empate es un resultado válido. */}
+          {match.stage !== "group" ? (
+            <div className="col-span-2 flex items-center gap-2 sm:order-6 sm:col-span-1">
+              {/* Con los equipos nombrados no hay forma de invertir la
+                  tanda sin darse cuenta: un 1-2 al revés le daría el
+                  título al otro. */}
+              <span
+                className="text-xs text-muted-foreground"
+                title={`Penales: ${home.name} - ${away.name}`}
+              >
+                Penales
+              </span>
+              <Input
+                type="number"
+                inputMode="numeric"
+                name="home_penalties"
+                aria-label={`Penales de ${home.name}`}
+                min={0}
+                max={30}
+                defaultValue={match.home_penalties ?? ""}
+                className="w-12 text-center"
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input
+                type="number"
+                inputMode="numeric"
+                name="away_penalties"
+                aria-label={`Penales de ${away.name}`}
+                min={0}
+                max={30}
+                defaultValue={match.away_penalties ?? ""}
+                className="w-12 text-center"
+              />
+              <span className="text-[11px] text-muted-foreground">
+                {home.name} - {away.name}
+              </span>
+            </div>
+          ) : null}
           <Button
             size="sm"
             type="submit"
             title="Guardar y marcar como jugado"
-            className="col-span-2 justify-self-start sm:order-6 sm:col-span-1"
+            className="col-span-2 justify-self-start sm:order-7 sm:col-span-1"
           >
             <Check aria-hidden />
             {match.status === "finished" ? "Actualizar" : "Finalizar"}
@@ -232,6 +272,7 @@ function MatchResult({
               awayScorers={
                 tallyScorers(matchEvents, home.id, away.id).away
               }
+              shootout={shootoutLabel(match)}
             />
             <div className="w-full sm:max-w-xs">
               <MvpPicker
@@ -263,7 +304,13 @@ function MatchResult({
 
       {/* Goles, asistencias y tarjetas */}
       <div className="space-y-2 pl-1">
-        {match.status === "finished" && assignedGoals !== totalScore ? (
+        {/* Con CERO goleadores cargados no hay nada que avisar: en un
+            10-6 de amistad, listar 16 nombres no le sirve a nadie y es
+            una decisión válida. El aviso es para la carga a medias, que
+            sí es un error: los goleadores no cuadran con el marcador. */}
+        {match.status === "finished" &&
+        assignedGoals > 0 &&
+        assignedGoals !== totalScore ? (
           <p className="text-xs text-yellow-500">
             {assignedGoals < totalScore
               ? `⚠️ Faltan ${totalScore - assignedGoals} de ${totalScore} goles por asignar — agrégalos abajo (gol o autogol).`
