@@ -260,11 +260,31 @@ export default async function PiezasPage() {
     figurasPor.set(m.mvp_player_id, (figurasPor.get(m.mvp_player_id) ?? 0) + 1);
   }
 
+  // Gente premiable: todo el plantel, con su equipo y sus goles, para
+  // las piezas de goleador y MVP del torneo. El admin escoge; no se
+  // asume que el goleador sea el premiado.
+  const premiables = roster
+    .map((r) => {
+      const team = teams.find((t) => t.id === r.team_id);
+      return {
+        playerId: r.player_id,
+        name: r.players.full_name,
+        position: POSITION_LABELS[r.players.position],
+        teamName: team?.name ?? "",
+        teamColor: team?.color ?? null,
+        crestUrl: team?.crest_url ?? null,
+        goals: golesPor.get(r.player_id) ?? 0,
+        assists: asistPor.get(r.player_id) ?? 0,
+      };
+    })
+    .sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name));
+
   const pieces: PiecesData = {
     matches: matchOptions,
     mvps,
     campeon,
     podio,
+    premiables,
     standings: {
       eyebrow: weekLabel,
       rows: standings.map((row) => ({

@@ -39,10 +39,10 @@ import { renderPlayerPost } from "@/lib/post-image";
 import type { CardImageData } from "@/lib/card-image";
 import { cn } from "@/lib/utils";
 
-/** El estudio ofrece un tipo más que los que sabe dibujar renderPostImage:
- *  "figura" se compone en dos pasos (carta + marco), así que no forma
- *  parte de PieceKind. */
-type StudioKind = PieceKind | "figura";
+/** El estudio ofrece tipos que no son `PieceKind`: "figura" se compone
+ *  en dos pasos (carta + marco), y "goleador"/"mvp-torneo" son la misma
+ *  pieza `premio` con distinto titular. */
+type StudioKind = PieceKind | "figura" | "goleador" | "mvp-torneo";
 
 const SITE = "dreamteamcolombia.vercel.app";
 const TAGS = "#DreamTeamColombia #FutbolAmateur #Montería #LaF8 #CanchaF8";
@@ -94,12 +94,26 @@ export interface PodioPiece {
   rows: PodioRow[];
 }
 
+/** Alguien a quien se le puede dar un premio del torneo. */
+export interface Premiable {
+  playerId: string;
+  name: string;
+  position: string;
+  teamName: string;
+  teamColor: string | null;
+  crestUrl: string | null;
+  goals: number;
+  assists: number;
+}
+
 export interface PiecesData {
   matches: MatchPiece[];
   mvps: MvpPiece[];
   /** null hasta que la final se juegue. */
   campeon: CampeonPiece | null;
   podio: PodioPiece | null;
+  /** Ordenados por goles, para que el goleador salga de primero. */
+  premiables: Premiable[];
   standings: { eyebrow: string; rows: StandingLite[] };
   scorers: { eyebrow: string; rows: RankLite[] };
   assists: { eyebrow: string; rows: RankLite[] };
@@ -125,7 +139,15 @@ const KINDS: { value: StudioKind; label: string; hint: string }[] = [
   { value: "penales", label: "Penales", hint: "Ranking del reto" },
   { value: "campeon", label: "Campeón", hint: "El que levantó la copa" },
   { value: "podio", label: "Podio", hint: "Cómo terminó el torneo" },
+  { value: "goleador", label: "Goleador", hint: "El del torneo, con foto" },
+  { value: "mvp-torneo", label: "MVP del torneo", hint: "El mejor, con foto" },
 ];
+
+/** Los dos premios individuales del cierre. Comparten pieza —cambian
+ *  el titular y si llevan cifra— y los dos piden una foto del admin. */
+function esPremio(kind: StudioKind) {
+  return kind === "goleador" || kind === "mvp-torneo";
+}
 
 const FORMATS: { value: PieceFormat; label: string; hint: string }[] = [
   { value: "feed", label: "Feed", hint: "1080 × 1350" },
@@ -195,7 +217,8 @@ function needsPicker(kind: StudioKind) {
     kind === "resultado" ||
     kind === "equipo" ||
     kind === "figura" ||
-    kind === "duelo"
+    kind === "duelo" ||
+    esPremio(kind)
   );
 }
 
@@ -229,6 +252,13 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   // Jugador cuya pieza de perfil se está viendo (y ajustando). Null = la
   // portada del equipo.
   const [ajustando, setAjustando] = useState<string | null>(null);
+  // Premios del cierre: a quién, con qué foto y cómo encuadrada. La
+  // foto la sube el admin —son de la premiación, no la del formulario.
+  const [premiadoId, setPremiadoId] = useState(
+    data.premiables[0]?.playerId ?? "",
+  );
+  const [fotoPremio, setFotoPremio] = useState<string | null>(null);
+  const [encPremio, setEncPremio] = useState<Encuadre>({ zoom: 1, x: 0, y: 0 });
   const [guardando, setGuardando] = useState(false);
   const router = useRouter();
   // 0 = todos. Seis alcanza cuando el torneo avanza y hay diferencias;
@@ -256,6 +286,10 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     () => team?.cards.find((c) => c.playerId === ajustando) ?? null,
     [team, ajustando],
   );
+  const premiado = useMemo(
+    () => data.premiables.find((p) => p.playerId === premiadoId) ?? null,
+    [data.premiables, premiadoId],
+  );
   const encActual = jugador
     ? (encuadres[jugador.playerId] ?? jugador.encuadre ?? ENCUADRE_PERFIL)
     : ENCUADRE_PERFIL;
@@ -280,12 +314,16 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       return "La final todavía no se ha jugado. Carga su resultado en Resultados.";
     if (kind === "podio" && !data.podio)
       return "El podio sale de la final. Carga su resultado en Resultados.";
+    if (esPremio(kind) && !premiado)
+      return "Todavía no hay jugadores con equipo. Ármalos en Equipos.";
+    if (esPremio(kind) && !fotoPremio)
+      return "Sube la foto del premiado para armar la pieza.";
     if (kind === "duelo" && !match)
       return "Escoge el partido del duelo.";
     if (kind === "duelo" && !fotos.home && !fotos.away)
       return "Sube la foto de cada equipo para armar el duelo.";
     return null;
-  }, [kind, match, team, mvp, data, fotos]);
+  }, [kind, match, team, mvp, data, fotos, premiado, fotoPremio]);
 
   // La portada del equipo se arma aparte porque el multipost la necesita
   // siempre, incluso mientras la vista previa está mostrando un perfil.
@@ -417,6 +455,34 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           overlayUrl: conMarco ? "/marco-duelo.webp" : null,
         };
       }
+      case "goleador":
+      case "mvp-torneo": {
+        if (!premiado) return null;
+        const esGoleador = kind === "goleador";
+        return {
+          ...common,
+          kind: "premio",
+          eyebrow: data.podio?.eyebrow ?? "Dream Team",
+          headline: esGoleador ? "Goleador del torneo" : "MVP del torneo",
+          team: {
+            name: premiado.teamName,
+            color: premiado.teamColor,
+            crestUrl: premiado.crestUrl,
+          },
+          playerName: premiado.name,
+          detail: `${premiado.teamName} · ${premiado.position}`,
+          photoUrl: fotoPremio,
+          encuadre: encPremio,
+          // El MVP no lleva cifra: no es un premio que se cuente, y un
+          // número al lado lo volvería otra estadística.
+          statValue: esGoleador ? String(premiado.goals) : null,
+          statLabel: esGoleador
+            ? premiado.goals === 1
+              ? "Gol"
+              : "Goles"
+            : null,
+        };
+      }
       case "campeon": {
         if (!data.campeon) return null;
         const c = data.campeon;
@@ -484,6 +550,9 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     portada,
     jugador,
     encActual,
+    premiado,
+    fotoPremio,
+    encPremio,
   ]);
 
   const caption = useMemo(() => {
@@ -537,6 +606,15 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       case "penales": {
         return `🥅 ¿CUÁNTOS LE METES AL ARQUERO?\n\nEste es el ranking del reto de penales. Son 5 tiros y el arquero te va aprendiendo las mañas: si repites palo, te la ataja.\n\n¿Te crees capaz de meter los 5? Entra y compite 👇\n\n🔗 ${SITE}/penales (Link en la bio)\n\n💬 Comenta tu puntaje 👇\n\n${TAGS}`;
       }
+      case "goleador": {
+        if (!premiado) return "";
+        const g = premiado.goals;
+        return `⚽ GOLEADOR DEL TORNEO\n\n${premiado.name} — ${g} ${g === 1 ? "gol" : "goles"}.\n\nNadie metió más en estas cinco semanas. ${premiado.teamName} lo tuvo adentro.\n\nLa tabla completa de goleadores está en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 Felicítenlo acá abajo 👇\n\n${TAGS}`;
+      }
+      case "mvp-torneo": {
+        if (!premiado) return "";
+        return `🏅 EL MEJOR DEL TORNEO\n\n${premiado.name} — ${premiado.teamName}.\n\nNo siempre lo dicen los números. Este se lo ganó semana a semana, y el que estuvo en la cancha lo sabe.\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿De acuerdo? Díganlo acá abajo 👇\n\n${TAGS}`;
+      }
       case "campeon": {
         const c = data.campeon;
         if (!c) return "";
@@ -568,11 +646,11 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       default:
         return "";
     }
-  }, [kind, match, team, mvp, data]);
+  }, [kind, match, team, mvp, data, premiado]);
 
   // La edición se guarda junto a la selección que la produjo: al cambiar
   // de pieza el texto vuelve solo al sugerido, sin efectos ni refs.
-  const captionKey = `${kind}:${matchId}:${teamId}:${mvpId}`;
+  const captionKey = `${kind}:${matchId}:${teamId}:${mvpId}:${premiadoId}`;
   const [edited, setEdited] = useState<{ key: string; text: string } | null>(null);
   const text = edited?.key === captionKey ? edited.text : caption;
 
@@ -582,7 +660,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
   const esFigura = kind === "figura" && Boolean(mvp) && !missing;
   const dibujable = Boolean(piece) || esFigura;
   const key = dibujable
-    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}:${JSON.stringify(encuadre)}:${conMarco}:${ajustando ?? ""}:${JSON.stringify(encActual)}`
+    ? `${kind}:${format}:${matchId}:${teamId}:${mvpId}:${cuantos}:${fotos.home ?? ""}:${fotos.away ?? ""}:${JSON.stringify(encuadre)}:${conMarco}:${ajustando ?? ""}:${JSON.stringify(encActual)}:${premiadoId}:${fotoPremio ?? ""}:${JSON.stringify(encPremio)}`
     : "";
   const busy = dibujable && rendered?.key !== key;
   const preview = dibujable && rendered?.key === key ? rendered.url : null;
@@ -804,6 +882,24 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
           </div>
         ) : null}
 
+        {esPremio(kind) && fotoPremio ? (
+          <div className="mt-3 space-y-3 rounded-md border border-border/60 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Ajusta la foto mirando la vista previa de arriba.
+              </p>
+              <button
+                type="button"
+                className="shrink-0 text-[11px] text-dt-blue underline-offset-2 hover:underline"
+                onClick={() => setEncPremio({ zoom: 1, x: 0, y: 0 })}
+              >
+                Reiniciar
+              </button>
+            </div>
+            <ControlesEncuadre valor={encPremio} onChange={setEncPremio} />
+          </div>
+        ) : null}
+
         {kind === "equipo" && jugador ? (
           <div className="mt-3 space-y-3 rounded-md border border-border/60 p-3">
             {jugador.photoUrl ? (
@@ -895,9 +991,25 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                 ? "Equipo"
                 : kind === "figura"
                   ? "Figura"
-                  : "Partido"}
+                  : esPremio(kind)
+                    ? "Premiado"
+                    : "Partido"}
             </Label>
-            {kind === "figura" ? (
+            {esPremio(kind) ? (
+              <select
+                id="objetivo"
+                className="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover"
+                value={premiadoId}
+                onChange={(e) => setPremiadoId(e.target.value)}
+              >
+                {data.premiables.map((p) => (
+                  <option key={p.playerId} value={p.playerId}>
+                    {p.name} · {p.teamName}
+                    {p.goals > 0 ? ` · ${p.goals}g` : ""}
+                  </option>
+                ))}
+              </select>
+            ) : kind === "figura" ? (
               <select
                 id="objetivo"
                 className="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover"
@@ -1012,6 +1124,37 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
                 })}
               </div>
               </>
+            ) : null}
+            {esPremio(kind) ? (
+              <div className="space-y-1.5 pt-1">
+                <Label
+                  htmlFor="foto-premio"
+                  className="text-xs text-muted-foreground"
+                >
+                  Foto del premiado
+                </Label>
+                <input
+                  id="foto-premio"
+                  type="file"
+                  accept="image/*"
+                  className="w-full min-w-0 max-w-full text-xs file:mr-2 file:rounded-md file:border file:border-input file:bg-transparent file:px-2 file:py-1 file:text-xs"
+                  onChange={(e) => {
+                    const archivo = e.target.files?.[0];
+                    if (!archivo?.type.startsWith("image/")) return;
+                    const url = URL.createObjectURL(archivo);
+                    setFotoPremio((prev) => {
+                      // Se suelta la anterior al reemplazarla, para no
+                      // dejar blobs colgando en memoria.
+                      if (prev) URL.revokeObjectURL(prev);
+                      return url;
+                    });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Sale recortada en círculo. Ajústala con los controles de
+                  abajo mirando la vista previa.
+                </p>
+              </div>
             ) : null}
             {kind === "resultado" && match && !match.finished ? (
               <p className="text-xs text-muted-foreground">

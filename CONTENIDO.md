@@ -44,6 +44,7 @@ duelo.
 | `penales` | Ranking del reto arcade de `/penales` | `penalty_leaderboard` |
 | `campeon` | **Cierre**: el que levantó la copa, con su escudo | Ganador de la final |
 | `podio` | **Cierre**: cómo terminó el torneo, de 1º a 4º | Final + 3º y 4º puesto |
+| `premio` | **Cierre**: goleador y MVP del torneo, con foto | Foto que sube el admin |
 
 **El paquete de la fecha** (`week-pack.tsx`) arma de un golpe las cuatro que
 se repiten cada semana: resultado, anuncio, posiciones y goleadores.
@@ -66,9 +67,18 @@ El orden importa: cada pieza revela una cosa y no pisa a la siguiente.
 7. **`posiciones`** y **`goleadores`** al cerrar la fecha.
 8. **Once ideal** de la fecha, cuando se arma en `/admin/once-ideal`.
 
-Al cerrar el torneo van las dos de cierre, en este orden: primero el
-**`resultado`** de la final, después el **`campeon`** y por último el
-**`podio`**. Si el podio sale primero, revienta el final antes de contarlo.
+Al cerrar el torneo van las de cierre en este orden: primero el
+**`resultado`** de la final, después el **`campeon`**, después los premios
+individuales (**goleador** y **MVP del torneo**) y por último el **`podio`**,
+que es el resumen. Si el podio sale primero, revienta el final antes de
+contarlo.
+
+Los dos premios individuales son la misma pieza `premio` con distinto
+titular. **La foto la sube el admin**, no sale de la base: son fotos de la
+premiación, no la del formulario de inscripción. Sale recortada en círculo y
+se ajusta con los mismos deslizadores del duelo. El goleador lleva su cifra;
+el MVP no: no es un premio que se cuente, y un número al lado lo volvería
+otra estadística.
 
 **El puesto final NO sale de la tabla de grupos.** Sale de la final y del
 partido por el tercer puesto: Colombia y Teletubbies terminaron la fase con
