@@ -1157,12 +1157,12 @@ function drawPremioBody(
   // el bloque de nombre, y lo que sobre se lo queda la foto. Apilando
   // desde arriba con offsets fijos, la cifra terminaba encima de la
   // línea del equipo apenas la foto crecía.
-  const bloqueCifra = conCifra ? (story ? 190 : 165) : 0;
+  const bloqueCifra = conCifra ? (story ? 160 : 132) : 0;
   const cifraTop = L.footerY - bloqueCifra;
-  const bloqueNombre = story ? 150 : 128;
+  const bloqueNombre = story ? 138 : 116;
 
   const size = Math.min(
-    story ? 640 : 560,
+    story ? 700 : 600,
     cifraTop - L.bodyTop - bloqueNombre - 16,
     L.w - 180,
   );
@@ -1227,15 +1227,17 @@ function drawPremioBody(
 
   if (!conCifra) return;
 
-  ctx.font = `${story ? 132 : 112}px ${display}`;
+  ctx.font = `${story ? 116 : 100}px ${display}`;
   ctx.fillStyle = VOLT;
   ctx.textAlign = "center";
-  ctx.fillText(String(data.statValue), cx, L.footerY - (story ? 76 : 66));
+  // La cifra va lo más abajo que deja el pie: cada píxel que baja es un
+  // píxel más de foto arriba, y el logo empieza unos 10px bajo footerY.
+  ctx.fillText(String(data.statValue), cx, L.footerY - (story ? 62 : 54));
 
   if (data.statLabel) {
-    ctx.font = `600 ${story ? 28 : 24}px ${sans}`;
+    ctx.font = `600 ${story ? 26 : 22}px ${sans}`;
     ctx.fillStyle = MUTED;
-    tracked(ctx, data.statLabel.toUpperCase(), cx, L.footerY - (story ? 30 : 24), 6);
+    tracked(ctx, data.statLabel.toUpperCase(), cx, L.footerY - (story ? 20 : 16), 5);
   }
 }
 
