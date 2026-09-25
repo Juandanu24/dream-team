@@ -167,13 +167,26 @@ export default async function PiezasPage() {
 
   // Sin final jugada no hay campeón ni podio: el estudio lo avisa en vez
   // de dibujar una pieza a medias.
+  // El campeón siempre va primero, gane de local o de visitante: la
+  // pieza cuenta la final desde su lado, no desde la cancha.
+  const campeonEsLocal =
+    laFinal?.gana.name === teamSide(teams, finalMatch?.home_team_id ?? null).name;
   const campeon = laFinal
     ? {
         eyebrow: tournament.name,
-        team: laFinal.gana,
-        rival: laFinal.pierde.name,
-        marker: `${finalMatch!.home_score ?? 0}-${finalMatch!.away_score ?? 0}`,
-        shootout: shootoutLabel(finalMatch!),
+        team: {
+          ...laFinal.gana,
+          score: campeonEsLocal ? finalMatch!.home_score : finalMatch!.away_score,
+        },
+        rival: {
+          ...laFinal.pierde,
+          score: campeonEsLocal ? finalMatch!.away_score : finalMatch!.home_score,
+        },
+        // La tanda va desde el lado del CAMPEÓN, no en orden local-
+        // visitante. En la pieza de resultado el orden local-visitante
+        // es correcto porque están los dos escudos; acá solo está el
+        // ganador, y un "1-2" se lee como si hubiera perdido.
+        shootout: shootoutLabel(finalMatch!, campeonEsLocal ? "home" : "away"),
       }
     : null;
 
