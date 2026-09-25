@@ -42,7 +42,12 @@ import { cn } from "@/lib/utils";
 /** El estudio ofrece tipos que no son `PieceKind`: "figura" se compone
  *  en dos pasos (carta + marco), y "goleador"/"mvp-torneo" son la misma
  *  pieza `premio` con distinto titular. */
-type StudioKind = PieceKind | "figura" | "goleador" | "mvp-torneo";
+type StudioKind =
+  | PieceKind
+  | "figura"
+  | "goleador"
+  | "mvp-torneo"
+  | "valla";
 
 const SITE = "dreamteamcolombia.vercel.app";
 const TAGS = "#DreamTeamColombia #FutbolAmateur #Montería #LaF8 #CanchaF8";
@@ -104,6 +109,9 @@ export interface Premiable {
   crestUrl: string | null;
   goals: number;
   assists: number;
+  /** Goles recibidos como arquero titular. null = nunca atajó. */
+  conceded: number | null;
+  gkMatches: number;
 }
 
 export interface PiecesData {
@@ -141,12 +149,13 @@ const KINDS: { value: StudioKind; label: string; hint: string }[] = [
   { value: "podio", label: "Podio", hint: "Cómo terminó el torneo" },
   { value: "goleador", label: "Goleador", hint: "El del torneo, con foto" },
   { value: "mvp-torneo", label: "MVP del torneo", hint: "El mejor, con foto" },
+  { value: "valla", label: "Valla menos vencida", hint: "El arquero, con foto" },
 ];
 
-/** Los dos premios individuales del cierre. Comparten pieza —cambian
- *  el titular y si llevan cifra— y los dos piden una foto del admin. */
+/** Los premios individuales del cierre. Comparten pieza —cambian el
+ *  titular y la cifra— y todos piden una foto del admin. */
 function esPremio(kind: StudioKind) {
-  return kind === "goleador" || kind === "mvp-torneo";
+  return kind === "goleador" || kind === "mvp-torneo" || kind === "valla";
 }
 
 const FORMATS: { value: PieceFormat; label: string; hint: string }[] = [
@@ -286,9 +295,26 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
     () => team?.cards.find((c) => c.playerId === ajustando) ?? null,
     [team, ajustando],
   );
+  // En la valla manda el promedio, no el total: 6 recibidos en cinco
+  // partidos es mucho mejor que 7 en tres. Los que nunca atajaron no
+  // entran, que para eso están los otros dos premios.
+  const premiablesOrdenados = useMemo(() => {
+    if (kind !== "valla") return data.premiables;
+    return data.premiables
+      .filter((p) => p.conceded !== null && p.gkMatches > 0)
+      .sort(
+        (a, b) =>
+          a.conceded! / a.gkMatches - b.conceded! / b.gkMatches ||
+          a.conceded! - b.conceded!,
+      );
+  }, [kind, data.premiables]);
+
   const premiado = useMemo(
-    () => data.premiables.find((p) => p.playerId === premiadoId) ?? null,
-    [data.premiables, premiadoId],
+    () =>
+      premiablesOrdenados.find((p) => p.playerId === premiadoId) ??
+      premiablesOrdenados[0] ??
+      null,
+    [premiablesOrdenados, premiadoId],
   );
   const encActual = jugador
     ? (encuadres[jugador.playerId] ?? jugador.encuadre ?? ENCUADRE_PERFIL)
@@ -314,6 +340,8 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
       return "La final todavía no se ha jugado. Carga su resultado en Resultados.";
     if (kind === "podio" && !data.podio)
       return "El podio sale de la final. Carga su resultado en Resultados.";
+    if (kind === "valla" && !premiado)
+      return "Nadie tiene partidos como arquero titular. Carga las alineaciones en Alineaciones.";
     if (esPremio(kind) && !premiado)
       return "Todavía no hay jugadores con equipo. Ármalos en Equipos.";
     if (esPremio(kind) && !fotoPremio)
@@ -456,31 +484,47 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         };
       }
       case "goleador":
-      case "mvp-torneo": {
+      case "mvp-torneo":
+      case "valla": {
         if (!premiado) return null;
-        const esGoleador = kind === "goleador";
+        const titulos: Record<string, string> = {
+          goleador: "Goleador del torneo",
+          "mvp-torneo": "MVP del torneo",
+          valla: "Valla menos vencida",
+        };
+        // El MVP no lleva cifra: no es un premio que se cuente, y un
+        // número al lado lo volvería otra estadística.
+        const cifra =
+          kind === "goleador"
+            ? {
+                value: String(premiado.goals),
+                label: premiado.goals === 1 ? "Gol" : "Goles",
+              }
+            : kind === "valla" && premiado.conceded !== null
+              ? { value: String(premiado.conceded), label: "Goles recibidos" }
+              : null;
+        // En la valla el dato que importa es en cuántos partidos, no la
+        // posición: recibir 6 en cinco no es lo mismo que en uno.
+        const detalle =
+          kind === "valla" && premiado.gkMatches > 0
+            ? `${premiado.teamName} · ${premiado.gkMatches} ${premiado.gkMatches === 1 ? "partido" : "partidos"}`
+            : `${premiado.teamName} · ${premiado.position}`;
         return {
           ...common,
           kind: "premio",
           eyebrow: data.podio?.eyebrow ?? "Dream Team",
-          headline: esGoleador ? "Goleador del torneo" : "MVP del torneo",
+          headline: titulos[kind],
           team: {
             name: premiado.teamName,
             color: premiado.teamColor,
             crestUrl: premiado.crestUrl,
           },
           playerName: premiado.name,
-          detail: `${premiado.teamName} · ${premiado.position}`,
+          detail: detalle,
           photoUrl: fotoPremio,
           encuadre: encPremio,
-          // El MVP no lleva cifra: no es un premio que se cuente, y un
-          // número al lado lo volvería otra estadística.
-          statValue: esGoleador ? String(premiado.goals) : null,
-          statLabel: esGoleador
-            ? premiado.goals === 1
-              ? "Gol"
-              : "Goles"
-            : null,
+          statValue: cifra?.value ?? null,
+          statLabel: cifra?.label ?? null,
         };
       }
       case "campeon": {
@@ -610,6 +654,12 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         if (!premiado) return "";
         const g = premiado.goals;
         return `⚽ GOLEADOR DEL TORNEO\n\n${premiado.name} — ${g} ${g === 1 ? "gol" : "goles"}.\n\nNadie metió más en estas cinco semanas. ${premiado.teamName} lo tuvo adentro.\n\nLa tabla completa de goleadores está en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 Felicítenlo acá abajo 👇\n\n${TAGS}`;
+      }
+      case "valla": {
+        if (!premiado || premiado.conceded === null) return "";
+        const c = premiado.conceded;
+        const pj = premiado.gkMatches;
+        return `🧤 VALLA MENOS VENCIDA\n\n${premiado.name} — ${c} ${c === 1 ? "gol recibido" : "goles recibidos"} en ${pj} ${pj === 1 ? "partido" : "partidos"}.\n\nEl arco más difícil del torneo. Poco ruido y mucho trabajo, como siempre con los arqueros.\n\n🔗 ${SITE} (Link en la bio)\n\n💬 Denle el crédito acá abajo 👇\n\n${TAGS}`;
       }
       case "mvp-torneo": {
         if (!premiado) return "";
@@ -999,13 +1049,19 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
               <select
                 id="objetivo"
                 className="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&>option]:bg-popover"
-                value={premiadoId}
+                value={premiado?.playerId ?? ""}
                 onChange={(e) => setPremiadoId(e.target.value)}
               >
-                {data.premiables.map((p) => (
+                {premiablesOrdenados.map((p) => (
                   <option key={p.playerId} value={p.playerId}>
                     {p.name} · {p.teamName}
-                    {p.goals > 0 ? ` · ${p.goals}g` : ""}
+                    {kind === "valla"
+                      ? p.conceded !== null
+                        ? ` · ${p.conceded} en ${p.gkMatches}`
+                        : ""
+                      : p.goals > 0
+                        ? ` · ${p.goals}g`
+                        : ""}
                   </option>
                 ))}
               </select>

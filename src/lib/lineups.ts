@@ -125,3 +125,69 @@ function normalizeLineups(data: unknown): LineupWithPlayers[] {
 }
 
 const LINE_ORDER = { gk: 0, def: 1, mid: 2, fwd: 3 } as const;
+
+/** Lo que recibió cada arquero: goles en contra y partidos atajados. */
+export interface GkRecord {
+  conceded: number;
+  matches: number;
+}
+
+/** Valla menos vencida, cruzando quién atajó cada partido con los goles
+ *  que recibió su equipo.
+ *
+ *  No hay una tabla de "arquero del partido": el dato sale de la
+ *  alineación (`line = 'gk'` e `is_starter`). Por eso solo cuenta los
+ *  partidos con alineación cargada — un partido sin ella no suma ni
+ *  resta, que es preferible a inventarle un arquero. */
+export async function getGoalkeeperRecords(
+  tournamentId: string,
+): Promise<Map<string, GkRecord>> {
+  const salida = new Map<string, GkRecord>();
+  try {
+    const supabase = createAdminClient();
+    const [matches, lineups] = await Promise.all([
+      supabase
+        .from("matches")
+        .select("id, home_team_id, away_team_id, home_score, away_score, status")
+        .eq("tournament_id", tournamentId)
+        .eq("status", "finished"),
+      supabase
+        .from("lineups")
+        .select("match_id, team_id, lineup_players(player_id, line, is_starter)")
+        .eq("tournament_id", tournamentId),
+    ]);
+
+    const porId = new Map(
+      ((matches.data as Match[]) ?? []).map((m) => [m.id, m]),
+    );
+
+    type Fila = {
+      match_id: string;
+      team_id: string;
+      lineup_players: { player_id: string; line: string; is_starter: boolean }[];
+    };
+
+    for (const fila of ((lineups.data as unknown as Fila[]) ?? [])) {
+      const match = porId.get(fila.match_id);
+      if (!match) continue;
+      const arquero = fila.lineup_players.find(
+        (e) => e.line === "gk" && e.is_starter,
+      );
+      if (!arquero) continue;
+
+      // Los goles que recibió son los del RIVAL en ese partido.
+      const recibidos =
+        fila.team_id === match.home_team_id ? match.away_score : match.home_score;
+      if (recibidos === null) continue;
+
+      const previo = salida.get(arquero.player_id) ?? { conceded: 0, matches: 0 };
+      salida.set(arquero.player_id, {
+        conceded: previo.conceded + recibidos,
+        matches: previo.matches + 1,
+      });
+    }
+  } catch (error) {
+    console.error("Error calculando la valla menos vencida:", error);
+  }
+  return salida;
+}

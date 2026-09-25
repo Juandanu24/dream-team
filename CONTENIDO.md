@@ -44,7 +44,7 @@ duelo.
 | `penales` | Ranking del reto arcade de `/penales` | `penalty_leaderboard` |
 | `campeon` | **Cierre**: el que levantó la copa, con su escudo | Ganador de la final |
 | `podio` | **Cierre**: cómo terminó el torneo, de 1º a 4º | Final + 3º y 4º puesto |
-| `premio` | **Cierre**: goleador y MVP del torneo, con foto | Foto que sube el admin |
+| `premio` | **Cierre**: goleador, MVP y valla menos vencida, con foto | Foto que sube el admin |
 
 **El paquete de la fecha** (`week-pack.tsx`) arma de un golpe las cuatro que
 se repiten cada semana: resultado, anuncio, posiciones y goleadores.
@@ -73,12 +73,19 @@ individuales (**goleador** y **MVP del torneo**) y por último el **`podio`**,
 que es el resumen. Si el podio sale primero, revienta el final antes de
 contarlo.
 
-Los dos premios individuales son la misma pieza `premio` con distinto
+Los tres premios individuales son la misma pieza `premio` con distinto
 titular. **La foto la sube el admin**, no sale de la base: son fotos de la
 premiación, no la del formulario de inscripción. Sale recortada en círculo y
-se ajusta con los mismos deslizadores del duelo. El goleador lleva su cifra;
-el MVP no: no es un premio que se cuente, y un número al lado lo volvería
-otra estadística.
+se ajusta con los mismos deslizadores del duelo. El goleador lleva sus goles
+y la valla sus goles recibidos; el MVP no lleva cifra: no es un premio que se
+cuente, y un número al lado lo volvería otra estadística.
+
+**La valla menos vencida se calcula, no se escribe.** Sale de cruzar quién
+atajó cada partido (la alineación, `line = 'gk'` e `is_starter`) con los goles
+que recibió su equipo. Solo cuentan los partidos con alineación cargada: uno
+sin ella no suma ni resta, que es preferible a inventarle un arquero. Y el
+orden es por **promedio**, no por total: 6 recibidos en cinco partidos es
+mucho mejor que 7 en tres.
 
 **El puesto final NO sale de la tabla de grupos.** Sale de la final y del
 partido por el tercer puesto: Colombia y Teletubbies terminaron la fase con

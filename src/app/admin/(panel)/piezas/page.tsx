@@ -1,4 +1,5 @@
 import { getTournamentData, type EventWithPlayer } from "@/lib/data";
+import { getGoalkeeperRecords } from "@/lib/lineups";
 import { matchWinner, shootoutLabel, tallyScorers } from "@/lib/match-summary";
 import {
   FOOT_LABELS,
@@ -263,8 +264,10 @@ export default async function PiezasPage() {
   // Gente premiable: todo el plantel, con su equipo y sus goles, para
   // las piezas de goleador y MVP del torneo. El admin escoge; no se
   // asume que el goleador sea el premiado.
+  const vallas = await getGoalkeeperRecords(tournament.id);
   const premiables = roster
     .map((r) => {
+      const valla = vallas.get(r.player_id);
       const team = teams.find((t) => t.id === r.team_id);
       return {
         playerId: r.player_id,
@@ -275,6 +278,9 @@ export default async function PiezasPage() {
         crestUrl: team?.crest_url ?? null,
         goals: golesPor.get(r.player_id) ?? 0,
         assists: asistPor.get(r.player_id) ?? 0,
+        // Solo los que atajaron algún partido con alineación cargada.
+        conceded: valla?.conceded ?? null,
+        gkMatches: valla?.matches ?? 0,
       };
     })
     .sort((a, b) => b.goals - a.goals || a.name.localeCompare(b.name));
