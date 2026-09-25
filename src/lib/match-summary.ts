@@ -150,12 +150,20 @@ export function formatPieceWhen(iso: string | null): string {
 
 /** "2-1 en penales", o null si el partido no se definió así. Vive acá
  *  para que la pieza, el WhatsApp y el panel digan lo mismo. */
-export function shootoutLabel(match: {
-  home_penalties?: number | null;
-  away_penalties?: number | null;
-}): string | null {
-  if (match.home_penalties == null || match.away_penalties == null) return null;
-  return `${match.home_penalties}-${match.away_penalties} en penales`;
+export function shootoutLabel(
+  match: {
+    home_penalties?: number | null;
+    away_penalties?: number | null;
+  },
+  /** Desde qué lado se cuenta. "home" por defecto, que es el orden de
+   *  los escudos en la pieza de resultado. La pieza de campeón lo pide
+   *  desde el ganador: ahí solo está él, y un "1-2" se leería como si
+   *  hubiera perdido. */
+  desde: "home" | "away" = "home",
+): string | null {
+  const { home_penalties: h, away_penalties: a } = match;
+  if (h == null || a == null) return null;
+  return desde === "home" ? `${h}-${a} en penales` : `${a}-${h} en penales`;
 }
 
 /** Quién ganó, contando la tanda si la hubo. null si fue empate y no
