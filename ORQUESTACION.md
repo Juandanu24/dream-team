@@ -11,6 +11,7 @@ Son tres documentos y cada uno responde una pregunta distinta:
 | `ORQUESTACION.md` (este) | **Cómo se trabaja y qué falta**: disciplina, estado, backlog |
 | `CONTENIDO.md` | **Para qué existe cada pieza**: criterio editorial, copys, assets |
 | `TORNEO-2.md` | **El plan del segundo torneo**: las cuatro entregas y en qué orden |
+| `LANDING.md` | **Encargo pendiente**: que el home cuente el torneo 1 y lleve a inscribirse |
 
 **Leer los tres antes de tocar código.** El tercero importa aunque el cambio
 parezca solo técnico: casi todo lo de este proyecto termina siendo una imagen
