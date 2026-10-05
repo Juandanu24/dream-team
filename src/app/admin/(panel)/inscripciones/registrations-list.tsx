@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ConfirmButton } from "@/components/confirm-button";
+import { PaymentProofButton } from "./payment-proof-button";
 import {
   FOOT_LABELS,
   POSITION_LABELS,
@@ -125,6 +126,12 @@ export function RegistrationsList({
                 <Badge variant={statusVariant[registration.status]}>
                   {REGISTRATION_LABELS[registration.status]}
                 </Badge>
+                <PaymentProofButton
+                  registrationId={registration.id}
+                  tienePago={Boolean(registration.payment_proof_path)}
+                  verificado={Boolean(registration.payment_verified_at)}
+                  nombre={player.full_name}
+                />
                 <div className="flex gap-1">
                   {registration.status === "pending" ? (
                     <>

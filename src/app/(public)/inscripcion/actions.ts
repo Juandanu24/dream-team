@@ -15,6 +15,9 @@ const registrationSchema = z.object({
 });
 
 const PHOTO_MAX_BYTES = 3 * 1024 * 1024;
+// El comprobante no se comprime en el cliente —hay que poder leer el
+// monto y la fecha— así que se le deja más margen.
+const PROOF_MAX_BYTES = 6 * 1024 * 1024;
 
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -55,6 +58,20 @@ export async function submitRegistration(
     return { ok: false, error: "La foto debe ser JPG, PNG o WebP" };
   }
 
+  // El comprobante es obligatorio: el torneo se cobra y el admin lo
+  // revisa antes de aprobar.
+  const proof = formData.get("payment_proof");
+  if (!(proof instanceof File) || proof.size === 0) {
+    return { ok: false, error: "Falta el comprobante de pago" };
+  }
+  if (proof.size > PROOF_MAX_BYTES) {
+    return { ok: false, error: "El comprobante quedó muy pesado, intenta con otro" };
+  }
+  const proofExtension = EXTENSIONS[proof.type];
+  if (!proofExtension) {
+    return { ok: false, error: "El comprobante debe ser JPG, PNG o WebP" };
+  }
+
   try {
     const supabase = createAdminClient();
 
@@ -71,6 +88,35 @@ export async function submitRegistration(
       return { ok: false, error: "Las inscripciones ya están cerradas" };
     }
 
+    // Se comprueba ANTES de subir nada. Al revés —como estaba— una
+    // segunda inscripción dejaba dos archivos huérfanos en los buckets
+    // y encima le pisaba la foto del perfil al jugador antes de
+    // descubrir que ya estaba inscrito.
+    const { data: existing } = await supabase
+      .from("players")
+      .select("id")
+      .eq("email", parsed.data.email)
+      .maybeSingle();
+
+    if (existing) {
+      const { data: yaInscrito } = await supabase
+        .from("registrations")
+        .select("status")
+        .eq("player_id", existing.id)
+        .eq("tournament_id", tournament.id)
+        .maybeSingle();
+
+      if (yaInscrito) {
+        return {
+          ok: false,
+          error:
+            yaInscrito.status === "rejected"
+              ? "Tu inscripción anterior fue rechazada, habla con los organizadores"
+              : "Ya estás inscrito en este torneo 😎",
+        };
+      }
+    }
+
     // Subir la foto al bucket público.
     const photoPath = `${randomUUID()}.${extension}`;
     const { error: uploadError } = await supabase.storage
@@ -85,14 +131,26 @@ export async function submitRegistration(
       data: { publicUrl },
     } = supabase.storage.from("player-photos").getPublicUrl(photoPath);
 
+    // El comprobante va a un bucket PRIVADO: ahí hay banco, monto y a
+    // veces el número de cuenta de alguien. Solo se guarda la ruta; la
+    // URL la firma el admin cuando va a mirarlo.
+    const proofPath = `${randomUUID()}.${proofExtension}`;
+    const { error: proofError } = await supabase.storage
+      .from("payment-proofs")
+      .upload(proofPath, await proof.arrayBuffer(), { contentType: proof.type });
+
+    const limpiarSubidas = async () => {
+      await supabase.storage.from("player-photos").remove([photoPath]);
+      await supabase.storage.from("payment-proofs").remove([proofPath]);
+    };
+
+    if (proofError) {
+      await supabase.storage.from("player-photos").remove([photoPath]);
+      return { ok: false, error: "No pudimos subir tu comprobante, intenta de nuevo" };
+    }
+
     // Si el email ya existe, se actualiza el perfil (sirve para próximos
     // torneos sin registrarse desde cero); si no, se crea el jugador.
-    const { data: existing } = await supabase
-      .from("players")
-      .select("id")
-      .eq("email", parsed.data.email)
-      .maybeSingle();
-
     let playerId: string;
 
     if (existing) {
@@ -100,7 +158,10 @@ export async function submitRegistration(
         .from("players")
         .update({ ...parsed.data, photo_url: publicUrl })
         .eq("id", existing.id);
-      if (error) throw error;
+      if (error) {
+        await limpiarSubidas();
+        throw error;
+      }
       playerId = existing.id;
     } else {
       const { data: created, error } = await supabase
@@ -108,31 +169,24 @@ export async function submitRegistration(
         .insert({ ...parsed.data, photo_url: publicUrl })
         .select("id")
         .single();
-      if (error) throw error;
+      if (error) {
+        await limpiarSubidas();
+        throw error;
+      }
       playerId = created.id;
-    }
-
-    const { data: registration } = await supabase
-      .from("registrations")
-      .select("id, status")
-      .eq("player_id", playerId)
-      .eq("tournament_id", tournament.id)
-      .maybeSingle();
-
-    if (registration) {
-      return {
-        ok: false,
-        error:
-          registration.status === "rejected"
-            ? "Tu inscripción anterior fue rechazada, habla con los organizadores"
-            : "Ya estás inscrito en este torneo 😎",
-      };
     }
 
     const { error: registrationError } = await supabase
       .from("registrations")
-      .insert({ player_id: playerId, tournament_id: tournament.id });
-    if (registrationError) throw registrationError;
+      .insert({
+        player_id: playerId,
+        tournament_id: tournament.id,
+        payment_proof_path: proofPath,
+      });
+    if (registrationError) {
+      await limpiarSubidas();
+      throw registrationError;
+    }
 
     return { ok: true };
   } catch (error) {
