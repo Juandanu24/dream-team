@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ChampionBanner } from "./champion-banner";
 import { InteractiveBall } from "@/components/interactive-ball";
 
 const stats = [
@@ -120,6 +121,9 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* El campeón del torneo pasado */}
+      <ChampionBanner />
 
       {/* Formato */}
       <section className="border-y border-border/60 bg-background/40">

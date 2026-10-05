@@ -1,5 +1,8 @@
 # TORNEO-2.md — Plan del segundo torneo
 
+> **Estado: las cuatro entregas están implementadas.** Falta correr las
+> migraciones 00015 y 00016 y hacer el cambio de torneo activo.
+
 Cuatro entregas. Se pueden hacer en orden y cada una queda publicable por
 su cuenta. **Juan pidió empezar por las inscripciones.**
 
