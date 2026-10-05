@@ -61,8 +61,10 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
 ## Rutas
 
 - `(public)/` — landing, `/inscripcion` (form + carta en vivo), `/torneo` (tabs:
-  posiciones, calendario, equipos, goleadores). Páginas con datos usan
-  `force-dynamic` y degradan a estados vacíos si Supabase no responde.
+  posiciones, calendario, equipos, goleadores), `/torneos/[slug]` (el mismo
+  tablero para un torneo archivado) e `/historia` (palmarés). Páginas con
+  datos usan `force-dynamic` y degradan a estados vacíos si Supabase no
+  responde.
 - `admin/login` + `admin/(panel)/` — panel, inscripciones (aprobar/rechazar),
   equipos, partidos, `alineaciones`, `amistosos`, `once-ideal`, resultados y
   `piezas` (generador de imágenes para redes).
@@ -212,5 +214,28 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   cifra terminaba encima de la línea del equipo apenas la foto crecía. El
   nombre va centrado en el hueco que queda, así se acomoda solo cuando la
   foto tope por ancho en vez de por alto.
+- **Los datos del torneo se cachean con `unstable_cache` y la etiqueta
+  `TAG_TORNEO`, pero las páginas siguen siendo `force-dynamic`.** Las dos
+  mitades importan. Sin caché, `/torneo` hacía 9 consultas a Supabase en cada
+  visita y tardaba más de un segundo. Y prerenderizando, el build —que corre
+  sin credenciales— habría guardado el estado vacío y el primer visitante
+  vería eso. Las acciones del admin llaman **`updateTag`**, no
+  `revalidateTag`: `updateTag` expira de inmediato y el admin ve su propio
+  cambio, mientras que `revalidateTag` sirve una versión vieja mientras
+  refresca por detrás.
+- **`/torneo` y `/torneos/[slug]` comparten `TournamentView`.** Es la misma
+  pantalla: duplicarla sería arreglar cada cosa dos veces. Los loaders de
+  `src/lib/` reciben el slug con el activo como valor por defecto, para no
+  romper a los llamadores que ya existían.
+- **El bucket `payment-proofs` es PRIVADO**, al revés que `player-photos` y
+  `team-crests`. Un comprobante de pago lleva banco, monto y a veces el
+  número de cuenta de una persona: en un bucket público queda en una URL que
+  cualquiera que la tenga abre, para siempre. Se guarda solo la ruta, y el
+  admin lo mira con una URL firmada que vence en un minuto.
+- **Los premios de un torneo se guardan, no se calculan** (`tournament_awards`,
+  migración 00016). El campeón y el podio salen de los partidos, pero el MVP
+  lo escoge el organizador a dedo. La cifra va como texto y congelada: si
+  mañana se corrigen eventos de un partido viejo, un premio ya entregado no
+  debe cambiar solo.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

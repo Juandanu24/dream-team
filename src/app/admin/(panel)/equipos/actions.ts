@@ -1,8 +1,9 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
+import { TAG_TORNEO } from "@/lib/data";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/supabase/server";
 import { ACTIVE_TOURNAMENT_SLUG } from "@/lib/types";
@@ -30,6 +31,10 @@ function revalidateTeams() {
   revalidatePath("/admin/equipos");
   revalidatePath("/admin");
   revalidatePath("/torneo");
+  // Los datos del torneo están cacheados. updateTag —y no
+  // revalidateTag— porque expira de inmediato: el admin tiene que ver
+  // su propio cambio, no una versión vieja mientras refresca por detrás.
+  updateTag(TAG_TORNEO);
 }
 
 export async function createTeam(formData: FormData) {

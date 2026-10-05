@@ -45,6 +45,13 @@ export interface Registration {
   player_id: string;
   tournament_id: string;
   status: RegistrationStatus;
+  /** Ruta dentro del bucket privado `payment-proofs`, no una URL: la URL
+   *  se firma al mirarla. Opcional porque el torneo 1 no cobraba.
+   *  Migración 00015. */
+  payment_proof_path?: string | null;
+  /** Cuándo el admin dio el pago por bueno. Separado de `status`:
+   *  aprobar la inscripción y verificar el pago son dos decisiones. */
+  payment_verified_at?: string | null;
   created_at: string;
 }
 

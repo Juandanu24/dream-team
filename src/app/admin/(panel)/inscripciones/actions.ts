@@ -1,8 +1,9 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
+import { TAG_TORNEO } from "@/lib/data";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/supabase/server";
 import type { RegistrationStatus } from "@/lib/types";
@@ -113,6 +114,10 @@ export async function updatePlayerPhoto(playerId: string, formData: FormData) {
   revalidateRegistrations();
   revalidatePath("/admin/equipos");
   revalidatePath("/torneo");
+  // Los datos del torneo están cacheados. updateTag —y no
+  // revalidateTag— porque expira de inmediato: el admin tiene que ver
+  // su propio cambio, no una versión vieja mientras refresca por detrás.
+  updateTag(TAG_TORNEO);
 }
 
 const playerSchema = z.object({
@@ -144,4 +149,50 @@ export async function updatePlayer(playerId: string, formData: FormData) {
 
   revalidateRegistrations();
   revalidatePath("/admin/equipos");
+}
+
+/** URL firmada para mirar un comprobante de pago.
+ *
+ *  El bucket es privado, así que no hay URL pública que servir. Se firma
+ *  en el momento y vence en un minuto: suficiente para abrirla, poco
+ *  para que quede dando vueltas en el historial de alguien. */
+export async function getPaymentProofUrl(
+  registrationId: string,
+): Promise<string | null> {
+  await requireAdmin();
+  const supabase = createAdminClient();
+
+  const { data: registration } = await supabase
+    .from("registrations")
+    .select("payment_proof_path")
+    .eq("id", z.string().uuid().parse(registrationId))
+    .maybeSingle();
+
+  const path = registration?.payment_proof_path;
+  if (!path) return null;
+
+  const { data, error } = await supabase.storage
+    .from("payment-proofs")
+    .createSignedUrl(path, 60);
+  if (error) return null;
+  return data.signedUrl;
+}
+
+/** Marca (o desmarca) el pago como verificado.
+ *
+ *  Va aparte de aprobar la inscripción a propósito: a veces el pago
+ *  llega por fuera —efectivo, un soporte por WhatsApp— y a veces se
+ *  aprueba a alguien antes de confirmar la plata. */
+export async function setPaymentVerified(
+  registrationId: string,
+  verified: boolean,
+): Promise<void> {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("registrations")
+    .update({ payment_verified_at: verified ? new Date().toISOString() : null })
+    .eq("id", z.string().uuid().parse(registrationId));
+  if (error) throw error;
+  revalidatePath("/admin/inscripciones");
 }

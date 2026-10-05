@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Camera, CheckCircle2, Loader2 } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +44,10 @@ export function RegistrationForm() {
   const [done, setDone] = useState(false);
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // El comprobante NO pasa por el recorte: hay que poder leer el monto
+  // y la fecha, y comprimirlo o encuadrarlo sería trabajar en contra.
+  const [proof, setProof] = useState<File | null>(null);
+  const proofInputRef = useRef<HTMLInputElement>(null);
 
   function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -69,10 +73,28 @@ export function RegistrationForm() {
     });
   }
 
+  function handleProofChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("El comprobante tiene que ser una imagen");
+      return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      toast.error("El comprobante quedó muy pesado, intenta con otro");
+      return;
+    }
+    setProof(file);
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!photo) {
       toast.error("Sube tu foto para la carta");
+      return;
+    }
+    if (!proof) {
+      toast.error("Sube el comprobante de pago");
       return;
     }
     if (!foot || !position) {
@@ -88,6 +110,7 @@ export function RegistrationForm() {
     formData.set("position", position);
     formData.set("member_since", memberSince);
     formData.set("photo", photo, photo.name);
+    formData.set("payment_proof", proof, proof.name);
 
     startTransition(async () => {
       const result = await submitRegistration(formData);
@@ -249,6 +272,47 @@ export function RegistrationForm() {
           <p className="text-xs text-muted-foreground">
             De frente y bien iluminada, tipo carné pero con flow. Después de
             elegirla puedes centrarla y hacerle zoom.
+          </p>
+        </div>
+
+        <div className="space-y-2 rounded-md border border-volt/40 bg-volt/5 p-4">
+          <Label htmlFor="payment_proof">Comprobante de pago</Label>
+          <p className="text-sm">
+            La inscripción vale{" "}
+            <span className="font-display text-xl tracking-wide text-volt">
+              $12.000
+            </span>
+            . Paga y adjunta el pantallazo.
+          </p>
+          <input
+            ref={proofInputRef}
+            id="payment_proof"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleProofChange}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => proofInputRef.current?.click()}
+            >
+              <Receipt aria-hidden />
+              {proof ? "Cambiar comprobante" : "Subir comprobante"}
+            </Button>
+            {proof ? (
+              <span className="flex items-center gap-1.5 text-xs text-volt">
+                <CheckCircle2 className="size-4" aria-hidden />
+                {proof.name.length > 28
+                  ? `${proof.name.slice(0, 25)}…`
+                  : proof.name}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Que se vea el monto y la fecha. Solo lo ven los organizadores: no
+            sale en la web ni en tu carta.
           </p>
         </div>
 

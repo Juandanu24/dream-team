@@ -1,6 +1,12 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+/** Etiqueta única del caché de datos del torneo. Las acciones del admin
+ *  la invalidan al guardar; vive acá para que no se escriba a mano en
+ *  cada sitio y se desincronice. */
+export const TAG_TORNEO = "torneo";
 import {
   ACTIVE_TOURNAMENT_SLUG,
   type GroupStandingRow,
@@ -45,14 +51,20 @@ export interface TournamentData {
 
 // Todo lo que necesita la página pública del torneo, en un solo viaje.
 // Devuelve null si Supabase no está configurado o el torneo no existe.
-export async function getTournamentData(): Promise<TournamentData | null> {
+//
+// Recibe el slug para poder leer también torneos terminados desde
+// `/torneos/[slug]`. Sin argumento sigue devolviendo el activo, que es
+// lo que esperan todos los llamadores que ya existían.
+async function cargarTorneo(
+  slug: string,
+): Promise<TournamentData | null> {
   try {
     const supabase = createAdminClient();
 
     const { data: tournament } = await supabase
       .from("tournaments")
       .select("*")
-      .eq("slug", ACTIVE_TOURNAMENT_SLUG)
+      .eq("slug", slug)
       .maybeSingle();
 
     if (!tournament) return null;
@@ -175,6 +187,28 @@ export async function getTournamentData(): Promise<TournamentData | null> {
 
 // Estado del torneo activo. Si Supabase no responde asumimos abierto,
 // para no bloquear inscripciones por un problema de red.
+/** Lo mismo, pero cacheado.
+ *
+ *  Son 9 consultas a Supabase y los datos cambian una o dos veces por
+ *  semana: servirlas en cada visita costaba más de un segundo. El caché
+ *  se invalida desde el admin —`revalidateTag(TAG_TORNEO)`— así que un
+ *  resultado recién cargado se ve de inmediato; el `revalidate` es solo
+ *  la red por si alguna acción se olvida de avisar.
+ *
+ *  Las páginas siguen siendo dinámicas a propósito. Prerenderizarlas
+ *  guardaría el estado vacío que sale cuando el build corre sin
+ *  credenciales de Supabase, y el primer visitante vería eso. */
+const torneoCacheado = unstable_cache(cargarTorneo, ["tournament-data"], {
+  tags: [TAG_TORNEO],
+  revalidate: 600,
+});
+
+export function getTournamentData(
+  slug: string = ACTIVE_TOURNAMENT_SLUG,
+): Promise<TournamentData | null> {
+  return torneoCacheado(slug);
+}
+
 export async function getTournamentStatus(): Promise<TournamentStatus> {
   try {
     const supabase = createAdminClient();

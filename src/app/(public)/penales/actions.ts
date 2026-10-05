@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
+import { TAG_TORNEO } from "@/lib/data";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ACTIVE_TOURNAMENT_SLUG } from "@/lib/types";
 import { SHOTS_PER_ROUND } from "@/lib/penalty-game";
@@ -58,6 +59,10 @@ export async function savePenaltyScore(
 
     revalidatePath("/penales");
     revalidatePath("/torneo");
+  // Los datos del torneo están cacheados. updateTag —y no
+  // revalidateTag— porque expira de inmediato: el admin tiene que ver
+  // su propio cambio, no una versión vieja mientras refresca por detrás.
+  updateTag(TAG_TORNEO);
     return { ok: true };
   } catch (error) {
     console.error("Error guardando puntaje de penales:", error);

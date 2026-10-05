@@ -10,6 +10,7 @@ Son tres documentos y cada uno responde una pregunta distinta:
 | `AGENTS.md` | **Cómo está hecho**: arquitectura, convenciones, gotchas |
 | `ORQUESTACION.md` (este) | **Cómo se trabaja y qué falta**: disciplina, estado, backlog |
 | `CONTENIDO.md` | **Para qué existe cada pieza**: criterio editorial, copys, assets |
+| `TORNEO-2.md` | **El plan del segundo torneo**: las cuatro entregas y en qué orden |
 
 **Leer los tres antes de tocar código.** El tercero importa aunque el cambio
 parezca solo técnico: casi todo lo de este proyecto termina siendo una imagen
@@ -140,6 +141,12 @@ actual cuando el `mkdir` falla — o sea, dentro del repo. Ya pasó: le metió
 ---
 
 ## Backlog
+
+### El segundo torneo
+
+El torneo 1 terminó. Lo que viene está planeado en **`TORNEO-2.md`**:
+inscripciones con comprobante de pago, rendimiento, salón de la fama y
+archivo del torneo viejo. Empezar por las inscripciones.
 
 ### Listo para implementar
 
