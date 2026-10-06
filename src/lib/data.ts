@@ -217,21 +217,23 @@ export function getTournamentData(
  *  NEXT_PUBLIC_TOURNAMENT_SLUG, y se le quita el sufijo porque el logo y
  *  el H1 ya dicen DREAM TEAM dos veces más arriba.
  *
- *  Devuelve null si Supabase no responde: el hero se queda sin la
- *  etiqueta, que es mejor que mostrar un nombre inventado. */
-async function cargarNombreDelTorneo(slug: string): Promise<string | null> {
-  try {
-    const supabase = createAdminClient();
-    const { data } = await supabase
-      .from("tournaments")
-      .select("name")
-      .eq("slug", slug)
-      .maybeSingle();
-    const nombre = (data as { name: string } | null)?.name;
-    return nombre ? nombre.replace(/\s*dream\s*team\s*$/i, "").trim() : null;
-  } catch {
-    return null;
-  }
+ *  Si Supabase no responde LANZA, no devuelve null, y el null lo pone
+ *  quien llama. La diferencia importa: dentro de `unstable_cache` un
+ *  null se guarda como si fuera la respuesta buena y se queda una hora
+ *  —y en el home, que es estático, horneado en el HTML hasta la
+ *  siguiente revalidación. Ya pasó: el cartel del hero desapareció en
+ *  producción por un fallo de un solo render. */
+async function cargarNombreDelTorneo(slug: string): Promise<string> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("tournaments")
+    .select("name")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw error;
+  const nombre = (data as { name: string } | null)?.name;
+  if (!nombre) throw new Error(`No existe el torneo "${slug}"`);
+  return nombre.replace(/\s*dream\s*team\s*$/i, "").trim();
 }
 
 const nombreCacheado = unstable_cache(
@@ -240,10 +242,17 @@ const nombreCacheado = unstable_cache(
   { tags: [TAG_TORNEO], revalidate: 3600 },
 );
 
-export function getActiveTournamentName(
+export async function getActiveTournamentName(
   slug: string = ACTIVE_TOURNAMENT_SLUG,
 ): Promise<string | null> {
-  return nombreCacheado(slug);
+  try {
+    return await nombreCacheado(slug);
+  } catch {
+    // Sin nombre, el cartel del hero no se dibuja y el título cae al
+    // genérico. Se reintenta en el siguiente render en vez de quedar
+    // congelado, porque el error no entró al caché.
+    return null;
+  }
 }
 
 export async function getTournamentStatus(): Promise<TournamentStatus> {

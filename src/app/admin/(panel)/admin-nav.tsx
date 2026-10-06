@@ -6,7 +6,6 @@ import {
   CalendarDays,
   ClipboardList,
   ListChecks,
-  ExternalLink,
   Image as ImageIcon,
   ClipboardCheck,
   Star,
@@ -29,44 +28,38 @@ export const ADMIN_NAV = [
   { href: "/admin/piezas", label: "Piezas", icon: ImageIcon },
 ];
 
-// Nav de escritorio del admin; en mobile se usa AdminMobileMenu.
-export function AdminNav() {
+export function esRutaActiva(pathname: string, href: string) {
+  return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+}
+
+// Las nueve secciones, una debajo de otra en la barra lateral.
+//
+// Antes iban en el encabezado, en fila. Nueve botones no caben en una
+// barra de 14 de alto: en pantallas medianas el último quedaba cortado y
+// había que descubrir que la fila se deslizaba. Apiladas se leen todas de
+// una, y la sección en la que estás se ve sin buscarla.
+export function AdminSidebarNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="scrollbar-none hidden flex-1 items-center gap-1 overflow-x-auto sm:flex">
-      {ADMIN_NAV.map((item) => {
-        const active =
-          item.href === "/admin"
-            ? pathname === "/admin"
-            : pathname.startsWith(item.href);
-        return (
-          <Button
-            key={item.href}
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "shrink-0 text-muted-foreground hover:text-foreground",
-              active && "bg-secondary text-foreground",
-            )}
-            asChild
-          >
-            <Link href={item.href}>
-              <item.icon aria-hidden /> {item.label}
-            </Link>
-          </Button>
-        );
-      })}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="shrink-0 text-muted-foreground hover:text-foreground"
-        asChild
-      >
-        <Link href="/">
-          <ExternalLink aria-hidden /> Ver sitio
-        </Link>
-      </Button>
+    <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2">
+      {ADMIN_NAV.map((item) => (
+        <Button
+          key={item.href}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "justify-start text-muted-foreground hover:text-foreground",
+            esRutaActiva(pathname, item.href) &&
+              "bg-secondary text-foreground",
+          )}
+          asChild
+        >
+          <Link href={item.href}>
+            <item.icon aria-hidden /> {item.label}
+          </Link>
+        </Button>
+      ))}
     </nav>
   );
 }

@@ -15,7 +15,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { logout } from "../actions";
-import { ADMIN_NAV } from "./admin-nav";
+import { ADMIN_NAV, esRutaActiva } from "./admin-nav";
 
 export function AdminMobileMenu() {
   const pathname = usePathname();
@@ -24,7 +24,7 @@ export function AdminMobileMenu() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" title="Menú" className="sm:hidden">
+        <Button variant="ghost" size="sm" title="Menú" className="lg:hidden">
           <Menu aria-hidden />
         </Button>
       </SheetTrigger>
@@ -36,17 +36,14 @@ export function AdminMobileMenu() {
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-4">
           {ADMIN_NAV.map((item) => {
-            const active =
-              item.href === "/admin"
-                ? pathname === "/admin"
-                : pathname.startsWith(item.href);
             return (
               <Button
                 key={item.href}
                 variant="ghost"
                 className={cn(
                   "justify-start text-muted-foreground",
-                  active && "bg-secondary text-foreground",
+                  esRutaActiva(pathname, item.href) &&
+                    "bg-secondary text-foreground",
                 )}
                 asChild
                 onClick={() => setOpen(false)}

@@ -295,5 +295,22 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   Probado contra la base con seis equipos y una fecha de tres partidos
   repartidos en dos días: la tabla, el calendario público y la publicación
   por semana lo soportan sin cambios.
+- **Un fallo de carga NUNCA se guarda en el caché.** `getHistory()` y
+  `getActiveTournamentName()` lanzan si Supabase falla y el `try/catch` vive
+  AFUERA de `unstable_cache`. Al revés —devolviendo `[]` o `null` adentro—
+  el caché guarda el fallo como si fuera la respuesta buena y lo sirve una
+  hora; y en el home, que es estático, queda horneado en el HTML hasta la
+  siguiente revalidación. Ya pasó: el cartel del hero desapareció en
+  producción porque el render del build no encontró el nombre del torneo,
+  mientras `/torneo` —dinámica, mismo código— lo mostraba bien. Con el
+  catch afuera, la sección no se dibuja en ESE render y el siguiente lo
+  vuelve a intentar.
+- **El admin va en barra lateral, no en el encabezado.** Son nueve
+  secciones y en fila no caben: en pantallas medianas la última salía
+  cortada y el scroll horizontal ni se notaba. La barra es fija desde `lg`;
+  por debajo manda el menú de hamburguesa, que ya existía. Arriba de la
+  barra va siempre qué torneo se está editando y en qué estado, porque el
+  admin escribe sobre el que marque `NEXT_PUBLIC_TOURNAMENT_SLUG` y ese
+  dato no se veía en ninguna pantalla.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
