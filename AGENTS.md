@@ -312,5 +312,14 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   barra va siempre qué torneo se está editando y en qué estado, porque el
   admin escribe sobre el que marque `NEXT_PUBLIC_TOURNAMENT_SLUG` y ese
   dato no se veía en ninguna pantalla.
+- **El aviso de entorno (`EnvBadge`) mira `NODE_ENV`, no el slug.** Antes
+  comparaba contra `"relampago-2026"` escrito a mano, y fallaba en los dos
+  sentidos: al poner `NEXT_PUBLIC_TOURNAMENT_SLUG=fin-de-ano-2026` en
+  Vercel el sitio público se rotuló solo como entorno de prueba —lo vieron
+  los visitantes—, y correr en local contra el torneo REAL no mostraba
+  nada, que es justo el caso peligroso, porque ahí el admin escribe en
+  producción. Ahora en producción no sale nunca y fuera de ella sale
+  siempre, en ámbar si apunta a `prueba-local` y en rojo ("Datos reales")
+  si apunta a cualquier otro. Cambiar de torneo ya no obliga a tocarlo.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
