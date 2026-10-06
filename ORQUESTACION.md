@@ -83,7 +83,11 @@ empuja a inscribirse.
 
 - **Siguen 8 suscritos a push de 54.** Es el canal directo y está al 15%.
 
-Migraciones aplicadas hasta **`00016_palmares.sql`**, todas corridas.
+Migraciones aplicadas hasta **`00016_palmares.sql`**.
+**Pendiente de correr: `00017_camiseta_y_estatura.sql`** (nombre de camiseta
+y estatura en la inscripción). Verificada en un Postgres desechable: es
+re-ejecutable y los checks rechazan camiseta vacía o de más de 20
+caracteres y estaturas fuera de 120–230 cm.
 
 
 ## Puertos

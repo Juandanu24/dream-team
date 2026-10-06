@@ -37,6 +37,7 @@ import {
   STAGE_LABELS,
   type Match,
   type Team,
+  cardName,
 } from "@/lib/types";
 
 // Pestañas de /torneo. El valor viaja en ?tab= para poder enlazar
@@ -322,8 +323,10 @@ export async function TournamentView({
     const team = entry ? teamById.get(entry.team_id) : undefined;
     return {
       id: player.id,
-      name: player.full_name,
+      // El de la camiseta; cae al completo si todavía no lo eligió.
+      name: cardName(player),
       age: player.age,
+      heightCm: player.height_cm ?? null,
       positionShort: entry?.is_goalkeeper
         ? "ARQ"
         : POSITION_SHORT[player.position],

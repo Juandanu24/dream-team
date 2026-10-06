@@ -8,7 +8,12 @@ import { PlayerCard } from "@/components/player-card";
 import { TeamCrest } from "@/components/team-crest";
 import { TiltCard } from "@/components/tilt-card";
 import { getPlayerProfile } from "@/lib/player-profile";
-import { FOOT_LABELS, POSITION_LABELS, POSITION_SHORT } from "@/lib/types";
+import {
+  cardName,
+  FOOT_LABELS,
+  POSITION_LABELS,
+  POSITION_SHORT,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -87,8 +92,9 @@ export default async function PlayerPage({
   } = perfil;
 
   const card = {
-    name: player.full_name,
+    name: cardName(player),
     age: player.age,
+    heightCm: player.height_cm ?? null,
     positionShort: POSITION_SHORT[player.position],
     footLabel: FOOT_LABELS[player.dominant_foot],
     memberSince: player.member_since,

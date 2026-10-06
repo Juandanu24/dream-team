@@ -321,5 +321,13 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   producción. Ahora en producción no sale nunca y fuera de ella sale
   siempre, en ámbar si apunta a `prueba-local` y en rojo ("Datos reales")
   si apunta a cualquier otro. Cambiar de torneo ya no obliga a tocarlo.
+- **El nombre de la carta y el nombre completo son dos datos**
+  (`players.jersey_name`, migración 00017). El completo identifica a la
+  persona para la organización; en la camiseta va el apodo o el apellido,
+  que es más corto y es como lo llaman en la cancha. `cardName()` en
+  `types.ts` aplica la regla —camiseta si la eligió, completo si no— y vive
+  ahí para que no se desincronice vista por vista: los 82 jugadores de antes
+  de la migración tienen `jersey_name` nulo. `height_cm` entra como tercer
+  dato de la carta; sin estatura la carta sigue con dos y no queda un hueco.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
