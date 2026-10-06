@@ -11,7 +11,6 @@ Son tres documentos y cada uno responde una pregunta distinta:
 | `ORQUESTACION.md` (este) | **Cómo se trabaja y qué falta**: disciplina, estado, backlog |
 | `CONTENIDO.md` | **Para qué existe cada pieza**: criterio editorial, copys, assets |
 | `TORNEO-2.md` | **El plan del segundo torneo**: las cuatro entregas y en qué orden |
-| `LANDING.md` | **Encargo pendiente**: que el home cuente el torneo 1 y lleve a inscribirse |
 
 **Leer los tres antes de tocar código.** El tercero importa aunque el cambio
 parezca solo técnico: casi todo lo de este proyecto termina siendo una imagen
@@ -50,23 +49,35 @@ verificarlo. Estas cinco reglas son la respuesta a errores que YA ocurrieron:
 
 ---
 
-## Estado del torneo (al 11 de septiembre de 2026)
+## Estado (al 5 de octubre de 2026)
 
-- **4 equipos**, 82 personas en `players`, 54 inscritos aprobados, 53 con
-  equipo.
-- **Fase de grupos CERRADA**: las 3 semanas jugadas, 6 partidos. Quedan
-  semifinales (S4) y tercer puesto + final (S5), los 4 partidos ya creados.
-- **Tabla final de grupos**: Teletubbies 6 pts (+7) · Colombia 6 (+5) ·
-  Irreverentes 3 (−3) · Máquina 3 (−9).
-- Las 6 figuras de partido elegidas; 11 alineaciones y 2 onces ideales.
-- 26 jugadores con encuadre de foto guardado.
-- 1 amistoso creado ("Champions league Martes").
+**El torneo 1 terminó y está archivado.** `relampago-2026` quedó en
+`finished`: lo ganó LOS IRREVERENTES F.C, que perdió sus dos primeros
+partidos (0-7 contra Teletubbies en la fecha 1) y les ganó la final a
+ellos mismos por penales, 0-0 y 2-1 desde el punto blanco. 10 partidos,
+66 goles, 53 jugadores con equipo, 54 inscritos aprobados. Los tres
+premios están en `tournament_awards`: MVP Juan Rodriguez, goleador Andres
+Baloco (6), valla Diego Vozinha.
+
+**Ojo con el dato que no cuadra:** de los 66 goles solo ~50 tienen autor
+cargado. Los 16 del 10-6 por el tercer puesto no se asignaron, así que el
+"goleador del torneo" se sostiene sobre 50 de 66. Está decidido como
+premio congelado, pero conviene no presentarlo como un cálculo exacto.
+
+**El torneo 2** (`fin-de-ano-2026`, "Torneo de Fin de Año Dream Team")
+está creado y en `registration`, con inscripción de $12.000 y comprobante
+de pago obligatorio. **Todavía no es el activo**: falta poner
+`NEXT_PUBLIC_TOURNAMENT_SLUG=fin-de-ano-2026` en Vercel. Mientras no se
+cambie, `/torneo` y el badge del hero siguen mostrando el torneo viejo.
+
+La web ya cuenta todo eso: `/historia` (palmarés), `/torneos/[slug]` (el
+tablero de un torneo archivado) y la sección del home que lo resume y
+empuja a inscribirse.
+
 - **Siguen 8 suscritos a push de 54.** Es el canal directo y está al 15%.
 
-Migraciones aplicadas hasta **`00013_amistosos.sql`**, todas corridas.
+Migraciones aplicadas hasta **`00016_palmares.sql`**, todas corridas.
 
-
----
 
 ## Puertos
 
@@ -145,9 +156,10 @@ actual cuando el `mkdir` falla — o sea, dentro del repo. Ya pasó: le metió
 
 ### El segundo torneo
 
-El torneo 1 terminó. Lo que viene está planeado en **`TORNEO-2.md`**:
-inscripciones con comprobante de pago, rendimiento, salón de la fama y
-archivo del torneo viejo. Empezar por las inscripciones.
+Las cuatro entregas de **`TORNEO-2.md`** están hechas: inscripción con
+comprobante, caché, archivo del torneo viejo y palmarés. Lo que queda es
+operativo, no de código: cambiar el slug activo en Vercel y abrir
+inscripciones.
 
 ### Listo para implementar
 

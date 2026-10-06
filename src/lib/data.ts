@@ -209,6 +209,43 @@ export function getTournamentData(
   return torneoCacheado(slug);
 }
 
+/** Nombre del torneo activo, sin el "Dream Team" del final.
+ *
+ *  El hero decía "1ER TORNEO AMISTOSO" escrito a mano y ya vamos por el
+ *  segundo: justo lo primero que ve quien llega nuevo estaba viejo. Sale
+ *  de la base para que se corrija solo al cambiar
+ *  NEXT_PUBLIC_TOURNAMENT_SLUG, y se le quita el sufijo porque el logo y
+ *  el H1 ya dicen DREAM TEAM dos veces más arriba.
+ *
+ *  Devuelve null si Supabase no responde: el hero se queda sin la
+ *  etiqueta, que es mejor que mostrar un nombre inventado. */
+async function cargarNombreDelTorneo(slug: string): Promise<string | null> {
+  try {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("tournaments")
+      .select("name")
+      .eq("slug", slug)
+      .maybeSingle();
+    const nombre = (data as { name: string } | null)?.name;
+    return nombre ? nombre.replace(/\s*dream\s*team\s*$/i, "").trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+const nombreCacheado = unstable_cache(
+  cargarNombreDelTorneo,
+  ["tournament-name"],
+  { tags: [TAG_TORNEO], revalidate: 3600 },
+);
+
+export function getActiveTournamentName(
+  slug: string = ACTIVE_TOURNAMENT_SLUG,
+): Promise<string | null> {
+  return nombreCacheado(slug);
+}
+
 export async function getTournamentStatus(): Promise<TournamentStatus> {
   try {
     const supabase = createAdminClient();

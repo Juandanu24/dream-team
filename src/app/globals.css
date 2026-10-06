@@ -258,6 +258,34 @@
   }
 }
 
+/* Entrada al hacer scroll, para la sección del torneo pasado.
+   La animación avanza con la posición del elemento en la ventana
+   (`view()`), no con un reloj: en un home ESTÁTICO una animación de
+   montaje no sirve —ya terminó cuando el visitante baja hasta la
+   sección— y un observador en JS para un adorno sería pagar
+   hidratación por nada. Donde no exista `view()` el bloque no aplica
+   y la sección sale quieta, que es un degradado aceptable. */
+@utility animate-reveal {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation: dt-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 8% cover 30%;
+    }
+  }
+}
+
+@keyframes dt-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

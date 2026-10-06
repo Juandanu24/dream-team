@@ -3,7 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Menu, ShieldCheck, Target, Trophy, UserPlus } from "lucide-react";
+import {
+  Home,
+  Medal,
+  Menu,
+  ShieldCheck,
+  Target,
+  Trophy,
+  UserPlus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -20,6 +28,8 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/torneo", label: "Torneo", icon: Trophy },
+  // Se llama "Palmarés" y no "Historia" porque así se titula la página.
+  { href: "/historia", label: "Palmarés", icon: Medal },
   { href: "/penales", label: "Penales", icon: Target },
 ];
 
