@@ -679,7 +679,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
         const puestos = data.podio.rows
           .map((r, i) => `${["🥇", "🥈", "🥉", "4️⃣"][i] ?? "•"} ${r.teamName}`)
           .join("\n");
-        return `🏁 ASÍ TERMINÓ EL TORNEO\n\n${puestos}\n\nTres semanas de fase de grupos, semifinales y una final que se fue hasta los penales. Quedó bueno.\n\nLa tabla, los goleadores y las cartas de cada jugador siguen en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Cuál fue el mejor partido del torneo? 👇\n\n${TAGS}`;
+        return `🏁 ASÍ TERMINÓ EL TORNEO\n\n${puestos}\n\nSe jugó, se sufrió y quedó bueno. Gracias a todos los que se metieron.\n\nLa tabla, los goleadores y las cartas de cada jugador siguen en la web 👇\n\n🔗 ${SITE} (Link en la bio)\n\n💬 ¿Cuál fue el mejor partido del torneo? 👇\n\n${TAGS}`;
       }
       case "equipo": {
         if (!team) return "";

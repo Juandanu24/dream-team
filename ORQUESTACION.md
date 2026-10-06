@@ -68,7 +68,14 @@ premio congelado, pero conviene no presentarlo como un cálculo exacto.
 está creado y en `registration`, con inscripción de $12.000 y comprobante
 de pago obligatorio. **Todavía no es el activo**: falta poner
 `NEXT_PUBLIC_TOURNAMENT_SLUG=fin-de-ano-2026` en Vercel. Mientras no se
-cambie, `/torneo` y el badge del hero siguen mostrando el torneo viejo.
+cambie, `/torneo`, el badge del hero y el `<title>` del sitio siguen
+mostrando el torneo viejo.
+
+**El formato del torneo 2 está sin decidir**, y Juan cuenta con más de
+seis equipos. Por eso la web ya no afirma ningún formato: la landing
+cuenta el proceso y el calendario sale de la base. `/admin/partidos` ya
+no supone cuántos equipos hay ni cuántos partidos tiene una fecha, así
+que el formato que se elija no obliga a tocar código.
 
 La web ya cuenta todo eso: `/historia` (palmarés), `/torneos/[slug]` (el
 tablero de un torneo archivado) y la sección del home que lo resume y

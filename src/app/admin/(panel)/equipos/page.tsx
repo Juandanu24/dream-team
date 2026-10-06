@@ -274,7 +274,7 @@ export default async function AdminTeamsPage() {
         </div>
       ) : (
         <p className="mt-6 text-sm text-muted-foreground">
-          Crea los 4 equipos del torneo y luego asigna a los aprobados.
+          Crea los equipos del torneo y luego asigna a los aprobados.
         </p>
       )}
 

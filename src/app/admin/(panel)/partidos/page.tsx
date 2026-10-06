@@ -17,9 +17,10 @@ import { WeekPlanner } from "./week-planner";
 
 export const dynamic = "force-dynamic";
 
-// Revisa que en la semana jueguen todos los equipos, exactamente una
-// vez. Con 4 equipos y 2 partidos por semana, cualquier otra cosa deja
-// a alguien por fuera o hace que alguien juegue doble.
+// Avisos de una fecha. Jugar dos veces siempre está mal. En cambio
+// "no juegan" solo es un error cuando los partidos de esa fecha dan
+// justo para todos los equipos: con seis equipos y dos partidos, que
+// dos se queden quietos es lo normal, no un descuadre.
 function weekIssues(weekMatches: Match[], teams: Team[]): string[] {
   const issues: string[] = [];
   const sinCruce = weekMatches.filter(
@@ -42,7 +43,8 @@ function weekIssues(weekMatches: Match[], teams: Team[]): string[] {
   if (repetidos.length > 0) {
     issues.push(`juegan dos veces: ${repetidos.map((t) => t.name).join(", ")}`);
   }
-  if (ausentes.length > 0 && sinCruce === 0) {
+  const alcanzaParaTodos = weekMatches.length * 2 === teams.length;
+  if (ausentes.length > 0 && sinCruce === 0 && alcanzaParaTodos) {
     issues.push(`no juegan: ${ausentes.map((t) => t.name).join(", ")}`);
   }
   return issues;
@@ -65,6 +67,12 @@ export default async function AdminFixturePage() {
   const { teams, matches } = data;
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
   const nextWeek = weeks.length > 0 ? Math.max(...weeks) + 1 : 1;
+  // Para avisar en el formulario cuando se le estén sumando partidos a
+  // una semana que ya tiene, que ahora sí se puede.
+  const matchesByWeek = matches.reduce<Record<number, number>>((acc, m) => {
+    acc[m.week] = (acc[m.week] ?? 0) + 1;
+    return acc;
+  }, {});
   const anyFinished = matches.some((m) => m.status === "finished");
 
   return (
@@ -92,7 +100,12 @@ export default async function AdminFixturePage() {
         </p>
       ) : (
         <>
-          <WeekPlanner teams={teams} nextWeek={nextWeek} weeks={weeks} />
+          <WeekPlanner
+            teams={teams}
+            nextWeek={nextWeek}
+            weeks={weeks}
+            matchesByWeek={matchesByWeek}
+          />
 
           {/* Semanas ya programadas */}
           {weeks.length > 0 ? (

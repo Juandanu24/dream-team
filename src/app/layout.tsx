@@ -3,6 +3,7 @@ import { Archivo, Bebas_Neue } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SwRegister } from "@/components/sw-register";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getActiveTournamentName } from "@/lib/data";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -19,15 +20,29 @@ const bebas = Bebas_Neue({
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://dreamteamcolombia.vercel.app";
 
+// Sin formato en la descripción a propósito. Antes decía "4 equipos,
+// fase de grupos, semifinales y gran final", que era el torneo 1: esto
+// es lo que ve quien recibe el link por WhatsApp, y el formato del
+// siguiente torneo depende de cuántos equipos entren.
 const DESCRIPTION =
-  "Un torneo. Un equipo. Un sueño. El 1er Torneo Amistoso de fútbol del Dream Team: 4 equipos, fase de grupos, semifinales y gran final.";
+  "Un torneo. Un equipo. Un sueño. Fútbol 9 del Dream Team en Montería: tabla en vivo, goleadores, alineaciones y la carta de cada jugador.";
 
-export const metadata: Metadata = {
+const TITULO_POR_DEFECTO = "Dream Team — Fútbol 9 en Montería";
+
+/** El título sale del nombre del torneo activo, igual que el cartel del
+ *  hero, para que no haya que acordarse de cambiarlo a mano cuando
+ *  arranque el siguiente. Si Supabase no responde queda el genérico:
+ *  mejor eso que anunciar un torneo que ya pasó. */
+export async function generateMetadata(): Promise<Metadata> {
+  const nombre = await getActiveTournamentName();
+  const title = nombre ? `Dream Team — ${nombre}` : TITULO_POR_DEFECTO;
+
+  return {
   // Sin metadataBase las URLs de Open Graph salen relativas y WhatsApp
   // e Instagram no logran cargar la imagen de vista previa.
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Dream Team — 1er Torneo Amistoso",
+    default: title,
     template: "%s | Dream Team",
   },
   description: DESCRIPTION,
@@ -36,20 +51,20 @@ export const metadata: Metadata = {
     siteName: "Dream Team",
     locale: "es_CO",
     url: SITE_URL,
-    title: "Dream Team — 1er Torneo Amistoso",
+    title,
     description: DESCRIPTION,
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Dream Team · 1er Torneo Amistoso · Montería",
+        alt: `${title} · Montería`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dream Team — 1er Torneo Amistoso",
+    title,
     description: DESCRIPTION,
     images: ["/og.png"],
   },
@@ -57,8 +72,9 @@ export const metadata: Metadata = {
     capable: true,
     title: "Dream Team",
     statusBarStyle: "black-translucent",
-  },
-};
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
