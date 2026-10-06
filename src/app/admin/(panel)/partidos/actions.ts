@@ -41,7 +41,9 @@ function bogotaToIso(local: string): string {
 }
 
 const weekSchema = z.object({
-  week: z.coerce.number().int().min(1).max(10),
+  // Hasta 20: con cuatro equipos sobraban diez fechas, pero un todos
+  // contra todos de seis son quince partidos y el tope se alcanzaba.
+  week: z.coerce.number().int().min(1).max(20),
   // group: dos partidos de grupos · semifinal: las dos semis
   // finals: martes 3º y 4º puesto, jueves la final
   mode: z.enum(["group", "semifinal", "finals"]),
@@ -56,9 +58,15 @@ const STAGES_BY_MODE = {
   finals: ["third_place", "final"],
 } as const;
 
-// Programa una semana completa: el partido del martes y el del jueves.
-// Valida que los cuatro equipos sean distintos, que es lo que garantiza
-// que todos jueguen una vez en la semana.
+// Programa una fecha: el partido del martes y el del jueves.
+//
+// La única regla que queda es que ningún equipo juegue dos veces en la
+// misma fecha. Antes exigía los cuatro equipos en fase de grupos, que
+// con un torneo de cuatro equivalía a "todos juegan una vez"; con seis
+// o más, dos partidos ya no alcanzan para cubrir a todos y la regla
+// bloqueaba el calendario en vez de protegerlo. Dejar cruces en "Por
+// definir" ya era válido en semifinales y finales, y se llenan después
+// con `updateMatch`.
 export async function addWeek(formData: FormData) {
   await requireAdmin();
 
@@ -77,9 +85,6 @@ export async function addWeek(formData: FormData) {
   const elegidos = ids.filter((id): id is string => Boolean(id));
   if (new Set(elegidos).size !== elegidos.length) {
     throw new Error("Hay un equipo repetido: cada equipo juega una vez por semana");
-  }
-  if (parsed.mode === "group" && elegidos.length !== 4) {
-    throw new Error("En fase de grupos hay que asignar los cuatro equipos");
   }
 
   const supabase = createAdminClient();

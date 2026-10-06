@@ -47,7 +47,6 @@ export function AddWeekForm({
 
   const chosen = SLOTS.map((s) => picks[s]).filter(Boolean);
   const repeated = chosen.filter((id, i) => chosen.indexOf(id) !== i);
-  const missing = teams.filter((t) => !chosen.includes(t.id));
 
   const nameOf = (id: string) => teams.find((t) => t.id === id)?.name ?? "";
 
@@ -57,12 +56,17 @@ export function AddWeekForm({
       `repetido: ${[...new Set(repeated)].map(nameOf).join(", ")}`,
     );
   }
-  if (mode === "group" && chosen.length < 4) {
-    problems.push(
-      missing.length > 0 && chosen.length > 0
-        ? `falta asignar: ${missing.map((t) => t.name).join(", ")}`
-        : "faltan equipos por asignar",
-    );
+  // Media llave —un equipo puesto y el rival vacío— sí es un error:
+  // deja un partido a medias. Los dos vacíos es el cruce "Por definir",
+  // que es válido y se llena después.
+  const aMedias = (
+    [
+      ["tue_home", "tue_away"],
+      ["thu_home", "thu_away"],
+    ] as const
+  ).filter(([a, b]) => Boolean(picks[a]) !== Boolean(picks[b]));
+  if (aMedias.length > 0) {
+    problems.push("hay un partido con un solo equipo");
   }
   const ready = problems.length === 0 && chosen.length > 0;
 

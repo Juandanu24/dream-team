@@ -17,9 +17,10 @@ import { WeekPlanner } from "./week-planner";
 
 export const dynamic = "force-dynamic";
 
-// Revisa que en la semana jueguen todos los equipos, exactamente una
-// vez. Con 4 equipos y 2 partidos por semana, cualquier otra cosa deja
-// a alguien por fuera o hace que alguien juegue doble.
+// Avisos de una fecha. Jugar dos veces siempre está mal. En cambio
+// "no juegan" solo es un error cuando los partidos de esa fecha dan
+// justo para todos los equipos: con seis equipos y dos partidos, que
+// dos se queden quietos es lo normal, no un descuadre.
 function weekIssues(weekMatches: Match[], teams: Team[]): string[] {
   const issues: string[] = [];
   const sinCruce = weekMatches.filter(
@@ -42,7 +43,8 @@ function weekIssues(weekMatches: Match[], teams: Team[]): string[] {
   if (repetidos.length > 0) {
     issues.push(`juegan dos veces: ${repetidos.map((t) => t.name).join(", ")}`);
   }
-  if (ausentes.length > 0 && sinCruce === 0) {
+  const alcanzaParaTodos = weekMatches.length * 2 === teams.length;
+  if (ausentes.length > 0 && sinCruce === 0 && alcanzaParaTodos) {
     issues.push(`no juegan: ${ausentes.map((t) => t.name).join(", ")}`);
   }
   return issues;

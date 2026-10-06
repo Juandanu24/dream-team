@@ -38,7 +38,7 @@ export default async function OnceIdealPage() {
         ONCE IDEAL DE LA <span className="text-dt-blue">FECHA</span>
       </h1>
       <p className="mt-2 max-w-prose text-sm text-muted-foreground">
-        Los nueve de la semana, mezclando los cuatro equipos. Se publica en la
+        Los nueve de la semana, mezclando todos los equipos. Se publica en la
         web, avisa por push y sale la imagen para Instagram.
       </p>
 

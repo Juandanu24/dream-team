@@ -268,5 +268,27 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   montaje ya terminó cuando el visitante baja hasta la sección. Va envuelta
   en `prefers-reduced-motion: no-preference` y en `@supports`: donde no
   exista, la sección sale quieta.
+- **Nada del formato del torneo se escribe en el home.** El primer torneo
+  fueron 4 equipos, 3 fechas de grupos, semifinales y final en la semana 5,
+  y todo eso estaba horneado en la landing: las cinco semanas con los
+  cruces "1 vs 2", "4 equipos" en los datos rápidos y hasta la descripción
+  Open Graph del sitio. El segundo va para más de seis equipos y el
+  formato se define cuando cierren las inscripciones, así que la landing
+  cuenta el **proceso** (te inscribes → te toca equipo → a jugar), que no
+  cambia, y manda el calendario a `/torneo`, que sale de la base. Si vuelve
+  a aparecer un número de equipos o una fecha en el home, es un dato que va
+  a envejecer.
+- **El calendario no asume cuántos equipos hay.** `addWeek` programa una
+  fecha de dos partidos (martes y jueves) y la única regla dura es que
+  nadie juegue dos veces en esa fecha. Antes exigía los cuatro equipos en
+  fase de grupos: con cuatro eso equivalía a "todos juegan una vez", pero
+  con seis bloqueaba el calendario. Por lo mismo el aviso "no juegan X, Y"
+  del panel solo sale cuando los partidos de la fecha dan justo para todos
+  los equipos; si no, que alguno descanse es lo normal.
+  **Lo que sigue atado a dos partidos por fecha es el formulario**, que
+  tiene las casillas martes/jueves fijas. Con seis equipos una vuelta
+  completa son tres partidos, así que o se reparte en dos fechas o hay que
+  rehacer el formulario para que acepte N partidos con su día y su hora.
+  Esa decisión depende del formato que se elija.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

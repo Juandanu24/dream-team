@@ -55,10 +55,10 @@ export async function TorneoUno() {
         }. Levantó la copa.`
       : `${championPath.length} partidos hasta levantar la copa.`;
 
-  // Sin "equipos" a propósito: el home ya dice "4 equipos" en Datos
-  // rápidos, pero ahí es el plan del torneo NUEVO. El mismo número en
-  // dos secciones vecinas hace dudar de cuál habla cada una, y es
-  // justo la cifra que menos cuenta —los equipos se ven en el camino.
+  // Sin "equipos" a propósito: son tres cifras, no cuatro, porque
+  // cuántos equipos hubo ya se ve en el camino del campeón y en el
+  // palmarés. Tres números grandes se leen de un golpe; cuatro en
+  // celular quedan apretados.
   const cifras = [
     { valor: stats.players, rotulo: "jugadores" },
     { valor: stats.matches, rotulo: "partidos" },

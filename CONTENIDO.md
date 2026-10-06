@@ -118,6 +118,26 @@ SEGUNDO. ¿TE LO VAS A PERDER?" con el botón de inscripción. El palmarés
 es el argumento; la inscripción es la acción. De ahí el color: toda la
 sección va en `--dt-blue` (información) y el único volt es el botón.
 
+## Qué puede decir el home y qué no
+
+El home le habla a quien **todavía no se ha inscrito**, y por eso solo
+puede afirmar cosas que no dependan de cuántos equipos entren.
+
+**Sí:** fútbol 9 (8 en cancha más arquero fijo), martes y jueves en la
+Cancha F8, los equipos los sortea la organización, todos juegan, hay
+premios, la inscripción vale $12.000.
+
+**No:** cuántos equipos, cuántas fechas, qué fases hay, quién juega
+contra quién. Eso es el formato, se decide cuando cierren las
+inscripciones y vive en `/torneo`, que lo saca de la base. El primer
+torneo tenía las cinco semanas escritas en la landing con los cruces y
+todo; al cambiar de torneo quedó mintiendo entero.
+
+Los horarios (martes 8 PM, jueves 9 PM) se dan como **lo habitual del
+grupo, no como el fixture**: en el torneo 1 hubo una semana con los dos
+partidos el mismo jueves. Por eso la tarjeta lleva la aclaración de que
+el día exacto lo confirma el calendario.
+
 ## Cómo escribe Juan los copys
 
 Reglas sacadas de correcciones suyas, no inventadas:

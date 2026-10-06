@@ -6,6 +6,7 @@ import {
   Medal,
   RefreshCw,
   Trophy,
+  UserPlus,
   Users,
   Zap,
 } from "lucide-react";
@@ -15,16 +16,20 @@ import { InteractiveBall } from "@/components/interactive-ball";
 import { getActiveTournamentName } from "@/lib/data";
 import { TorneoUno } from "./torneo-uno";
 
+// Nada de esto depende de cuántos equipos entren. Lo que sí dependía
+// —"4 equipos", el calendario de cinco semanas, los cruces 1 vs 2— era
+// del primer torneo y salió de acá: el formato del segundo se define
+// cuando cierren las inscripciones.
 const stats = [
-  {
-    icon: Users,
-    title: "4 equipos",
-    detail: "Plantillas parejas, sorteadas por la organización",
-  },
   {
     icon: Zap,
     title: "Fútbol 9",
     detail: "8 en cancha + arquero fijo por equipo",
+  },
+  {
+    icon: Users,
+    title: "Equipos parejos",
+    detail: "Los sortea la organización, nadie arma el suyo",
   },
   {
     icon: RefreshCw,
@@ -38,34 +43,31 @@ const stats = [
   },
 ];
 
-const format = [
+// Los tres pasos son los mismos con cuatro equipos o con ocho. Antes
+// acá vivía el formato del torneo (fases, semifinales, en qué semana
+// iba cada una) y el calendario con los cruces ya escritos: eso solo
+// se puede decir cuando ya se sabe cuántos equipos hay.
+const howItWorks = [
+  {
+    icon: UserPlus,
+    title: "Te inscribes",
+    detail:
+      "Llenas tus datos, subes tu foto y el comprobante de pago. Vale $12.000.",
+  },
   {
     icon: Users,
-    title: "Fase de grupos",
-    detail: "Todos contra todos. Cada equipo juega 3 partidos en 3 semanas.",
+    // Que los equipos se sortean ya lo dice la tarjeta de arriba; acá
+    // el paso cuenta qué te pasa a ti, no cómo se arma el torneo.
+    title: "Te toca equipo",
+    detail:
+      "Cuando aprueben tu inscripción entras al sorteo y sabes en qué equipo quedaste.",
   },
   {
     icon: Trophy,
-    title: "Semifinales",
-    detail: "1º vs 4º y 2º vs 3º de la tabla. Semana 4.",
+    title: "A jugar",
+    detail:
+      "Tabla, goleadores, alineaciones y las cartas de cada jugador quedan en la web.",
   },
-  {
-    icon: Medal,
-    title: "Finales",
-    detail: "Partido por el 3º puesto y la Gran Final. Semana 5.",
-  },
-];
-
-const calendar = [
-  { week: "Semana 1", tuesday: "1 vs 2", thursday: "3 vs 4" },
-  { week: "Semana 2", tuesday: "1 vs 3", thursday: "2 vs 4" },
-  { week: "Semana 3", tuesday: "1 vs 4", thursday: "2 vs 3" },
-  {
-    week: "Semana 4",
-    tuesday: "Semifinal 1 (1º vs 4º)",
-    thursday: "Semifinal 2 (2º vs 3º)",
-  },
-  { week: "Semana 5", tuesday: "3º y 4º puesto", thursday: "GRAN FINAL" },
 ];
 
 export default async function HomePage() {
@@ -130,114 +132,99 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Formato */}
+      {/* Cómo funciona + cuándo se juega */}
       <section className="border-y border-border/60 bg-background/40">
-        <div className="mx-auto max-w-6xl px-4 py-16">
-          <h2 className="font-display text-4xl tracking-wide sm:text-5xl">
-            FORMATO DEL <span className="text-volt">TORNEO</span>
-          </h2>
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {format.map((item, i) => (
-              <Card key={item.title} className="border-border/60 bg-card/70">
-                <CardContent className="px-5 py-2">
-                  <div className="flex items-center gap-3">
-                    <span className="font-display text-4xl text-volt/40">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[1fr_320px]">
+          <div>
+            <h2 className="font-display text-4xl tracking-wide sm:text-5xl">
+              CÓMO <span className="text-volt">FUNCIONA</span>
+            </h2>
+            <div className="mt-8 space-y-3">
+              {howItWorks.map((item, i) => (
+                <Card key={item.title} className="border-border/60 bg-card/70 py-4">
+                  <CardContent className="flex items-start gap-4 px-5">
+                    <span className="font-display text-4xl leading-none text-volt/40">
                       {i + 1}
                     </span>
-                    <item.icon className="size-6 text-volt" aria-hidden />
-                    <h3 className="font-display text-2xl tracking-wide">
-                      {item.title}
-                    </h3>
-                  </div>
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    {item.detail}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <p className="mt-6 text-sm text-muted-foreground">
-            Todos los equipos juegan <span className="text-volt">5 partidos</span>:
-            3 de fase de grupos, semifinal y final o partido por el puesto.
-          </p>
-        </div>
-      </section>
+                    <div>
+                      <h3 className="flex items-center gap-2 font-display text-2xl tracking-wide">
+                        <item.icon className="size-5 text-volt" aria-hidden />
+                        {item.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {item.detail}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-      {/* Calendario + Cuándo */}
-      <section className="mx-auto grid max-w-6xl gap-8 px-4 py-16 lg:grid-cols-[1fr_320px]">
-        <div>
-          <h2 className="flex items-center gap-3 font-display text-4xl tracking-wide sm:text-5xl">
-            <CalendarDays className="size-8 text-dt-blue" aria-hidden />
-            CALENDARIO
-          </h2>
-          <div className="mt-8 space-y-3">
-            {calendar.map((row) => (
-              <Card key={row.week} className="border-border/60 bg-card/70 py-4">
-                <CardContent className="flex flex-col gap-2 px-5 sm:flex-row sm:items-center">
-                  <p className="w-32 shrink-0 font-display text-xl tracking-wide text-dt-blue">
-                    {row.week}
-                  </p>
-                  <div className="flex flex-1 flex-col gap-1 text-sm sm:flex-row sm:gap-6">
-                    <p>
-                      <span className="text-muted-foreground">MAR:</span>{" "}
-                      {row.tuesday}
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">JUE:</span>{" "}
-                      <span className={row.thursday === "GRAN FINAL" ? "font-semibold text-volt" : undefined}>
-                        {row.thursday}
-                      </span>
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {/* Decir el formato antes de tiempo es prometer algo que
+                todavía no se sabe: con cuatro equipos no es el mismo
+                torneo que con ocho. */}
+            <Card className="mt-3 border-dt-blue/40 bg-card/70 py-4">
+              <CardContent className="flex items-start gap-3 px-5">
+                <CalendarDays className="mt-0.5 size-5 shrink-0 text-dt-blue" aria-hidden />
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-foreground">
+                    El formato se define cuando cierren las inscripciones
+                  </span>
+                  , según cuántos equipos entren: cuántas fechas, cómo se
+                  clasifica y los cruces. El calendario sale en{" "}
+                  <Link
+                    href="/torneo?tab=calendario"
+                    className="text-dt-blue underline-offset-4 hover:underline"
+                  >
+                    la página del torneo
+                  </Link>{" "}
+                  apenas se sorteen los equipos.
+                </p>
+              </CardContent>
+            </Card>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Los cruces de la fase de grupos se definen cuando se sorteen los
-            equipos. Resultados y tabla en vivo en{" "}
-            <Link href="/torneo?tab=calendario" className="text-dt-blue underline-offset-4 hover:underline">
-              la página del torneo
-            </Link>
-            .
-          </p>
-        </div>
 
-        <aside className="space-y-3">
-          <h2 className="font-display text-4xl tracking-wide">
-            ¿CUÁNDO<span className="text-dt-blue">?</span>
-          </h2>
-          <Card className="border-dt-blue/40 bg-card/70">
-            <CardContent className="space-y-4 px-5 py-2">
-              <div className="flex items-center gap-3">
-                <Clock className="size-6 shrink-0 text-dt-blue" aria-hidden />
-                <div>
-                  <p className="font-display text-2xl tracking-wide">MARTES</p>
-                  <p className="text-sm text-muted-foreground">8:00 PM</p>
+          <aside className="space-y-3">
+            <h2 className="font-display text-4xl tracking-wide">
+              ¿CUÁNDO<span className="text-dt-blue">?</span>
+            </h2>
+            <Card className="border-dt-blue/40 bg-card/70">
+              <CardContent className="space-y-4 px-5 py-2">
+                <div className="flex items-center gap-3">
+                  <Clock className="size-6 shrink-0 text-dt-blue" aria-hidden />
+                  <div>
+                    <p className="font-display text-2xl tracking-wide">MARTES</p>
+                    <p className="text-sm text-muted-foreground">8:00 PM</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Clock className="size-6 shrink-0 text-dt-blue" aria-hidden />
-                <div>
-                  <p className="font-display text-2xl tracking-wide">JUEVES</p>
-                  <p className="text-sm text-muted-foreground">9:00 PM</p>
+                <div className="flex items-center gap-3">
+                  <Clock className="size-6 shrink-0 text-dt-blue" aria-hidden />
+                  <div>
+                    <p className="font-display text-2xl tracking-wide">JUEVES</p>
+                    <p className="text-sm text-muted-foreground">9:00 PM</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="size-6 shrink-0 text-dt-blue" aria-hidden />
-                <div>
-                  <p className="font-display text-2xl tracking-wide">CANCHA F8</p>
-                  <p className="text-sm text-muted-foreground">
-                    Montería · 1 hora por día
-                  </p>
+                <div className="flex items-center gap-3">
+                  <MapPin className="size-6 shrink-0 text-dt-blue" aria-hidden />
+                  <div>
+                    <p className="font-display text-2xl tracking-wide">CANCHA F8</p>
+                    <p className="text-sm text-muted-foreground">Montería</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <p className="text-center font-display text-xl tracking-widest text-muted-foreground">
-            PASIÓN, AMISTAD Y <span className="text-volt">BUEN FÚTBOL</span>
-          </p>
-        </aside>
+                {/* Los horarios son los de siempre del grupo, no el
+                    fixture: en el torneo pasado hubo semanas con los dos
+                    partidos el mismo jueves. */}
+                <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                  Son los horarios de siempre. El día exacto de cada partido
+                  se confirma con el calendario.
+                </p>
+              </CardContent>
+            </Card>
+            <p className="text-center font-display text-xl tracking-widest text-muted-foreground">
+              PASIÓN, AMISTAD Y <span className="text-volt">BUEN FÚTBOL</span>
+            </p>
+          </aside>
+        </div>
       </section>
 
       {/* CTA final */}
