@@ -40,97 +40,76 @@ function bogotaToIso(local: string): string {
   return new Date(`${local}:00-05:00`).toISOString();
 }
 
+/** Un partido suelto de la fecha: su fase, cuándo se juega y el cruce.
+ *  Los equipos son nulables porque un cruce "Por definir" es válido —en
+ *  semifinales no se sabe quién clasifica hasta que termine la fase. */
+const matchSchema = z.object({
+  stage: z.enum(["group", "semifinal", "third_place", "final"]),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
+  time: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
+  home_team_id: z.string().uuid().nullable(),
+  away_team_id: z.string().uuid().nullable(),
+});
+
 const weekSchema = z.object({
   // Hasta 20: con cuatro equipos sobraban diez fechas, pero un todos
   // contra todos de seis son quince partidos y el tope se alcanzaba.
   week: z.coerce.number().int().min(1).max(20),
-  // group: dos partidos de grupos · semifinal: las dos semis
-  // finals: martes 3º y 4º puesto, jueves la final
-  mode: z.enum(["group", "semifinal", "finals"]),
-  tuesday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
-  tuesday_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
-  thursday_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
+  // Hasta 8 partidos: con dieciséis equipos una vuelta son ocho, y más
+  // que eso no es una fecha, es un error de dedo.
+  matches: z.array(matchSchema).min(1).max(8),
 });
 
-const STAGES_BY_MODE = {
-  group: ["group", "group"],
-  semifinal: ["semifinal", "semifinal"],
-  finals: ["third_place", "final"],
-} as const;
+export type NuevoPartido = z.input<typeof matchSchema>;
 
-// Programa una fecha: el partido del martes y el del jueves.
+// Programa una fecha: los partidos que sean, cada uno con su día y su
+// hora.
 //
-// La única regla que queda es que ningún equipo juegue dos veces en la
-// misma fecha. Antes exigía los cuatro equipos en fase de grupos, que
-// con un torneo de cuatro equivalía a "todos juegan una vez"; con seis
-// o más, dos partidos ya no alcanzan para cubrir a todos y la regla
-// bloqueaba el calendario en vez de protegerlo. Dejar cruces en "Por
-// definir" ya era válido en semifinales y finales, y se llenan después
-// con `updateMatch`.
-export async function addWeek(formData: FormData) {
+// Antes programaba exactamente dos, el del martes y el del jueves, y el
+// jueves lo calculaba sumándole dos días al martes. Con cuatro equipos
+// eso era justo una vuelta completa; con seis son tres partidos y la
+// forma del formulario se volvía el límite del torneo. Ahora la forma
+// de la fecha la decide el formato, no el código.
+//
+// Las dos reglas que quedan son las que no dependen del formato: nadie
+// juega dos veces en la misma fecha, y nadie juega contra sí mismo.
+export async function addWeek(input: {
+  week: number;
+  matches: NuevoPartido[];
+}) {
   await requireAdmin();
 
-  const parsed = weekSchema.parse({
-    week: formData.get("week"),
-    mode: formData.get("mode"),
-    tuesday: formData.get("tuesday"),
-    tuesday_time: formData.get("tuesday_time"),
-    thursday_time: formData.get("thursday_time"),
-  });
+  const parsed = weekSchema.parse(input);
 
-  const ids = ["tue_home", "tue_away", "thu_home", "thu_away"].map(
-    (field) => String(formData.get(field) ?? "") || null,
+  for (const m of parsed.matches) {
+    if (m.home_team_id && m.home_team_id === m.away_team_id) {
+      throw new Error("Un equipo no puede jugar contra sí mismo");
+    }
+  }
+
+  const elegidos = parsed.matches.flatMap((m) =>
+    [m.home_team_id, m.away_team_id].filter((id): id is string => Boolean(id)),
   );
-
-  const elegidos = ids.filter((id): id is string => Boolean(id));
   if (new Set(elegidos).size !== elegidos.length) {
-    throw new Error("Hay un equipo repetido: cada equipo juega una vez por semana");
+    throw new Error("Hay un equipo repetido: cada equipo juega una vez por fecha");
   }
 
   const supabase = createAdminClient();
   const tournamentId = await activeTournamentId();
 
-  const { count } = await supabase
-    .from("matches")
-    .select("id", { count: "exact", head: true })
-    .eq("tournament_id", tournamentId)
-    .eq("week", parsed.week);
-  if (count) {
-    throw new Error(`La semana ${parsed.week} ya tiene partidos`);
-  }
-
-  // El jueves es siempre dos días después del martes. La suma se hace
-  // sobre la fecha calendario, no sobre el instante: a las 8 PM de
-  // Colombia el martes ya es miércoles en UTC y daría un día corrido.
-  const [year, month, day] = parsed.tuesday.split("-").map(Number);
-  const anchor = new Date(Date.UTC(year, month - 1, day));
-  anchor.setUTCDate(anchor.getUTCDate() + 2);
-  const thursdayDate = anchor.toISOString().slice(0, 10);
-
-  const tuesday = new Date(`${parsed.tuesday}T${parsed.tuesday_time}:00-05:00`);
-  const thursday = new Date(
-    `${thursdayDate}T${parsed.thursday_time}:00-05:00`,
+  // Ya no se bloquea una semana que tenga partidos: con un formato de
+  // más equipos puede hacer falta sumarle uno después. Lo que había
+  // antes impedía corregir sin borrar la fecha entera.
+  const { error } = await supabase.from("matches").insert(
+    parsed.matches.map((m) => ({
+      tournament_id: tournamentId,
+      stage: m.stage,
+      week: parsed.week,
+      kickoff_at: bogotaToIso(`${m.date}T${m.time}`),
+      home_team_id: m.home_team_id,
+      away_team_id: m.away_team_id,
+    })),
   );
-
-  const [tueStage, thuStage] = STAGES_BY_MODE[parsed.mode];
-  const { error } = await supabase.from("matches").insert([
-    {
-      tournament_id: tournamentId,
-      stage: tueStage,
-      week: parsed.week,
-      kickoff_at: tuesday.toISOString(),
-      home_team_id: ids[0],
-      away_team_id: ids[1],
-    },
-    {
-      tournament_id: tournamentId,
-      stage: thuStage,
-      week: parsed.week,
-      kickoff_at: thursday.toISOString(),
-      home_team_id: ids[2],
-      away_team_id: ids[3],
-    },
-  ]);
   if (error) throw error;
 
   revalidateMatches();

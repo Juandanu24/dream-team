@@ -67,6 +67,12 @@ export default async function AdminFixturePage() {
   const { teams, matches } = data;
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
   const nextWeek = weeks.length > 0 ? Math.max(...weeks) + 1 : 1;
+  // Para avisar en el formulario cuando se le estén sumando partidos a
+  // una semana que ya tiene, que ahora sí se puede.
+  const matchesByWeek = matches.reduce<Record<number, number>>((acc, m) => {
+    acc[m.week] = (acc[m.week] ?? 0) + 1;
+    return acc;
+  }, {});
   const anyFinished = matches.some((m) => m.status === "finished");
 
   return (
@@ -94,7 +100,12 @@ export default async function AdminFixturePage() {
         </p>
       ) : (
         <>
-          <WeekPlanner teams={teams} nextWeek={nextWeek} weeks={weeks} />
+          <WeekPlanner
+            teams={teams}
+            nextWeek={nextWeek}
+            weeks={weeks}
+            matchesByWeek={matchesByWeek}
+          />
 
           {/* Semanas ya programadas */}
           {weeks.length > 0 ? (

@@ -12,10 +12,12 @@ export function WeekPlanner({
   teams,
   nextWeek,
   weeks,
+  matchesByWeek,
 }: {
   teams: Team[];
   nextWeek: number;
   weeks: number[];
+  matchesByWeek: Record<number, number>;
 }) {
   const [open, setOpen] = useState(weeks.length === 0);
 
@@ -47,6 +49,7 @@ export function WeekPlanner({
           <AddWeekForm
             teams={teams}
             nextWeek={nextWeek}
+            matchesByWeek={matchesByWeek}
             onSaved={() => setOpen(false)}
           />
         </CardContent>

@@ -285,10 +285,15 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   con seis bloqueaba el calendario. Por lo mismo el aviso "no juegan X, Y"
   del panel solo sale cuando los partidos de la fecha dan justo para todos
   los equipos; si no, que alguno descanse es lo normal.
-  **Lo que sigue atado a dos partidos por fecha es el formulario**, que
-  tiene las casillas martes/jueves fijas. Con seis equipos una vuelta
-  completa son tres partidos, así que o se reparte en dos fechas o hay que
-  rehacer el formulario para que acepte N partidos con su día y su hora.
-  Esa decisión depende del formato que se elija.
+  `addWeek` recibe **una lista de partidos**, cada uno con su fase, su día
+  y su hora, de 1 a 8. Antes recibía exactamente dos y le sumaba dos días
+  al martes para sacar el jueves: con cuatro equipos eso era justo una
+  vuelta, pero con seis son tres partidos y la forma del formulario se
+  volvía el límite del torneo. Tampoco bloquea ya una semana que tenga
+  partidos —hacía falta borrar la fecha entera para corregirla—, y el
+  formulario avisa cuántos tiene antes de sumarle.
+  Probado contra la base con seis equipos y una fecha de tres partidos
+  repartidos en dos días: la tabla, el calendario público y la publicación
+  por semana lo soportan sin cambios.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
