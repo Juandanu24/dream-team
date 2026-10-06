@@ -237,5 +237,36 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   lo escoge el organizador a dedo. La cifra va como texto y congelada: si
   mañana se corrigen eventos de un partido viejo, un premio ya entregado no
   debe cambiar solo.
+- **El home es ESTÁTICO a propósito**, y lee Supabase igual. Es la única
+  página pública que no es `force-dynamic`, y conviene saber por qué antes
+  de "arreglarla": el build SÍ tiene credenciales y hornea los datos reales
+  en el HTML —se comprobó: el campeón sale en el prerender—, así que lo que
+  cuenta del torneo 1 no necesita ser dinámico. Y no puede quedarse viejo:
+  ese torneo está `finished` y su campeón, su podio y sus premios ya no
+  cambian. A cambio se sirve desde el CDN en 3 ms sin invocar función, que
+  es lo que importa para quien llega de Instagram con datos móviles.
+  La página hereda `revalidate: 3600` de `getHistory()`, así que incluso si
+  el build agarra la base a medias se corrige sola en una hora, sin
+  redeploy. Eso fue justo lo que pasó la primera vez: una migración cerró
+  el torneo DESPUÉS de compilar y el banner salió vacío —**una migración
+  SQL no dispara `updateTag`**, solo las server actions lo hacen.
+- **`readableAccent()` solo resuelve la mitad del problema de contraste.**
+  Aclara los colores apagados para que se vean sobre el negro, pero no hace
+  nada con el caso contrario: el amarillo de Los Irreverentes (#f5ec00)
+  sobre el hueso del tema claro es ilegible. Por eso el color del equipo se
+  usa como texto solo bajo `dark:`; en claro manda el color de texto normal
+  y la identidad la cargan el escudo, el borde y el degradado. Como fondo
+  con alfa (`${acento}22`) sí sirve en los dos temas.
+- **`PlayerPhoto` es la versión HTML de `drawCover()`.** Misma convención
+  —zoom 1 = la foto justo cubre el marco, x/y de −1 a 1 sobre lo que
+  sobra— para que una foto se vea igual en la web que en las piezas. No es
+  un `object-position` y ya: ese reparte el sobrante SIN zoom, así que al
+  acercar la foto el ancla se corre. Por eso van dos cajas, la interna de
+  `zoom × marco` y desplazada `p · (1 − zoom)`.
+- **`animate-reveal` se mueve con el scroll, no con un reloj**
+  (`animation-timeline: view()`). En una página estática una animación de
+  montaje ya terminó cuando el visitante baja hasta la sección. Va envuelta
+  en `prefers-reduced-motion: no-preference` y en `@supports`: donde no
+  exista, la sección sale quieta.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

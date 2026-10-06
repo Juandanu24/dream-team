@@ -11,8 +11,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChampionBanner } from "./champion-banner";
 import { InteractiveBall } from "@/components/interactive-ball";
+import { getActiveTournamentName } from "@/lib/data";
+import { TorneoUno } from "./torneo-uno";
 
 const stats = [
   {
@@ -67,7 +68,9 @@ const calendar = [
   { week: "Semana 5", tuesday: "3º y 4º puesto", thursday: "GRAN FINAL" },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const nombreDelTorneo = await getActiveTournamentName();
+
   return (
     <>
       {/* Hero */}
@@ -80,9 +83,11 @@ export default function HomePage() {
           <InteractiveBall className="size-full" spinSeconds={34} reverse />
         </div>
         <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center sm:pt-28">
-          <span className="clip-angled bg-primary px-4 py-1.5 font-display text-lg tracking-widest text-primary-foreground">
-            1ER TORNEO AMISTOSO
-          </span>
+          {nombreDelTorneo ? (
+            <span className="clip-angled bg-primary px-4 py-1.5 font-display text-lg tracking-widest text-primary-foreground">
+              {nombreDelTorneo.toUpperCase()}
+            </span>
+          ) : null}
           <h1 className="mt-6 font-display text-7xl leading-none tracking-wide sm:text-9xl">
             DREAM
             <span className="block -skew-x-6 text-volt drop-shadow-[0_0_35px_rgba(204,255,0,0.35)]">
@@ -107,6 +112,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* El torneo pasado, contado para quien llega nuevo */}
+      <TorneoUno />
+
       {/* Datos rápidos */}
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -121,9 +129,6 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-
-      {/* El campeón del torneo pasado */}
-      <ChampionBanner />
 
       {/* Formato */}
       <section className="border-y border-border/60 bg-background/40">

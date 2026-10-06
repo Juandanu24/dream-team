@@ -99,6 +99,25 @@ que toca partirlo en dos publicaciones. El botón lo avisa.
 
 ---
 
+## La sección del torneo pasado en el home
+
+No es una pieza de Instagram, pero se escribe con el mismo criterio, así
+que vive acá. Es lo primero que ve quien llega nuevo por el torneo de fin
+de año y tiene un solo trabajo: que crea que esto es serio y se inscriba.
+
+**La historia se cuenta con datos, no con adjetivos.** "El camino del
+campeón" son los cinco resultados de Los Irreverentes en fila —0-7, 2-4,
+7-1, 3-2 y 0-0 (2-1 pen)—, y de ahí sale solo que empezaron humillados
+contra el equipo al que después le ganaron la final. Escribir "una
+remontada épica" habría dicho menos. Por lo mismo la frase que acompaña
+("Perdió sus primeros 2 partidos. Levantó la copa.") se **calcula**: con
+el próximo campeón se reescribe sola en vez de quedar mintiendo.
+
+**Termina empujando, no en la nostalgia.** El cierre es "AHORA VA EL
+SEGUNDO. ¿TE LO VAS A PERDER?" con el botón de inscripción. El palmarés
+es el argumento; la inscripción es la acción. De ahí el color: toda la
+sección va en `--dt-blue` (información) y el único volt es el botón.
+
 ## Cómo escribe Juan los copys
 
 Reglas sacadas de correcciones suyas, no inventadas:

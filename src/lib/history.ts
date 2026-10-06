@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { matchWinner } from "@/lib/match-summary";
 import { TAG_TORNEO } from "@/lib/data";
-import type { Match, Team } from "@/lib/types";
+import type { Match, MatchStage, Team } from "@/lib/types";
 
 export type AwardKind = "mvp" | "goleador" | "valla" | "fair_play";
 
@@ -20,10 +20,42 @@ export interface AwardWinner {
   playerId: string;
   playerName: string;
   photoUrl: string | null;
+  /** Encuadre que el jugador ya tiene ajustado (migración 00012), para
+   *  que la foto salga igual que en las piezas y no recortada al
+   *  centro. Nulo = sin ajustar. */
+  photoZoom: number | null;
+  photoOffsetX: number | null;
+  photoOffsetY: number | null;
   teamName: string | null;
   teamColor: string | null;
   /** La cifra con la que se entregó, congelada. */
   detail: string | null;
+}
+
+/** Las cifras del torneo, para contarlo de un vistazo. */
+export interface TournamentStats {
+  teams: number;
+  /** Solo los que se jugaron. */
+  matches: number;
+  goals: number;
+  /** Los que quedaron con equipo, no los inscritos. */
+  players: number;
+}
+
+/** Un partido del campeón, como paso de su camino al título. */
+export interface PathStep {
+  /** "Fecha 1", "Semifinal", "Final"… */
+  label: string;
+  rivalName: string;
+  rivalCrest: string | null;
+  rivalColor: string | null;
+  goalsFor: number;
+  goalsAgainst: number;
+  /** Solo si se definió desde el punto blanco. */
+  penaltiesFor: number | null;
+  penaltiesAgainst: number | null;
+  result: "win" | "loss" | "draw";
+  isFinal: boolean;
 }
 
 export interface PodiumRow {
@@ -40,6 +72,19 @@ export interface TournamentHistory {
   champion: PodiumRow | null;
   podium: PodiumRow[];
   awards: AwardWinner[];
+  stats: TournamentStats;
+  /** Los partidos del campeón, en orden. Vacío si no hubo campeón. */
+  championPath: PathStep[];
+}
+
+/** Etiqueta corta del partido para el camino del campeón. Los nombres
+ *  largos de `STAGE_LABELS` no caben en un chip, y en fase de grupos lo
+ *  que ubica al lector es la fecha, no la palabra "grupos". */
+function pasoLabel(stage: MatchStage, week: number): string {
+  if (stage === "group") return `Fecha ${week}`;
+  if (stage === "semifinal") return "Semifinal";
+  if (stage === "third_place") return "3er puesto";
+  return "Final";
 }
 
 type AwardRow = {
@@ -47,7 +92,13 @@ type AwardRow = {
   kind: AwardKind;
   detail: string | null;
   player_id: string;
-  players: { full_name: string; photo_url: string | null } | null;
+  players: {
+    full_name: string;
+    photo_url: string | null;
+    photo_zoom: number | null;
+    photo_offset_x: number | null;
+    photo_offset_y: number | null;
+  } | null;
 };
 
 async function cargarPalmares(): Promise<TournamentHistory[]> {
@@ -68,11 +119,14 @@ async function cargarPalmares(): Promise<TournamentHistory[]> {
     // Todo de una, y se arma en memoria: una consulta por torneo sería
     // N+1 para una página que casi no cambia.
     const [matches, teams, roster, awards] = await Promise.all([
+      // Todos los terminados, no solo los de cierre: de ellos salen
+      // también las cifras del torneo y el camino del campeón, y son
+      // diez filas por torneo. Pedir dos veces lo mismo con filtros
+      // distintos costaría una consulta más para no ahorrar nada.
       supabase
         .from("matches")
         .select("*")
         .in("tournament_id", ids)
-        .in("stage", ["final", "third_place"])
         .eq("status", "finished"),
       supabase.from("teams").select("*").in("tournament_id", ids),
       // Para saber en qué equipo jugaba el premiado ese torneo: el
@@ -84,7 +138,9 @@ async function cargarPalmares(): Promise<TournamentHistory[]> {
         .in("tournament_id", ids),
       supabase
         .from("tournament_awards")
-        .select("*, players(full_name, photo_url)")
+        .select(
+          "*, players(full_name, photo_url, photo_zoom, photo_offset_x, photo_offset_y)",
+        )
         .in("tournament_id", ids),
     ]);
 
@@ -138,10 +194,67 @@ async function cargarPalmares(): Promise<TournamentHistory[]> {
         if (b) podium.push(b);
       }
 
+      // Las cifras del torneo salen de los mismos partidos ya traídos.
+      const stats: TournamentStats = {
+        teams: equipos.filter((t) => t.tournament_id === torneo.id).length,
+        matches: delTorneo.length,
+        goals: delTorneo.reduce(
+          (total, m) => total + (m.home_score ?? 0) + (m.away_score ?? 0),
+          0,
+        ),
+        players: planteles.filter((r) => r.tournament_id === torneo.id).length,
+      };
+
+      // El camino del campeón: sus partidos en orden. Cuenta la historia
+      // con datos en vez de prosa —arrancar perdiendo 0-7 y levantar la
+      // copa se ve solo— y sirve para cualquier campeón, no solo este.
+      const campeonId =
+        final && matchWinner(final)
+          ? matchWinner(final) === "home"
+            ? final.home_team_id
+            : final.away_team_id
+          : null;
+
+      const championPath: PathStep[] = !campeonId
+        ? []
+        : delTorneo
+            .filter(
+              (m) =>
+                m.home_team_id === campeonId || m.away_team_id === campeonId,
+            )
+            .sort((a, b) => a.week - b.week)
+            .map((m) => {
+              const deLocal = m.home_team_id === campeonId;
+              const rival = equipoPorId.get(
+                (deLocal ? m.away_team_id : m.home_team_id) ?? "",
+              );
+              const gana = matchWinner(m);
+              return {
+                label: pasoLabel(m.stage, m.week),
+                rivalName: rival?.name ?? "—",
+                rivalCrest: rival?.crest_url ?? null,
+                rivalColor: rival?.color ?? null,
+                goalsFor: (deLocal ? m.home_score : m.away_score) ?? 0,
+                goalsAgainst: (deLocal ? m.away_score : m.home_score) ?? 0,
+                penaltiesFor: (deLocal ? m.home_penalties : m.away_penalties) ?? null,
+                penaltiesAgainst:
+                  (deLocal ? m.away_penalties : m.home_penalties) ?? null,
+                result:
+                  gana === null
+                    ? ("draw" as const)
+                    : (gana === "home") === deLocal
+                      ? ("win" as const)
+                      : ("loss" as const),
+                isFinal: m.stage === "final",
+              };
+            });
+
       return {
         slug: torneo.slug,
         name: torneo.name,
         champion: podium[0] ?? null,
+        stats,
+        championPath,
         podium,
         awards: premios
           .filter((a) => a.tournament_id === torneo.id)
@@ -154,6 +267,9 @@ async function cargarPalmares(): Promise<TournamentHistory[]> {
               playerId: a.player_id,
               playerName: a.players?.full_name ?? "—",
               photoUrl: a.players?.photo_url ?? null,
+              photoZoom: a.players?.photo_zoom ?? null,
+              photoOffsetX: a.players?.photo_offset_x ?? null,
+              photoOffsetY: a.players?.photo_offset_y ?? null,
               teamName: equipo?.name ?? null,
               teamColor: equipo?.color ?? null,
               detail: a.detail,
