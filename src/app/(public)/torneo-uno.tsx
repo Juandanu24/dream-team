@@ -66,7 +66,7 @@ export async function TorneoUno() {
   ].filter((c) => c.valor > 0);
 
   return (
-    <section className="border-y border-border/60 bg-background/40">
+    <section className="border-y border-separator">
       <div className="mx-auto max-w-6xl px-4 py-16">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
           <div>
@@ -106,7 +106,7 @@ export async function TorneoUno() {
             color={campeon.color}
             className="size-24 drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:size-28"
           />
-          <p className="flex items-center gap-1.5 text-xs tracking-widest text-volt uppercase">
+          <p className="flex items-center gap-1.5 text-xs tracking-widest text-volt-text uppercase">
             <Trophy className="size-3.5" aria-hidden /> Campeón
           </p>
           {/* El color del equipo solo en oscuro. `readableAccent` aclara
@@ -125,11 +125,11 @@ export async function TorneoUno() {
         </Link>
 
         {/* Las cifras, subiendo al entrar en pantalla */}
-        <div className="animate-reveal mt-3 grid grid-cols-3 gap-3">
+        <div className="animate-reveal mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-xl bg-separator shadow-card">
           {cifras.map((cifra, i) => (
             <div
               key={cifra.rotulo}
-              className="flex flex-col items-center justify-center rounded-xl border border-border/60 bg-card/70 px-3 py-6"
+              className="flex flex-col items-center justify-center bg-card px-3 py-7"
             >
               <CountUp
                 to={cifra.valor}
@@ -178,7 +178,7 @@ export async function TorneoUno() {
               <Link
                 key={premio.kind}
                 href={`/jugador/${premio.playerId}`}
-                className="group flex items-center gap-4 rounded-xl border border-border/60 bg-card/70 p-4 transition-colors hover:border-dt-blue/50"
+                className="group flex items-center gap-4 rounded-xl bg-card p-4 shadow-card transition-transform hover:-translate-y-0.5"
               >
                 <PlayerPhoto
                   src={premio.photoUrl}
@@ -211,19 +211,15 @@ export async function TorneoUno() {
         ) : null}
 
         {/* Y de la nostalgia al presente: el que sigue está abierto */}
-        <div className="animate-reveal mt-10 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-volt/40 bg-volt/5 p-6">
+        <div className="animate-reveal mt-10 flex flex-wrap items-center justify-between gap-4 rounded-xl bg-volt-wash p-7">
           <p className="font-display text-2xl tracking-wide sm:text-3xl">
             AHORA VA EL SEGUNDO.
-            <span className="block text-volt sm:inline sm:ps-2">
+            <span className="block text-volt-text sm:inline sm:ps-2">
               ¿TE LO VAS A PERDER?
             </span>
           </p>
-          <Button
-            size="lg"
-            className="font-display text-xl tracking-wide"
-            asChild
-          >
-            <Link href="/inscripcion">QUIERO JUGAR</Link>
+          <Button size="lg" className="h-12 rounded-full px-7 text-base font-semibold" asChild>
+            <Link href="/inscripcion">Quiero jugar</Link>
           </Button>
         </div>
       </div>
@@ -240,18 +236,14 @@ function PasoDelCamino({ paso, acento }: { paso: PathStep; acento: string }) {
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-lg border px-3 py-2.5 sm:min-w-[8.5rem] sm:flex-col sm:items-start sm:gap-1.5",
-        paso.isFinal
-          ? "bg-card"
-          : gano
-            ? "border-border/60 bg-card/70"
-            : "border-border/40 bg-card/40",
+        "flex items-center gap-3 rounded-lg bg-card px-3 py-2.5 shadow-card sm:min-w-[8.5rem] sm:flex-col sm:items-start sm:gap-1.5",
+        paso.isFinal && "border",
       )}
       style={paso.isFinal ? { borderColor: `${acento}88` } : undefined}
     >
       <p className="flex w-[5.5rem] shrink-0 items-center gap-1 text-[10px] tracking-widest text-muted-foreground uppercase sm:w-auto">
         {paso.isFinal ? (
-          <Trophy className="size-3 text-volt" aria-hidden />
+          <Trophy className="size-3 text-volt-text" aria-hidden />
         ) : null}
         {paso.label}
       </p>

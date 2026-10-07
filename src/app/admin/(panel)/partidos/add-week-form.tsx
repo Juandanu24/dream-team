@@ -206,7 +206,7 @@ export function AddWeekForm({
         {filas.map((fila, i) => (
           <div key={fila.id} className="rounded-lg border border-border/60 p-3">
             <div className="flex flex-wrap items-end gap-3">
-              <span className="pb-2 font-display text-lg tracking-wide text-volt">
+              <span className="pb-2 font-display text-lg tracking-wide text-volt-text">
                 {i + 1}
               </span>
               <div className="min-w-40 flex-1 space-y-1">
@@ -302,7 +302,7 @@ export function AddWeekForm({
       {problemas.length > 0 ? (
         <p className="text-sm text-yellow-500">⚠️ {problemas.join(" · ")}</p>
       ) : listo ? (
-        <p className="text-sm text-volt">
+        <p className="text-sm text-volt-text">
           {descansan.length === 0
             ? "✓ Todos los equipos juegan una vez esta fecha"
             : `✓ Listo · descansan: ${descansan.map((t) => t.name).join(", ")}`}

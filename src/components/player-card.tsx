@@ -1,5 +1,6 @@
 import { UserRound } from "lucide-react";
 import { readableAccent } from "@/lib/team-color";
+import { formatHeight } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export interface PlayerCardProps {
@@ -8,6 +9,8 @@ export interface PlayerCardProps {
   positionShort: string;
   footLabel: string;
   memberSince: string;
+  /** En centímetros. Si no está, la carta sigue con dos datos. */
+  heightCm?: number | null;
   photoUrl?: string | null;
   teamName?: string | null;
   /** Color del equipo; si es muy oscuro se aclara para que se vea. */
@@ -31,6 +34,7 @@ export function PlayerCard({
   positionShort,
   footLabel,
   memberSince,
+  heightCm,
   photoUrl,
   teamName,
   teamColor,
@@ -40,6 +44,7 @@ export function PlayerCard({
   className,
 }: PlayerCardProps) {
   const accent = readableAccent(teamColor);
+  const estatura = formatHeight(heightCm);
 
   return (
     <div
@@ -173,7 +178,8 @@ export function PlayerCard({
 
         <div
           className={cn(
-            "grid grid-cols-2 gap-2 text-center",
+            "grid gap-2 text-center",
+            estatura ? "grid-cols-3" : "grid-cols-2",
             compact ? "mt-1.5" : "mt-3",
           )}
         >
@@ -213,6 +219,26 @@ export function PlayerCard({
               En el DT
             </p>
           </div>
+          {estatura ? (
+            <div>
+              <p
+                className={cn(
+                  "font-display text-foreground tabular-nums",
+                  compact ? "text-sm" : "text-xl",
+                )}
+              >
+                {estatura}
+              </p>
+              <p
+                className={cn(
+                  "tracking-widest text-muted-foreground uppercase",
+                  compact ? "text-[7px]" : "text-[10px]",
+                )}
+              >
+                Estatura
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {teamName ? (

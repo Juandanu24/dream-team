@@ -19,11 +19,11 @@ export default async function RegistrationPage() {
 
   return (
     <div className="relative mx-auto max-w-4xl overflow-hidden px-4 py-12">
-      <div className="animate-float pointer-events-none absolute -top-6 -right-10 size-32 text-volt/15 motion-reduce:animate-none sm:right-0 sm:size-40">
+      <div className="animate-float pointer-events-none absolute -top-6 -right-10 size-32 text-volt-text/15 motion-reduce:animate-none sm:right-0 sm:size-40">
         <InteractiveBall className="pointer-events-auto size-full" spinSeconds={30} />
       </div>
       <h1 className="font-display text-5xl tracking-wide sm:text-6xl">
-        SUMA TU <span className="text-volt">NOMBRE</span>
+        SUMA TU <span className="text-volt-text">NOMBRE</span>
       </h1>
 
       {open ? (
@@ -40,7 +40,7 @@ export default async function RegistrationPage() {
       ) : (
         <Card className="mt-8 border-border/60 bg-card/70">
           <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-            <Lock className="size-10 text-volt" aria-hidden />
+            <Lock className="size-10 text-volt-text" aria-hidden />
             <div>
               <h2 className="font-display text-3xl tracking-wide">
                 INSCRIPCIONES CERRADAS

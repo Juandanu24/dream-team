@@ -49,7 +49,7 @@ export function MatchScheduleRow({
       }
       className="flex flex-wrap items-center gap-2 border-b border-border/40 py-3 last:border-b-0"
     >
-      <Badge variant="outline" className="border-volt/50 text-volt">
+      <Badge variant="outline" className="border-volt/50 text-volt-text">
         {STAGE_LABELS[match.stage]}
       </Badge>
       <Input

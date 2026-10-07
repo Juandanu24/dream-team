@@ -18,7 +18,7 @@ export function SiteFooter() {
               className="h-9 w-auto"
             />
             <span className="font-display text-2xl tracking-wide">
-              DREAM <span className="text-volt">TEAM</span>
+              DREAM <span className="text-volt-text">TEAM</span>
             </span>
           </div>
           <p className="text-sm text-muted-foreground">

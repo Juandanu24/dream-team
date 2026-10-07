@@ -265,7 +265,7 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
           <span
             className={cn(
               "text-xs",
-              completa ? "text-volt" : "text-muted-foreground",
+              completa ? "text-volt-text" : "text-muted-foreground",
             )}
           >
             {Object.values(asignados).filter(Boolean).length}/{casillas.length}
@@ -434,7 +434,7 @@ export function LineupEditor({ target }: { target: EditorTarget }) {
       </div>
 
       {publicada ? (
-        <p className="flex items-center gap-1.5 text-xs text-volt">
+        <p className="flex items-center gap-1.5 text-xs text-volt-text">
           <Check className="size-3.5" aria-hidden />
           Publicada — ya se ve en la web y se notificó.
         </p>

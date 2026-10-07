@@ -32,6 +32,8 @@ import { submitRegistration } from "./actions";
 
 export function RegistrationForm() {
   const [fullName, setFullName] = useState("");
+  const [jerseyName, setJerseyName] = useState("");
+  const [height, setHeight] = useState("");
   const [email, setEmail] = useState("");
   const [age, setAge] = useState("");
   const [foot, setFoot] = useState<DominantFoot | "">("");
@@ -101,9 +103,15 @@ export function RegistrationForm() {
       toast.error("Elige tu pie dominante y tu posición");
       return;
     }
+    if (!jerseyName.trim()) {
+      toast.error("Escribe el nombre que va en la camiseta");
+      return;
+    }
 
     const formData = new FormData();
     formData.set("full_name", fullName);
+    formData.set("jersey_name", jerseyName);
+    formData.set("height_cm", height);
     formData.set("email", email);
     formData.set("age", age);
     formData.set("dominant_foot", foot);
@@ -126,8 +134,9 @@ export function RegistrationForm() {
   const card = (
     <TiltCard className="w-full max-w-[280px]">
       <PlayerCard
-        name={fullName}
+        name={jerseyName || fullName}
         age={age}
+        heightCm={height ? Number(height) : null}
         positionShort={position ? POSITION_SHORT[position] : ""}
         footLabel={foot ? FOOT_LABELS[foot] : ""}
         memberSince={memberSince}
@@ -140,10 +149,10 @@ export function RegistrationForm() {
   if (done) {
     return (
       <div className="flex flex-col items-center gap-6 py-8 text-center">
-        <CheckCircle2 className="size-12 text-volt" aria-hidden />
+        <CheckCircle2 className="size-12 text-volt-text" aria-hidden />
         <div>
           <h2 className="font-display text-4xl tracking-wide">
-            ¡QUEDASTE <span className="text-volt">INSCRITO!</span>
+            ¡QUEDASTE <span className="text-volt-text">INSCRITO!</span>
           </h2>
           <p className="mx-auto mt-2 max-w-md text-muted-foreground">
             Tu inscripción quedó <strong>pendiente de aprobación</strong>. Los
@@ -175,6 +184,20 @@ export function RegistrationForm() {
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="jersey_name">Nombre en la camiseta</Label>
+            <Input
+              id="jersey_name"
+              value={jerseyName}
+              onChange={(e) => setJerseyName(e.target.value)}
+              placeholder="Como te dicen en la cancha"
+              maxLength={20}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Este es el que sale en tu carta. Máximo 20 caracteres.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -195,6 +218,20 @@ export function RegistrationForm() {
               max={80}
               value={age}
               onChange={(e) => setAge(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="height_cm">Estatura (cm)</Label>
+            <Input
+              id="height_cm"
+              type="number"
+              inputMode="numeric"
+              min={120}
+              max={230}
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              placeholder="178"
               required
             />
           </div>
@@ -279,7 +316,7 @@ export function RegistrationForm() {
           <Label htmlFor="payment_proof">Comprobante de pago</Label>
           <p className="text-sm">
             La inscripción vale{" "}
-            <span className="font-display text-xl tracking-wide text-volt">
+            <span className="font-display text-xl tracking-wide text-volt-text">
               $12.000
             </span>
             . Paga y adjunta el pantallazo.
@@ -302,7 +339,7 @@ export function RegistrationForm() {
               {proof ? "Cambiar comprobante" : "Subir comprobante"}
             </Button>
             {proof ? (
-              <span className="flex items-center gap-1.5 text-xs text-volt">
+              <span className="flex items-center gap-1.5 text-xs text-volt-text">
                 <CheckCircle2 className="size-4" aria-hidden />
                 {proof.name.length > 28
                   ? `${proof.name.slice(0, 25)}…`

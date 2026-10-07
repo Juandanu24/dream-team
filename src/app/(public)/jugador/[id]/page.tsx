@@ -8,7 +8,12 @@ import { PlayerCard } from "@/components/player-card";
 import { TeamCrest } from "@/components/team-crest";
 import { TiltCard } from "@/components/tilt-card";
 import { getPlayerProfile } from "@/lib/player-profile";
-import { FOOT_LABELS, POSITION_LABELS, POSITION_SHORT } from "@/lib/types";
+import {
+  cardName,
+  FOOT_LABELS,
+  POSITION_LABELS,
+  POSITION_SHORT,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +60,7 @@ function Stat({
     <Card className="border-border/60 bg-card/70 py-0">
       <CardContent className="flex flex-col items-center gap-1 px-3 py-4">
         <Icon
-          className={accent ? "size-5 text-volt" : "size-5 text-dt-blue"}
+          className={accent ? "size-5 text-volt-text" : "size-5 text-dt-blue"}
           aria-hidden
         />
         <span className="font-display text-3xl tracking-wide">{value}</span>
@@ -87,8 +92,9 @@ export default async function PlayerPage({
   } = perfil;
 
   const card = {
-    name: player.full_name,
+    name: cardName(player),
     age: player.age,
+    heightCm: player.height_cm ?? null,
     positionShort: POSITION_SHORT[player.position],
     footLabel: FOOT_LABELS[player.dominant_foot],
     memberSince: player.member_since,
@@ -131,7 +137,7 @@ export default async function PlayerPage({
               {isCaptain ? (
                 <>
                   <span aria-hidden>·</span>
-                  <span className="text-volt">Capitán</span>
+                  <span className="text-volt-text">Capitán</span>
                 </>
               ) : null}
             </div>

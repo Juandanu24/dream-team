@@ -84,7 +84,7 @@ function MatchResult({
   if (!home || !away) {
     return (
       <div className="border-b border-border/40 py-4 text-sm text-muted-foreground last:border-b-0">
-        <Badge variant="outline" className="mr-2 border-volt/50 text-volt">
+        <Badge variant="outline" className="mr-2 border-volt/50 text-volt-text">
           {STAGE_LABELS[match.stage]}
         </Badge>
         Cruce sin definir — asígnalo en{" "}
@@ -144,7 +144,7 @@ function MatchResult({
   return (
     <div className="space-y-3 border-b border-border/40 py-4 last:border-b-0">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className="border-volt/50 text-volt">
+        <Badge variant="outline" className="border-volt/50 text-volt-text">
           {STAGE_LABELS[match.stage]}
         </Badge>
         {match.status === "finished" ? <Badge>Jugado</Badge> : null}
@@ -336,7 +336,7 @@ function MatchResult({
             <span className="flex-1 truncate">
               {group.name}
               {group.ids.length > 1 ? (
-                <span className="font-display text-volt"> ×{group.ids.length}</span>
+                <span className="font-display text-volt-text"> ×{group.ids.length}</span>
               ) : null}
               <span className="ml-2 text-xs text-muted-foreground">
                 {teams.find((t) => t.id === group.teamId)?.name}
@@ -438,7 +438,7 @@ export default async function AdminResultsPage() {
                     className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
                     aria-hidden
                   />
-                  <span className="font-display text-2xl tracking-wide text-volt">
+                  <span className="font-display text-2xl tracking-wide text-volt-text">
                     SEMANA {week}
                   </span>
                   <span className="text-xs text-muted-foreground">

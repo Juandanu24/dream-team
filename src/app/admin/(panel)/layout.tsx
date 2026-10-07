@@ -34,7 +34,7 @@ export default async function AdminLayout({
       href="/admin"
       className="shrink-0 font-display text-xl tracking-wide whitespace-nowrap"
     >
-      ADMIN <span className="text-volt">DT</span>
+      ADMIN <span className="text-volt-text">DT</span>
     </Link>
   );
 

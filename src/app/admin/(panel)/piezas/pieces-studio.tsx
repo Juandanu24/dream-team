@@ -882,7 +882,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
               ) : null}
               {busy ? (
                 <div className="absolute inset-0 grid place-items-center bg-black/50">
-                  <Loader2 className="size-8 animate-spin text-volt" aria-hidden />
+                  <Loader2 className="size-8 animate-spin text-volt-text" aria-hidden />
                 </div>
               ) : null}
               {missing ? (
@@ -1300,7 +1300,7 @@ export function PiecesStudio({ data }: { data: PiecesData }) {
             <Label htmlFor="caption">Texto del post</Label>
             <Button variant="ghost" size="sm" onClick={copyCaption}>
               {copied ? (
-                <Check className="text-volt" aria-hidden />
+                <Check className="text-volt-text" aria-hidden />
               ) : (
                 <Copy aria-hidden />
               )}

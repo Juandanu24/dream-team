@@ -19,6 +19,7 @@ export interface GalleryPlayer {
   positionShort: string;
   footLabel: string;
   memberSince: string;
+  heightCm: number | null;
   photoUrl: string | null;
   teamName: string;
   teamColor: string | null;
@@ -51,6 +52,7 @@ export function PlayersGallery({ players }: { players: GalleryPlayer[] }) {
       positionShort={player.positionShort}
       footLabel={player.footLabel}
       memberSince={player.memberSince}
+      heightCm={player.heightCm}
       photoUrl={player.photoUrl}
       teamName={player.teamName}
       teamColor={player.teamColor}

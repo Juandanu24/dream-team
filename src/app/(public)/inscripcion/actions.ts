@@ -7,6 +7,17 @@ import { ACTIVE_TOURNAMENT_SLUG } from "@/lib/types";
 
 const registrationSchema = z.object({
   full_name: z.string().trim().min(3, "Nombre muy corto").max(80),
+  // 20 caracteres es lo que cabe en la carta sin encogerse a ilegible.
+  jersey_name: z
+    .string()
+    .trim()
+    .min(1, "Escribe el nombre para la camiseta")
+    .max(20, "El nombre de la camiseta no puede pasar de 20 caracteres"),
+  height_cm: z.coerce
+    .number()
+    .int()
+    .min(120, "Revisa la estatura")
+    .max(230, "Revisa la estatura"),
   email: z.email("Email inválido").trim().toLowerCase(),
   age: z.coerce.number().int().min(10, "Edad mínima 10").max(80, "Edad máxima 80"),
   dominant_foot: z.enum(["right", "left", "both"]),
@@ -34,6 +45,8 @@ export async function submitRegistration(
 ): Promise<RegistrationResult> {
   const parsed = registrationSchema.safeParse({
     full_name: formData.get("full_name"),
+    jersey_name: formData.get("jersey_name"),
+    height_cm: formData.get("height_cm"),
     email: formData.get("email"),
     age: formData.get("age"),
     dominant_foot: formData.get("dominant_foot"),

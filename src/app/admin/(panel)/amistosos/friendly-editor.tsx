@@ -332,7 +332,7 @@ export function FriendlyEditor({
           <span
             className={cn(
               "text-xs",
-              puestos === casillas.length ? "text-volt" : "text-muted-foreground",
+              puestos === casillas.length ? "text-volt-text" : "text-muted-foreground",
             )}
           >
             {puestos}/{casillas.length}

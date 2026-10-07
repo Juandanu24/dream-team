@@ -29,6 +29,13 @@ export interface Player {
   dominant_foot: DominantFoot;
   position: PlayerPosition;
   member_since: string;
+  /** El que va en la carta. Nulo en los jugadores de antes de la
+   *  migración 00017: ahí manda `full_name`. El completo se sigue
+   *  guardando porque es con el que la organización identifica a la
+   *  persona; en la camiseta va el apodo, que es otra cosa. */
+  jersey_name?: string | null;
+  /** En centímetros enteros. Nulo = no lo dio. */
+  height_cm?: number | null;
   photo_url: string | null;
   /** Encuadre de la foto: cuánto acercarla y hacia dónde correrla dentro
    *  del marco de cada pieza. Opcionales porque llegaron en la migración
@@ -344,6 +351,22 @@ export const REGISTRATION_LABELS: Record<RegistrationStatus, string> = {
   approved: "Aprobado",
   rejected: "Rechazado",
 };
+
+/** El nombre que va en la carta: el de la camiseta si lo eligió, el
+ *  completo si no. La regla vive acá y no en cada vista, que es como se
+ *  desincroniza. */
+export function cardName(player: {
+  full_name: string;
+  jersey_name?: string | null;
+}): string {
+  return player.jersey_name?.trim() || player.full_name;
+}
+
+/** Estatura para mostrar: 178 → "1,78". Nulo si no la dio. */
+export function formatHeight(cm?: number | null): string | null {
+  if (!cm) return null;
+  return (cm / 100).toFixed(2).replace(".", ",");
+}
 
 // Slug del torneo activo (el que muestran la landing y la inscripción).
 // Se puede apuntar a otro torneo con NEXT_PUBLIC_TOURNAMENT_SLUG, que es
