@@ -371,5 +371,15 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   seguía con `check (week between 1 and 10)` de la 00001, así que zod dejaba
   pasar y Postgres rechazaba con un 23514 que la interfaz no traduce. Lo
   corrige la migración 00018.
+- **El panel del admin dice qué FALTA, no solo qué hay.** La tarjeta de la
+  fecha (`getFechaDeHoy`) deriva una lista de chequeo de `matches`,
+  `lineups`, `match_events` y `team_of_week`: anuncio por push, una
+  alineación por equipo y partido —distinguiendo borrador de publicada—,
+  marcador, figura y once ideal. Sale de que en el torneo 1 se quedaron
+  sin hacer cinco cosas distintas y no había pantalla que lo dijera.
+  Respeta la regla de los goles sin autor: solo avisa si hay ALGUNOS
+  cargados, porque cero autores en un 10-6 es una decisión válida.
+  Y lo que todavía no toca sale en gris, no en amarillo: un partido sin
+  jugar no tiene "marcador pendiente".
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.
