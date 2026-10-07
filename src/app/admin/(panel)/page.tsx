@@ -29,7 +29,7 @@ export default async function AdminHomePage() {
     return (
       <div>
         <h1 className="font-display text-4xl tracking-wide">
-          PANEL DEL <span className="text-volt">TORNEO</span>
+          PANEL DEL <span className="text-volt-text">TORNEO</span>
         </h1>
         <p className="mt-4 text-sm text-muted-foreground">
           No se pudo leer la base de datos. ¿Ya configuraste Supabase y el
@@ -79,7 +79,7 @@ export default async function AdminHomePage() {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-4xl tracking-wide">
-          PANEL DEL <span className="text-volt">TORNEO</span>
+          PANEL DEL <span className="text-volt-text">TORNEO</span>
         </h1>
         <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {tiles.map((tile) => (
@@ -90,7 +90,7 @@ export default async function AdminHomePage() {
                 }`}
               >
                 <CardContent className="px-5 py-2">
-                  <tile.icon className="size-5 text-volt" aria-hidden />
+                  <tile.icon className="size-5 text-volt-text" aria-hidden />
                   <p className="mt-3 font-display text-4xl">{tile.value}</p>
                   <p className="text-sm text-muted-foreground">{tile.label}</p>
                 </CardContent>
@@ -126,13 +126,13 @@ export default async function AdminHomePage() {
                     <TableHead className="text-center">E</TableHead>
                     <TableHead className="text-center">P</TableHead>
                     <TableHead className="text-center">DG</TableHead>
-                    <TableHead className="text-center text-volt">PTS</TableHead>
+                    <TableHead className="text-center text-volt-text">PTS</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {standings.map((row, i) => (
                     <TableRow key={row.team_id}>
-                      <TableCell className="font-display text-lg text-volt">
+                      <TableCell className="font-display text-lg text-volt-text">
                         {i + 1}
                       </TableCell>
                       <TableCell className="font-medium">
@@ -153,7 +153,7 @@ export default async function AdminHomePage() {
                       <TableCell className="text-center">{row.drawn}</TableCell>
                       <TableCell className="text-center">{row.lost}</TableCell>
                       <TableCell className="text-center">{row.goal_diff}</TableCell>
-                      <TableCell className="text-center font-display text-lg text-volt">
+                      <TableCell className="text-center font-display text-lg text-volt-text">
                         {row.points}
                       </TableCell>
                     </TableRow>
@@ -168,7 +168,7 @@ export default async function AdminHomePage() {
         <Card className="border-border/60 bg-card/70">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
-              <Goal className="size-5 text-volt" aria-hidden />
+              <Goal className="size-5 text-volt-text" aria-hidden />
               GOLEADORES
             </CardTitle>
           </CardHeader>
@@ -180,7 +180,7 @@ export default async function AdminHomePage() {
             ) : (
               scorers.slice(0, 8).map((scorer, i) => (
                 <div key={scorer.player_id} className="flex items-center gap-3">
-                  <span className="w-5 font-display text-lg text-volt">
+                  <span className="w-5 font-display text-lg text-volt-text">
                     {i + 1}
                   </span>
                   <Avatar className="size-8">
@@ -195,7 +195,7 @@ export default async function AdminHomePage() {
                       {scorer.team_name}
                     </span>
                   </span>
-                  <span className="font-display text-2xl text-volt">
+                  <span className="font-display text-2xl text-volt-text">
                     {scorer.goals}
                   </span>
                 </div>
@@ -222,7 +222,7 @@ export default async function AdminHomePage() {
                   key={match.id}
                   className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
                 >
-                  <span className="w-36 shrink-0 text-xs text-volt uppercase">
+                  <span className="w-36 shrink-0 text-xs text-volt-text uppercase">
                     {STAGE_LABELS[match.stage]}
                   </span>
                   <span className="flex-1">

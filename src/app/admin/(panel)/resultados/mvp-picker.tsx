@@ -36,7 +36,7 @@ export function MvpPicker({
         {pending ? (
           <Loader2 className="size-3.5 animate-spin" aria-hidden />
         ) : (
-          <Trophy className="size-3.5 text-volt" aria-hidden />
+          <Trophy className="size-3.5 text-volt-text" aria-hidden />
         )}
         Figura del partido
       </Label>

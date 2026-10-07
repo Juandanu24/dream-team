@@ -71,7 +71,7 @@ export function PaymentProofButton({
         variant="ghost"
         disabled={pending}
         title={verificado ? "Pago verificado — quitar" : "Marcar el pago como verificado"}
-        className={cn(verificado && "text-volt")}
+        className={cn(verificado && "text-volt-text")}
         onClick={() =>
           startTransition(async () => {
             try {

@@ -219,7 +219,7 @@ export function TotwEditor({
             <span
               className={cn(
                 "text-xs",
-                completo ? "text-volt" : "text-muted-foreground",
+                completo ? "text-volt-text" : "text-muted-foreground",
               )}
             >
               {puestos}/{casillas.length}
@@ -337,7 +337,7 @@ export function TotwEditor({
         </div>
 
         {publicado ? (
-          <p className="flex items-center gap-1.5 text-xs text-volt">
+          <p className="flex items-center gap-1.5 text-xs text-volt-text">
             <Check className="size-3.5" aria-hidden />
             Publicado — ya se ve en la web y se avisó.
           </p>

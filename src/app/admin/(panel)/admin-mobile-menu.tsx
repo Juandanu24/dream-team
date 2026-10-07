@@ -31,7 +31,7 @@ export function AdminMobileMenu() {
       <SheetContent side="right" className="w-64">
         <SheetHeader>
           <SheetTitle className="font-display text-2xl tracking-wide">
-            ADMIN <span className="text-volt">DT</span>
+            ADMIN <span className="text-volt-text">DT</span>
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-4">

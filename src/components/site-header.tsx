@@ -42,7 +42,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-separator bg-material">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex shrink-0 items-center">
@@ -110,7 +110,7 @@ export function SiteHeader() {
             <SheetContent side="right" className="w-64">
               <SheetHeader>
                 <SheetTitle className="font-display text-2xl tracking-wide">
-                  DREAM <span className="text-volt">TEAM</span>
+                  DREAM <span className="text-volt-text">TEAM</span>
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-4">

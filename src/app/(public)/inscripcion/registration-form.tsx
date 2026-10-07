@@ -149,10 +149,10 @@ export function RegistrationForm() {
   if (done) {
     return (
       <div className="flex flex-col items-center gap-6 py-8 text-center">
-        <CheckCircle2 className="size-12 text-volt" aria-hidden />
+        <CheckCircle2 className="size-12 text-volt-text" aria-hidden />
         <div>
           <h2 className="font-display text-4xl tracking-wide">
-            ¡QUEDASTE <span className="text-volt">INSCRITO!</span>
+            ¡QUEDASTE <span className="text-volt-text">INSCRITO!</span>
           </h2>
           <p className="mx-auto mt-2 max-w-md text-muted-foreground">
             Tu inscripción quedó <strong>pendiente de aprobación</strong>. Los
@@ -316,7 +316,7 @@ export function RegistrationForm() {
           <Label htmlFor="payment_proof">Comprobante de pago</Label>
           <p className="text-sm">
             La inscripción vale{" "}
-            <span className="font-display text-xl tracking-wide text-volt">
+            <span className="font-display text-xl tracking-wide text-volt-text">
               $12.000
             </span>
             . Paga y adjunta el pantallazo.
@@ -339,7 +339,7 @@ export function RegistrationForm() {
               {proof ? "Cambiar comprobante" : "Subir comprobante"}
             </Button>
             {proof ? (
-              <span className="flex items-center gap-1.5 text-xs text-volt">
+              <span className="flex items-center gap-1.5 text-xs text-volt-text">
                 <CheckCircle2 className="size-4" aria-hidden />
                 {proof.name.length > 28
                   ? `${proof.name.slice(0, 25)}…`

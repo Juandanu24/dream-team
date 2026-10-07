@@ -117,10 +117,10 @@ export default async function AdminFixturePage() {
                   return (
                     <Card key={week} className="border-border/60 bg-card/70">
                       <CardHeader>
-                        <CardTitle className="flex flex-wrap items-center gap-2 font-display text-2xl tracking-wide text-volt">
+                        <CardTitle className="flex flex-wrap items-center gap-2 font-display text-2xl tracking-wide text-volt-text">
                           SEMANA {week}
                           {issues.length === 0 ? (
-                            <span className="text-xs font-normal text-volt/80">
+                            <span className="text-xs font-normal text-volt-text/80">
                               ✓ Juegan los {teams.length}
                             </span>
                           ) : (

@@ -111,8 +111,27 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
 - **Dos acentos con roles fijos**, para que no compitan: `--volt` es ACCIÓN y
   presente (inscríbete, gol, en vivo, campeón); `--dt-blue` es INFORMACIÓN y
   navegación (enlaces, tabs, fechas, asistencias, datos secundarios).
-  Los colores del logo no se usan literales: el azul #015EF8 da 3.73:1 sobre el
-  negro y 4.90:1 sobre el claro, o sea que no pasa AA en ninguno de los dos.
+- **El lima y el cian son RELLENO, nunca texto.** `--volt` vale `#d4f000` en
+  los dos temas porque siempre lleva tinta oscura encima (14.37:1). Como
+  letra sobre blanco daría 1.29:1, así que para lima en texto está
+  **`--volt-text`** (`#4f6600` en claro, 6.50:1; el mismo lima en oscuro).
+  Usar `text-volt` en vez de `text-volt-text` deja el texto ilegible en el
+  tema claro y el compilador no lo detecta: ya pasó.
+- **Cada tema se queda con un extremo del trazo del logo.** El monograma va
+  de azul a cian: oscuro usa el cian `#35D2E8` (10.82:1), claro usa el azul
+  eléctrico `#0A3FE8` (7.27:1 sobre blanco), que es el color real de la D.
+  El azul se había descartado entero por dar 3.71:1 sobre negro — el error
+  era tratarlo como token único en vez de dejarlo cambiar de familia.
+- **Las capas se separan por valor, no por borde.** `#FFFFFF` sobre
+  `#EBEEF4` da 1.16:1, suficiente para que una tarjeta exista sin contorno.
+  El fondo claro viejo (`#f1ede4` con tarjetas `#fbf9f5`) daba 1.06:1, y por
+  eso había que ponerle borde a todo: no sobraba borde, faltaba escalón.
+  Las tarjetas van `bg-card shadow-card` sin borde; `shadow-card` son dos
+  sombras suaves en claro y un filo de luz interior en oscuro, que es como
+  iOS levanta una superficie sobre negro. `--separator` es la línea capilar.
+- **Las piezas de canvas NO leen los colores de `globals.css`** — solo las
+  variables de fuente. Sus hexes son propios y viven en `post-image.ts`, así
+  que cambiar el tema de la web no mueve lo ya publicado en Instagram.
 - Las imágenes para redes se dibujan en canvas en el navegador
   (`src/lib/post-image.ts`, igual que `card-image.ts`) porque así usan las
   fuentes reales de next/font; un script de Node no las tiene. Los bloques

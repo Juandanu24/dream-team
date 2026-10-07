@@ -78,10 +78,10 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         {/* Balones flotando, como en el flyer. Se pueden patear 👟 */}
-        <div className="animate-float absolute top-14 -right-8 size-28 text-volt/50 drop-shadow-[0_0_18px_rgba(204,255,0,0.25)] motion-reduce:animate-none sm:top-20 sm:right-6 sm:size-44 lg:right-24">
+        <div className="animate-float absolute top-14 -right-8 size-28 text-volt-text/50 drop-shadow-[0_0_18px_rgba(204,255,0,0.25)] motion-reduce:animate-none sm:top-20 sm:right-6 sm:size-44 lg:right-24">
           <InteractiveBall className="size-full" spinSeconds={26} />
         </div>
-        <div className="animate-float absolute bottom-8 -left-10 size-24 text-volt/20 [animation-delay:-2.5s] motion-reduce:animate-none sm:left-4 sm:size-32">
+        <div className="animate-float absolute bottom-8 -left-10 size-24 text-volt-text/20 [animation-delay:-2.5s] motion-reduce:animate-none sm:left-4 sm:size-32">
           <InteractiveBall className="size-full" spinSeconds={34} reverse />
         </div>
         <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center sm:pt-28">
@@ -92,23 +92,23 @@ export default async function HomePage() {
           ) : null}
           <h1 className="mt-6 font-display text-7xl leading-none tracking-wide sm:text-9xl">
             DREAM
-            <span className="block -skew-x-6 text-volt drop-shadow-[0_0_35px_rgba(204,255,0,0.35)]">
+            <span className="block -skew-x-6 text-volt-text drop-shadow-[0_0_35px_rgba(204,255,0,0.35)]">
               TEAM
             </span>
           </h1>
           <p className="mt-6 font-display text-2xl tracking-widest text-foreground/90 sm:text-3xl">
-            UN TORNEO. UN EQUIPO. <span className="text-volt">UN SUEÑO.</span>
+            UN TORNEO. UN EQUIPO. <span className="text-volt-text">UN SUEÑO.</span>
           </p>
           <p className="mt-3 max-w-xl text-muted-foreground">
             Ven a ser parte del mejor torneo: fútbol 9 —8 en cancha más arquero
             fijo— todos los martes y jueves en Montería.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button size="lg" className="font-display text-xl tracking-wide" asChild>
-              <Link href="/inscripcion">INSCRÍBETE AHORA</Link>
+            <Button size="lg" className="h-12 rounded-full px-7 text-base font-semibold" asChild>
+              <Link href="/inscripcion">Inscríbete ahora</Link>
             </Button>
-            <Button size="lg" variant="outline" className="font-display text-xl tracking-wide" asChild>
-              <Link href="/torneo">VER EL TORNEO</Link>
+            <Button size="lg" variant="outline" className="h-12 rounded-full px-7 text-base font-semibold" asChild>
+              <Link href="/torneo">Ver el torneo</Link>
             </Button>
           </div>
         </div>
@@ -121,9 +121,9 @@ export default async function HomePage() {
       <section className="mx-auto max-w-6xl px-4 pb-16">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {stats.map((stat) => (
-            <Card key={stat.title} className="border-border/60 bg-card/70">
+            <Card key={stat.title} className="bg-card shadow-card ring-0">
               <CardContent className="flex flex-col items-center gap-2 px-4 py-2 text-center">
-                <stat.icon className="size-7 text-volt" aria-hidden />
+                <stat.icon className="size-7 text-volt-text" aria-hidden />
                 <p className="font-display text-2xl tracking-wide">{stat.title}</p>
                 <p className="text-sm text-muted-foreground">{stat.detail}</p>
               </CardContent>
@@ -137,18 +137,18 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 lg:grid-cols-[1fr_320px]">
           <div>
             <h2 className="font-display text-4xl tracking-wide sm:text-5xl">
-              CÓMO <span className="text-volt">FUNCIONA</span>
+              CÓMO <span className="text-volt-text">FUNCIONA</span>
             </h2>
             <div className="mt-8 space-y-3">
               {howItWorks.map((item, i) => (
-                <Card key={item.title} className="border-border/60 bg-card/70 py-4">
+                <Card key={item.title} className="bg-card py-4 shadow-card ring-0">
                   <CardContent className="flex items-start gap-4 px-5">
-                    <span className="font-display text-4xl leading-none text-volt/40">
+                    <span className="font-display text-4xl leading-none text-volt-text/40">
                       {i + 1}
                     </span>
                     <div>
                       <h3 className="flex items-center gap-2 font-display text-2xl tracking-wide">
-                        <item.icon className="size-5 text-volt" aria-hidden />
+                        <item.icon className="size-5 text-volt-text" aria-hidden />
                         {item.title}
                       </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -163,7 +163,7 @@ export default async function HomePage() {
             {/* Decir el formato antes de tiempo es prometer algo que
                 todavía no se sabe: con cuatro equipos no es el mismo
                 torneo que con ocho. */}
-            <Card className="mt-3 border-dt-blue/40 bg-card/70 py-4">
+            <Card className="mt-3 bg-accent py-4 ring-0">
               <CardContent className="flex items-start gap-3 px-5">
                 <CalendarDays className="mt-0.5 size-5 shrink-0 text-dt-blue" aria-hidden />
                 <p className="text-sm text-muted-foreground">
@@ -188,7 +188,7 @@ export default async function HomePage() {
             <h2 className="font-display text-4xl tracking-wide">
               ¿CUÁNDO<span className="text-dt-blue">?</span>
             </h2>
-            <Card className="border-dt-blue/40 bg-card/70">
+            <Card className="bg-card shadow-card ring-0">
               <CardContent className="space-y-4 px-5 py-2">
                 <div className="flex items-center gap-3">
                   <Clock className="size-6 shrink-0 text-dt-blue" aria-hidden />
@@ -221,7 +221,7 @@ export default async function HomePage() {
               </CardContent>
             </Card>
             <p className="text-center font-display text-xl tracking-widest text-muted-foreground">
-              PASIÓN, AMISTAD Y <span className="text-volt">BUEN FÚTBOL</span>
+              PASIÓN, AMISTAD Y <span className="text-volt-text">BUEN FÚTBOL</span>
             </p>
           </aside>
         </div>
@@ -232,10 +232,10 @@ export default async function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 py-16 text-center">
           <h2 className="font-display text-4xl tracking-wide sm:text-6xl">
             SUMA TU NOMBRE A TU EQUIPO
-            <span className="block -skew-x-6 text-volt">¡Y VAMOS POR TODO!</span>
+            <span className="block -skew-x-6 text-volt-text">¡Y VAMOS POR TODO!</span>
           </h2>
-          <Button size="lg" className="font-display text-xl tracking-wide" asChild>
-            <Link href="/inscripcion">QUIERO JUGAR</Link>
+          <Button size="lg" className="h-12 rounded-full px-7 text-base font-semibold" asChild>
+            <Link href="/inscripcion">Quiero jugar</Link>
           </Button>
         </div>
       </section>

@@ -27,7 +27,7 @@ export function PenaltyLeaderboard({
           <span
             className={cn(
               "w-6 text-center font-display text-lg",
-              i < 3 ? "text-base" : "text-volt",
+              i < 3 ? "text-base" : "text-volt-text",
             )}
           >
             {MEDALS[i] ?? i + 1}
@@ -44,7 +44,7 @@ export function PenaltyLeaderboard({
               {row.attempts} {row.attempts === 1 ? "intento" : "intentos"}
             </span>
           </span>
-          <span className="flex items-center gap-1 font-display text-2xl text-volt">
+          <span className="flex items-center gap-1 font-display text-2xl text-volt-text">
             {row.best_score}
             <Trophy className="size-4" aria-hidden />
           </span>

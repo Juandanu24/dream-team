@@ -216,9 +216,9 @@ export function PenaltyGame({
         </div>
         {personalBest !== null ? (
           <p className="flex items-center gap-1.5 pb-2 text-sm text-muted-foreground">
-            <Trophy className="size-4 text-volt" aria-hidden />
+            <Trophy className="size-4 text-volt-text" aria-hidden />
             Tu récord:{" "}
-            <span className="font-display text-lg text-volt">{personalBest}</span>
+            <span className="font-display text-lg text-volt-text">{personalBest}</span>
             /{SHOTS_PER_ROUND}
           </p>
         ) : null}
@@ -302,7 +302,7 @@ export function PenaltyGame({
             <p
               className={cn(
                 "animate-pop font-display text-6xl tracking-wide drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)] sm:text-8xl",
-                lastOutcome === "goal" ? "text-volt" : "text-white",
+                lastOutcome === "goal" ? "text-volt-text" : "text-white",
               )}
             >
               {outcomeLabel(lastOutcome)}
@@ -334,7 +334,7 @@ export function PenaltyGame({
         {/* Pantalla final */}
         {phase === "finished" ? (
           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/70 px-4 text-center backdrop-blur-sm">
-            <p className="font-display text-7xl text-volt sm:text-8xl">
+            <p className="font-display text-7xl text-volt-text sm:text-8xl">
               {score}/{SHOTS_PER_ROUND}
             </p>
             <p className="max-w-sm text-sm text-white/90">{scoreComment(score)}</p>
@@ -364,7 +364,7 @@ export function PenaltyGame({
         <CardContent className="px-5 py-2 text-sm text-muted-foreground">
           Toca la zona del arco a la que quieres patear. El arquero se mueve de
           lado a lado: aprovecha cuando se abra de un palo. Ojo, que{" "}
-          <span className="text-volt">te va aprendiendo las mañas</span> — si
+          <span className="text-volt-text">te va aprendiendo las mañas</span> — si
           siempre tiras al mismo lado, te la va a adivinar. Los ángulos altos
           son más difíciles de atajar, pero también más fáciles de mandar afuera.
         </CardContent>

@@ -215,7 +215,7 @@ export default async function AdminTeamsPage() {
                           }
                           className={
                             entry.is_captain
-                              ? "font-display text-base text-volt"
+                              ? "font-display text-base text-volt-text"
                               : "font-display text-base text-muted-foreground/40 hover:text-foreground"
                           }
                         >

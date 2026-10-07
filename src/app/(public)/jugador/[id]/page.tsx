@@ -60,7 +60,7 @@ function Stat({
     <Card className="border-border/60 bg-card/70 py-0">
       <CardContent className="flex flex-col items-center gap-1 px-3 py-4">
         <Icon
-          className={accent ? "size-5 text-volt" : "size-5 text-dt-blue"}
+          className={accent ? "size-5 text-volt-text" : "size-5 text-dt-blue"}
           aria-hidden
         />
         <span className="font-display text-3xl tracking-wide">{value}</span>
@@ -137,7 +137,7 @@ export default async function PlayerPage({
               {isCaptain ? (
                 <>
                   <span aria-hidden>·</span>
-                  <span className="text-volt">Capitán</span>
+                  <span className="text-volt-text">Capitán</span>
                 </>
               ) : null}
             </div>

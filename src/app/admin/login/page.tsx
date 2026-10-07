@@ -19,9 +19,9 @@ export default function AdminLoginPage() {
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4">
       <Card className="w-full max-w-sm border-border/60 bg-card/80">
         <CardHeader className="text-center">
-          <ShieldCheck className="mx-auto size-8 text-volt" aria-hidden />
+          <ShieldCheck className="mx-auto size-8 text-volt-text" aria-hidden />
           <CardTitle className="font-display text-3xl tracking-wide">
-            ADMIN <span className="text-volt">DREAM TEAM</span>
+            ADMIN <span className="text-volt-text">DREAM TEAM</span>
           </CardTitle>
         </CardHeader>
         <CardContent>

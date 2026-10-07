@@ -49,7 +49,7 @@ export function TournamentStatusCard({ status }: { status: TournamentStatus }) {
             >
               <input type="hidden" name="status" value={option.value} />
               <option.icon
-                className={active ? "size-5 text-volt" : "size-5 text-muted-foreground"}
+                className={active ? "size-5 text-volt-text" : "size-5 text-muted-foreground"}
                 aria-hidden
               />
               <div className="min-w-0 flex-1">
@@ -57,7 +57,7 @@ export function TournamentStatusCard({ status }: { status: TournamentStatus }) {
                   {option.label}
                   {active ? (
                     <CheckCircle2
-                      className="ml-1.5 inline size-4 text-volt"
+                      className="ml-1.5 inline size-4 text-volt-text"
                       aria-label="Estado actual"
                     />
                   ) : null}

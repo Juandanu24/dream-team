@@ -25,7 +25,7 @@ export default async function HistoriaPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-16">
       <h1 className="font-display text-5xl tracking-wide sm:text-6xl">
-        PAL<span className="text-volt">MARÉS</span>
+        PAL<span className="text-volt-text">MARÉS</span>
       </h1>
       <p className="mt-3 max-w-prose text-sm text-muted-foreground">
         Todo lo que ha pasado en el Dream Team, torneo por torneo. Acá quedan
@@ -71,7 +71,7 @@ export default async function HistoriaPage() {
                         className="size-20 shrink-0"
                       />
                       <div className="min-w-0">
-                        <p className="flex items-center gap-1.5 text-xs tracking-widest text-volt uppercase">
+                        <p className="flex items-center gap-1.5 text-xs tracking-widest text-volt-text uppercase">
                           <Trophy className="size-3.5" aria-hidden /> Campeón
                         </p>
                         <p className="font-display text-3xl tracking-wide sm:text-4xl">

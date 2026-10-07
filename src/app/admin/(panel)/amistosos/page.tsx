@@ -108,7 +108,7 @@ export default async function AmistososPage() {
                       className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
                       aria-hidden
                     />
-                    <span className="font-display text-2xl tracking-wide text-volt">
+                    <span className="font-display text-2xl tracking-wide text-volt-text">
                       {friendly.title.toUpperCase()}
                     </span>
                     <span className="text-xs text-muted-foreground capitalize">

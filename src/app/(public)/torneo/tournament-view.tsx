@@ -116,7 +116,7 @@ function MatchRow({
             {teamName(teams, match.home_team_id)}
           </span>
           {match.status === "finished" ? (
-            <span className="font-display text-2xl text-volt">
+            <span className="font-display text-2xl text-volt-text">
               {match.home_score} - {match.away_score}
             </span>
           ) : (
@@ -134,11 +134,11 @@ function MatchRow({
       ) : null}
       {mvp ? (
         <p className="mt-1 flex items-center justify-center gap-1.5 text-xs sm:pl-44">
-          <Trophy className="size-3.5 text-volt" aria-hidden />
+          <Trophy className="size-3.5 text-volt-text" aria-hidden />
           <span className="text-muted-foreground">Figura:</span>
           <Link
             href={`/jugador/${mvp.id}`}
-            className="font-medium text-volt underline-offset-4 hover:underline"
+            className="font-medium text-volt-text underline-offset-4 hover:underline"
           >
             {mvp.full_name}
           </Link>
@@ -177,8 +177,8 @@ function TeamOfWeekBlock({ totw }: { totw: TeamOfWeekWithPlayers }) {
   return (
     <div className="mt-4 rounded-md border border-volt/40 bg-volt/5 p-4">
       <div className="flex items-center gap-2">
-        <Star className="size-4 text-volt" aria-hidden />
-        <span className="font-display text-lg tracking-wide text-volt">
+        <Star className="size-4 text-volt-text" aria-hidden />
+        <span className="font-display text-lg tracking-wide text-volt-text">
           ONCE IDEAL DE LA FECHA
         </span>
         <span className="ml-auto text-xs text-dt-blue">{totw.formation}</span>
@@ -253,7 +253,7 @@ function LineupBlock({
         ) : null}
       </dl>
       {lineup.notes ? (
-        <p className="mt-2 border-t border-border/40 pt-2 text-xs text-volt">
+        <p className="mt-2 border-t border-border/40 pt-2 text-xs text-volt-text">
           {lineup.notes}
         </p>
       ) : null}
@@ -287,7 +287,7 @@ export async function TournamentView({
     return (
       <div className="mx-auto max-w-4xl px-4 py-16">
         <h1 className="font-display text-5xl tracking-wide">
-          EL <span className="text-volt">TORNEO</span>
+          EL <span className="text-volt-text">TORNEO</span>
         </h1>
         <div className="mt-8">
           <EmptyNote>
@@ -358,14 +358,14 @@ export async function TournamentView({
 
   return (
     <div className="relative mx-auto max-w-5xl overflow-hidden px-4 py-12">
-      <div className="animate-float pointer-events-none absolute -top-4 -right-12 size-32 text-volt/15 motion-reduce:animate-none sm:right-0 sm:size-40">
+      <div className="animate-float pointer-events-none absolute -top-4 -right-12 size-32 text-volt-text/15 motion-reduce:animate-none sm:right-0 sm:size-40">
         <InteractiveBall className="pointer-events-auto size-full" spinSeconds={32} />
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-display text-5xl tracking-wide">
           {tournament.name.toUpperCase()}
         </h1>
-        <Badge variant="outline" className="border-volt/50 text-volt">
+        <Badge variant="outline" className="border-volt/50 text-volt-text">
           {tournament.status === "registration"
             ? "Inscripciones abiertas"
             : tournament.status === "in_progress"
@@ -439,13 +439,13 @@ export async function TournamentView({
                       <TableHead className="text-center">DG</TableHead>
                       <TableHead className="hidden text-center sm:table-cell">🟨</TableHead>
                       <TableHead className="hidden text-center sm:table-cell">🟥</TableHead>
-                      <TableHead className="text-center text-volt">PTS</TableHead>
+                      <TableHead className="text-center text-volt-text">PTS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {standings.map((row, i) => (
                       <TableRow key={row.team_id}>
-                        <TableCell className="font-display text-lg text-volt">
+                        <TableCell className="font-display text-lg text-volt-text">
                           {i + 1}
                         </TableCell>
                         <TableCell className="font-medium">
@@ -478,7 +478,7 @@ export async function TournamentView({
                         <TableCell className="hidden text-center sm:table-cell">
                           {row.red_cards ?? 0}
                         </TableCell>
-                        <TableCell className="text-center font-display text-lg text-volt">
+                        <TableCell className="text-center font-display text-lg text-volt-text">
                           {row.points}
                         </TableCell>
                       </TableRow>
@@ -504,7 +504,7 @@ export async function TournamentView({
             weeks.map((week) => (
               <Card key={week} className="border-border/60 bg-card/70">
                 <CardHeader>
-                  <CardTitle className="font-display text-2xl tracking-wide text-volt">
+                  <CardTitle className="font-display text-2xl tracking-wide text-volt-text">
                     SEMANA {week}
                   </CardTitle>
                 </CardHeader>
@@ -566,7 +566,7 @@ export async function TournamentView({
           <Card className="border-border/60 bg-card/70">
             <CardHeader>
               <CardTitle className="flex flex-wrap items-center gap-2 font-display text-2xl tracking-wide">
-                <Target className="size-5 text-volt" aria-hidden />
+                <Target className="size-5 text-volt-text" aria-hidden />
                 RETO DE PENALES
                 <Link
                   href="/penales"
@@ -586,7 +586,7 @@ export async function TournamentView({
           <Card className="border-border/60 bg-card/70">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
-                <Goal className="size-5 text-volt" aria-hidden />
+                <Goal className="size-5 text-volt-text" aria-hidden />
                 GOLEADORES
               </CardTitle>
             </CardHeader>
@@ -598,7 +598,7 @@ export async function TournamentView({
               ) : (
                 scorers.map((scorer, i) => (
                   <div key={scorer.player_id} className="flex items-center gap-3">
-                    <span className="w-6 font-display text-lg text-volt">
+                    <span className="w-6 font-display text-lg text-volt-text">
                       {i + 1}
                     </span>
                     <Avatar className="size-8">
@@ -613,7 +613,7 @@ export async function TournamentView({
                         {scorer.team_name}
                       </span>
                     </span>
-                    <span className="font-display text-2xl text-volt">
+                    <span className="font-display text-2xl text-volt-text">
                       {scorer.goals}
                     </span>
                   </div>

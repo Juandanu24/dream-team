@@ -11,6 +11,11 @@
   --font-display: var(--font-bebas);
   --font-heading: var(--font-bebas);
   --color-volt: var(--volt);
+  --color-volt-text: var(--volt-text);
+  --color-volt-wash: var(--volt-wash);
+  --color-gold: var(--gold);
+  --color-surface-2: var(--surface-2);
+  --color-separator: var(--separator);
   --color-dt-blue: var(--dt-blue);
   --color-dt-blue-soft: var(--dt-blue-soft);
   --color-dt-blue-ink: var(--dt-blue-ink);
@@ -54,97 +59,152 @@
 
 /*
  * Paleta sacada del logo, en dos temas anclados al OS (next-themes pone la
- * clase). Dos mundos distintos a propósito:
- *   dark  = noche de estadio — el logo tal cual: neón sobre negro.
- *   light = día de cancha    — fondo hueso, oliva y turquesa apagados.
+ * clase). El trazo del monograma VA DE AZUL A CIAN, y cada tema se queda
+ * con un extremo:
+ *   dark  = noche de estadio — cian #35D2E8 (10.82:1 sobre el fondo)
+ *   light = mediodía en la cancha — azul eléctrico #0A3FE8, el color real
+ *           de la D (7.27:1 sobre blanco)
+ *
+ * El azul del logo se había descartado por completo porque sobre negro da
+ * 3.71:1. El error era tratarlo como token ÚNICO: sobre el tema claro pasa
+ * de sobra. Dejando que el acento cambie de familia entre temas, el claro
+ * recupera el color verdadero de la marca y gana carácter propio —plano y
+ * diurno— en vez de ser el oscuro calcado sobre blanco.
  *
  * Dos acentos con roles fijos, para que no compitan:
  *   --volt    → ACCIÓN y presente (inscríbete, gol, en vivo, campeón)
  *   --dt-blue → INFORMACIÓN y navegación (enlaces, tabs, fechas, datos)
  *
- * El azul del logo (#015EF8) no se usa literal: da 3.73:1 sobre el negro y
- * 4.90:1 sobre el claro, o sea que no pasa AA en ninguno de los dos. Cada
- * tema lleva su versión, igual que --volt.
+ * EL LIMA Y EL CIAN SON RELLENO, NO TEXTO. El lima es el mismo hex en los
+ * dos temas porque siempre lleva tinta oscura encima (14.37:1); como letra
+ * sobre blanco daría 1.29:1. Para lima en texto está --volt-text.
+ *
+ * Y las capas se separan por valor, no por borde: #FFFFFF sobre #EBEEF4 da
+ * 1.16:1, suficiente para que una tarjeta exista sin dibujarle el contorno.
+ * Antes el fondo claro era #f1ede4 con tarjetas #fbf9f5 —casi el mismo
+ * valor— y por eso había que ponerle borde a todo.
  */
 :root {
-  --volt: #55700a;
-  --dt-blue: #0e6e75;
-  --dt-blue-soft: #e3eded;
-  --dt-blue-ink: #0a5158;
-  --stadium-glow-1: rgb(85 112 10 / 11%);
-  --stadium-glow-2: rgb(14 110 117 / 9%);
-  --background: #f1ede4;
-  --foreground: #16211d;
-  --card: #fbf9f5;
-  --card-foreground: #16211d;
-  --popover: #fbf9f5;
-  --popover-foreground: #16211d;
-  --primary: #c2ec00;
-  --primary-foreground: #16211d;
-  --secondary: #e5e0d4;
-  --secondary-foreground: #16211d;
-  --muted: #e9e4d9;
-  --muted-foreground: #4a5a55;
-  --accent: #e3eded;
-  --accent-foreground: #0a5158;
+  /* Acentos */
+  --volt: #d4f000;
+  --volt-text: #4f6600;
+  --volt-ink: #0c1322;
+  --volt-wash: #f6fccc;
+  --dt-blue: #0a3fe8;
+  --dt-blue-soft: #e7ecfd;
+  --dt-blue-ink: #0a3fe8;
+  --gold: #6b5e00;
+  --gold-fill: #f5ec00;
+
+  /* Capas */
+  --background: #ebeef4;
+  --foreground: #0c1322;
+  --card: #ffffff;
+  --card-foreground: #0c1322;
+  --surface-2: #f4f6fa;
+  --popover: #ffffff;
+  --popover-foreground: #0c1322;
+  --separator: rgb(16 28 51 / 11%);
+  --separator-strong: rgb(16 28 51 / 18%);
+
+  --primary: #d4f000;
+  --primary-foreground: #0c1322;
+  --secondary: #f4f6fa;
+  --secondary-foreground: #0c1322;
+  --muted: #f4f6fa;
+  --muted-foreground: #5a6680;
+  --accent: #e7ecfd;
+  --accent-foreground: #0a3fe8;
   --destructive: #b4231b;
-  --border: rgb(22 33 29 / 13%);
-  --input: rgb(22 33 29 / 20%);
-  --ring: #0e6e75;
-  --chart-1: #55700a;
-  --chart-2: #0e6e75;
-  --chart-3: #8a7a3e;
-  --chart-4: #16211d;
-  --chart-5: #4a5a55;
-  --radius: 0.375rem;
-  --sidebar: #fbf9f5;
-  --sidebar-foreground: #16211d;
-  --sidebar-primary: #c2ec00;
-  --sidebar-primary-foreground: #16211d;
-  --sidebar-accent: #e5e0d4;
-  --sidebar-accent-foreground: #16211d;
-  --sidebar-border: rgb(22 33 29 / 13%);
-  --sidebar-ring: #0e6e75;
+  --border: rgb(16 28 51 / 11%);
+  --input: rgb(16 28 51 / 18%);
+  --ring: #0a3fe8;
+
+  /* Barra flotante translúcida */
+  --material: rgb(255 255 255 / 72%);
+  --shadow-card:
+    0 1px 1.5px rgb(16 28 51 / 5%), 0 14px 36px -20px rgb(16 28 51 / 22%);
+
+  --stadium-glow-1: rgb(10 63 232 / 7%);
+  --stadium-glow-2: rgb(212 240 0 / 10%);
+
+  --chart-1: #4f6600;
+  --chart-2: #0a3fe8;
+  --chart-3: #6b5e00;
+  --chart-4: #0c1322;
+  --chart-5: #5a6680;
+
+  /* Radio: 14px de base. Tailwind deriva md≈11 (chip), lg=14 (fila) y
+     xl≈20 (tarjeta), que es la escala del sistema. Antes era 6px, que es
+     lo que hacía que no se sintiera iOS por más esquinas redondas. */
+  --radius: 0.875rem;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0c1322;
+  --sidebar-primary: #d4f000;
+  --sidebar-primary-foreground: #0c1322;
+  --sidebar-accent: #f4f6fa;
+  --sidebar-accent-foreground: #0c1322;
+  --sidebar-border: rgb(16 28 51 / 11%);
+  --sidebar-ring: #0a3fe8;
 }
 
 .dark {
-  --volt: #ccff00;
-  --dt-blue: #4fa8ff;
-  --dt-blue-soft: #0c1f33;
-  --dt-blue-ink: #9ccdff;
-  --stadium-glow-1: rgb(204 255 0 / 14%);
-  --stadium-glow-2: rgb(79 168 255 / 9%);
-  --background: #0a0a0a;
-  --foreground: #f5f5f5;
-  --card: #131313;
-  --card-foreground: #f5f5f5;
-  --popover: #161616;
-  --popover-foreground: #f5f5f5;
+  --volt: #d4f000;
+  --volt-text: #d4f000;
+  --volt-ink: #070b12;
+  --volt-wash: #141a16;
+  --dt-blue: #35d2e8;
+  --dt-blue-soft: #0c2a30;
+  --dt-blue-ink: #9fe8f4;
+  --gold: #f5ec00;
+  --gold-fill: #f5ec00;
+
+  --background: #070b12;
+  --foreground: #eef2f6;
+  --card: #0e1522;
+  --card-foreground: #eef2f6;
+  --surface-2: #161f30;
+  --popover: #141c2b;
+  --popover-foreground: #eef2f6;
+  --separator: rgb(150 175 215 / 16%);
+  --separator-strong: rgb(150 175 215 / 26%);
+
   --primary: var(--volt);
-  --primary-foreground: #0a0a0a;
-  --secondary: #1c1c1c;
-  --secondary-foreground: #f5f5f5;
-  --muted: #1c1c1c;
-  --muted-foreground: #a1a1a1;
-  --accent: #212b00;
-  --accent-foreground: var(--volt);
-  --destructive: #ff5c5c;
-  --border: rgb(255 255 255 / 12%);
-  --input: rgb(255 255 255 / 16%);
-  --ring: var(--volt);
+  --primary-foreground: #070b12;
+  --secondary: #161f30;
+  --secondary-foreground: #eef2f6;
+  --muted: #161f30;
+  --muted-foreground: #8a99ad;
+  --accent: #0c2a30;
+  --accent-foreground: var(--dt-blue);
+  --destructive: #ff6b6b;
+  --border: rgb(150 175 215 / 16%);
+  --input: rgb(150 175 215 / 26%);
+  --ring: var(--dt-blue);
+
+  /* En oscuro no hay sombra: una tarjeta se levanta con un filo de luz
+     interior, que es como lo resuelve iOS. */
+  --material: rgb(10 16 26 / 72%);
+  --shadow-card: inset 0 0 0 1px rgb(150 175 215 / 10%);
+
+  --stadium-glow-1: rgb(53 210 232 / 10%);
+  --stadium-glow-2: rgb(212 240 0 / 7%);
+
   --chart-1: var(--volt);
-  --chart-2: #4fa8ff;
+  --chart-2: var(--dt-blue);
   --chart-3: #8fb300;
-  --chart-4: #f5f5f5;
-  --chart-5: #a1a1a1;
-  --sidebar: #131313;
-  --sidebar-foreground: #f5f5f5;
+  --chart-4: #eef2f6;
+  --chart-5: #8a99ad;
+
+  --sidebar: #0e1522;
+  --sidebar-foreground: #eef2f6;
   --sidebar-primary: var(--volt);
-  --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-accent: #1c1c1c;
-  --sidebar-accent-foreground: #f5f5f5;
-  --sidebar-border: rgb(255 255 255 / 12%);
-  --sidebar-ring: var(--volt);
+  --sidebar-primary-foreground: #070b12;
+  --sidebar-accent: #161f30;
+  --sidebar-accent-foreground: #eef2f6;
+  --sidebar-border: rgb(150 175 215 / 16%);
+  --sidebar-ring: var(--dt-blue);
 }
 
 /* Fondo tipo estadio: resplandor volt arriba, según el tema. */
@@ -153,6 +213,34 @@
     radial-gradient(ellipse 90% 55% at 50% -15%, var(--stadium-glow-1), transparent 70%),
     radial-gradient(ellipse 60% 40% at 95% 110%, var(--stadium-glow-2), transparent 70%),
     var(--background);
+}
+
+/* Material translúcido: la barra superior y nada más.
+   Un solo elemento con desenfoque en toda la web, que es lo que lo hace
+   sentir material y no efecto. Donde no exista `backdrop-filter` cae al
+   fondo opaco en vez de dejar texto sobre semitransparente. */
+@utility bg-material {
+  background: var(--background);
+  @supports (backdrop-filter: blur(20px)) {
+    background: var(--material);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+}
+
+/* Elevación de tarjeta. En claro son dos sombras suaves; en oscuro no hay
+   sombra sino un filo de luz interior, que es como iOS levanta una
+   superficie sobre un fondo negro. El valor cambia por tema, el utility no. */
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
+/* Separador capilar con inserción: la línea arranca donde arranca el
+   contenido, no en el borde de la tarjeta. Es el inset separator de iOS,
+   sin un div de más. */
+@utility divide-hairline {
+  & > * + * {
+    border-top: 1px solid var(--separator);
+  }
 }
 
 /* Chip con corte diagonal, como las etiquetas del flyer. */

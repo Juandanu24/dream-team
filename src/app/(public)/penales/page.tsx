@@ -16,7 +16,7 @@ export default async function PenaltiesPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
       <h1 className="font-display text-5xl tracking-wide sm:text-6xl">
-        RETO DE <span className="text-volt">PENALES</span>
+        RETO DE <span className="text-volt-text">PENALES</span>
       </h1>
       <p className="mt-3 max-w-xl text-muted-foreground">
         Cinco penales contra el arquero. El que más meta manda en el ranking del

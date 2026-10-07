@@ -153,7 +153,7 @@ export function TeamCardsButton({
         con sus números del torneo. Van numeradas para conservar el orden.
       </p>
       {cards.length > 10 ? (
-        <p className="text-xs text-volt">
+        <p className="text-xs text-volt-text">
           Instagram admite 10 por carrusel y este equipo tiene {total} piezas:
           te toca partirlo en dos publicaciones.
         </p>

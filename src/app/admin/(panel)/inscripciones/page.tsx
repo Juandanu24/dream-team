@@ -56,7 +56,7 @@ export default async function AdminRegistrationsPage() {
       ) : registrations.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
           Todavía no hay inscritos. Comparte el link de{" "}
-          <span className="text-volt">/inscripcion</span> en el grupo.
+          <span className="text-volt-text">/inscripcion</span> en el grupo.
         </p>
       ) : (
         <div className="mt-6">

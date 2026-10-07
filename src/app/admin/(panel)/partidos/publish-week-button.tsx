@@ -23,7 +23,7 @@ export function PublishWeekButton({
       variant={published ? "ghost" : "outline"}
       size="sm"
       disabled={pending}
-      className={published ? "text-volt" : undefined}
+      className={published ? "text-volt-text" : undefined}
       onClick={() => {
         const mensaje = published
           ? `La semana ${week} ya se publicó. ¿Volver a avisar con los datos actuales?`
