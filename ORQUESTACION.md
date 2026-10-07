@@ -49,7 +49,7 @@ verificarlo. Estas cinco reglas son la respuesta a errores que YA ocurrieron:
 
 ---
 
-## Estado (al 5 de octubre de 2026)
+## Estado (al 7 de octubre de 2026)
 
 **El torneo 1 terminó y está archivado.** `relampago-2026` quedó en
 `finished`: lo ganó LOS IRREVERENTES F.C, que perdió sus dos primeros
@@ -59,17 +59,23 @@ ellos mismos por penales, 0-0 y 2-1 desde el punto blanco. 10 partidos,
 premios están en `tournament_awards`: MVP Juan Rodriguez, goleador Andres
 Baloco (6), valla Diego Vozinha.
 
-**Ojo con el dato que no cuadra:** de los 66 goles solo ~50 tienen autor
-cargado. Los 16 del 10-6 por el tercer puesto no se asignaron, así que el
-"goleador del torneo" se sostiene sobre 50 de 66. Está decidido como
-premio congelado, pero conviene no presentarlo como un cálculo exacto.
+**Los goles sin autor del 10-6 NO son carga a medias: no se anotaron a
+propósito y así se quedan.** En ese partido por el tercer puesto jugaron
+personas que no estaban inscritas —terminó siendo un amistoso—, y por eso
+sus 16 goles no tienen goleador. Juan lo dio por cerrado: "déjalo en 50,
+no pasa nada".
+
+O sea que ~50 de los 66 goles tienen autor, y el goleador del torneo se
+calcula sobre esos 50. **No hay nada que arreglar acá**: ni asignar los
+goles que faltan, ni sacar el partido de las cifras. El marcador 10-6 sí
+cuenta para el podio y para el total, porque se jugó.
 
 **El torneo 2** (`fin-de-ano-2026`, "Torneo de Fin de Año Dream Team")
 está creado y en `registration`, con inscripción de $12.000 y comprobante
-de pago obligatorio. **Todavía no es el activo**: falta poner
-`NEXT_PUBLIC_TOURNAMENT_SLUG=fin-de-ano-2026` en Vercel. Mientras no se
-cambie, `/torneo`, el badge del hero y el `<title>` del sitio siguen
-mostrando el torneo viejo.
+de pago obligatorio. **Ya es el torneo activo**
+(`NEXT_PUBLIC_TOURNAMENT_SLUG=fin-de-ano-2026` está puesto en Vercel), así
+que `/torneo`, el cartel del hero y el `<title>` del sitio lo muestran a
+él. Todavía no tiene equipos ni partidos: está esperando inscritos.
 
 **El formato del torneo 2 está sin decidir**, y Juan cuenta con más de
 seis equipos. Por eso la web ya no afirma ningún formato: la landing
@@ -93,14 +99,29 @@ empuja a inscribirse.
 - **Hay 6 suscritos a push.** Es el canal directo y está bajísimo; subirlo
   vale más que cualquier pieza nueva.
 
-Migraciones aplicadas hasta **`00017_camiseta_y_estatura.sql`**.
-**Pendiente de correr: `00018_semanas_hasta_20.sql`** — sube el tope de
-`matches.week` de 10 a 20. Es un arreglo, no una función: el formulario de
-calendario ya acepta hasta la 20 pero la base seguía con el `check` de la
-00001, así que zod dejaba pasar la semana 11 y Postgres la rechazaba con un
-23514 sin traducir. Comprobado contra el torneo de pruebas y verificado en
-un Postgres desechable.
+Migraciones aplicadas hasta **`00018_semanas_hasta_20.sql`**, todas
+corridas. Comprobado contra la base: la semana 11 ya se acepta.
 
+
+### Lo que de verdad falta
+
+- **Mirar el panel admin renderizado.** La barra lateral, los tokens
+  nuevos, la tarjeta de la fecha y el tablero de inscripción se
+  entregaron sin verlos: el admin pide sesión y las sesiones de trabajo
+  no pueden abrir una. Todo se verificó replicando la lógica contra la
+  base, que detecta errores de dato pero no de layout.
+- **Armar los equipos y el calendario del torneo 2** cuando cierren las
+  inscripciones. El admin ya no supone cuántos equipos hay.
+- **`/admin/torneos/[slug]`**, el detalle de un torneo dentro del panel.
+  Quedó de último a propósito: entre la lista que ya existe y
+  `/torneos/[slug]`, la diferencia es el podio, los premios y no salir
+  del panel. Hacerlo solo si se extraña.
+- **El reto de penales está en standby.** Se le quitó la pestaña de
+  `/torneo`; la página `/penales` y su enlace en el navbar siguen.
+- **El tema claro está construido y apagado.** Tokens, contraste medido y
+  pantallas probadas; se sirve solo el oscuro por decisión de Juan. Se
+  reactiva quitando `TEMA_FIJO` en `theme-provider.tsx`, y el selector
+  reaparece solo.
 
 ## Puertos
 
