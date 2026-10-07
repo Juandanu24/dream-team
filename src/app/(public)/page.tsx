@@ -139,7 +139,7 @@ export default async function HomePage() {
             <h2 className="font-display text-4xl tracking-wide sm:text-5xl">
               CÓMO <span className="text-volt-text">FUNCIONA</span>
             </h2>
-            <div className="mt-8 space-y-3">
+            <div className="mt-6 space-y-3">
               {howItWorks.map((item, i) => (
                 <Card key={item.title} className="bg-card py-4 shadow-card ring-0">
                   <CardContent className="flex items-start gap-4 px-5">
@@ -184,10 +184,14 @@ export default async function HomePage() {
             </Card>
           </div>
 
-          <aside className="space-y-3">
-            <h2 className="font-display text-4xl tracking-wide">
+          <aside>
+            {/* Mismo tamaño y mismo margen que el título de la izquierda:
+                con escalas distintas las dos columnas arrancaban a
+                alturas diferentes y se veía desnivelado. */}
+            <h2 className="font-display text-4xl tracking-wide sm:text-5xl">
               ¿CUÁNDO<span className="text-dt-blue">?</span>
             </h2>
+            <div className="mt-6 space-y-3">
             <Card className="bg-card shadow-card ring-0">
               <CardContent className="space-y-4 px-5 py-2">
                 <div className="flex items-center gap-3">
@@ -220,9 +224,11 @@ export default async function HomePage() {
                 </p>
               </CardContent>
             </Card>
-            <p className="text-center font-display text-xl tracking-widest text-muted-foreground">
-              PASIÓN, AMISTAD Y <span className="text-volt-text">BUEN FÚTBOL</span>
-            </p>
+              <p className="text-center font-display text-xl tracking-widest text-muted-foreground">
+                PASIÓN, AMISTAD Y{" "}
+                <span className="text-volt-text">BUEN FÚTBOL</span>
+              </p>
+            </div>
           </aside>
         </div>
       </section>

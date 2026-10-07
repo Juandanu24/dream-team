@@ -1,5 +1,26 @@
 import Link from "next/link";
 
+/** El glifo de Instagram, dibujado acá: lucide sacó las marcas de su
+ *  catálogo y `Instagram` ya no existe en el paquete. */
+function IconoInstagram() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-4 shrink-0 text-dt-blue"
+      aria-hidden
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-border/60">
@@ -24,6 +45,17 @@ export function SiteFooter() {
           <p className="text-sm text-muted-foreground">
             Pasión, amistad y buen fútbol. Montería, Colombia.
           </p>
+          {/* Instagram es donde se publica todo: la cuenta va acá como
+              enlace de verdad, no como texto suelto. */}
+          <a
+            href="https://instagram.com/dreamteam_colombia"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-2 rounded-full bg-surface-2 px-3.5 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <IconoInstagram />
+            @dreamteam_colombia
+          </a>
         </div>
         <div className="flex flex-col items-center gap-1 sm:items-end">
           <p className="text-xs text-muted-foreground">

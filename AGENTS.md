@@ -348,5 +348,28 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   ahí para que no se desincronice vista por vista: los 82 jugadores de antes
   de la migración tienen `jersey_name` nulo. `height_cm` entra como tercer
   dato de la carta; sin estatura la carta sigue con dos y no queda un hueco.
+- **El calendario separa fase de grupos y playoff, y el playoff es una
+  llave.** Una lista por fechas responde "cuándo se juega", que es lo que
+  importa en grupos; en playoff lo que importa es de dónde sale cada
+  finalista, y eso una lista no lo muestra. `PlayoffBracket` dibuja los
+  conectores con `div` con fondo, no con un `<svg>`, para que sigan al
+  layout cuando las tarjetas cambian de alto.
+- **En la pestaña de estadísticas solo se corona al líder si el torneo
+  TERMINÓ y va solo en la punta.** Con el torneo en curso el primero es "el
+  que va ganando" y destacarlo miente; con empate, destacar al primero es
+  inventar un ganador —en figuras del torneo 1 hay ocho jugadores con una
+  sola y el orden entre ellos es alfabético—. Las figuras se cuentan de
+  `matches.mvp_player_id`, sin vista SQL.
+- **Las marcas de evento del calendario son formas planas, no iconos.** A
+  14px un icono de línea detallado es una mancha y hay que distinguir un
+  gol de una asistencia de reojo: disco lleno para el gol, aro para el
+  autogol, "A" para la asistencia y rectángulos para las tarjetas. Los
+  goleadores van en dos columnas, una por equipo, por la misma razón que en
+  la pieza de resultado; el autogol en la columna del que se benefició.
+- **Ojo con subir un límite en zod sin mirar el `check` de la base.** Pasó:
+  el formulario de calendario pasó a aceptar la semana 20 y `matches.week`
+  seguía con `check (week between 1 and 10)` de la 00001, así que zod dejaba
+  pasar y Postgres rechazaba con un 23514 que la interfaz no traduce. Lo
+  corrige la migración 00018.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

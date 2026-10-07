@@ -81,13 +81,16 @@ La web ya cuenta todo eso: `/historia` (palmarés), `/torneos/[slug]` (el
 tablero de un torneo archivado) y la sección del home que lo resume y
 empuja a inscribirse.
 
-- **Siguen 8 suscritos a push de 54.** Es el canal directo y está al 15%.
+- **Hay 6 suscritos a push.** Es el canal directo y está bajísimo; subirlo
+  vale más que cualquier pieza nueva.
 
-Migraciones aplicadas hasta **`00016_palmares.sql`**.
-**Pendiente de correr: `00017_camiseta_y_estatura.sql`** (nombre de camiseta
-y estatura en la inscripción). Verificada en un Postgres desechable: es
-re-ejecutable y los checks rechazan camiseta vacía o de más de 20
-caracteres y estaturas fuera de 120–230 cm.
+Migraciones aplicadas hasta **`00017_camiseta_y_estatura.sql`**.
+**Pendiente de correr: `00018_semanas_hasta_20.sql`** — sube el tope de
+`matches.week` de 10 a 20. Es un arreglo, no una función: el formulario de
+calendario ya acepta hasta la 20 pero la base seguía con el `check` de la
+00001, así que zod dejaba pasar la semana 11 y Postgres la rechazaba con un
+23514 sin traducir. Comprobado contra el torneo de pruebas y verificado en
+un Postgres desechable.
 
 
 ## Puertos

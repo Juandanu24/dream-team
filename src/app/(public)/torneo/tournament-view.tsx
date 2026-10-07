@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Goal, Handshake, RectangleVertical, Star, Target, Trophy } from "lucide-react";
+import { Goal, Handshake, RectangleVertical, Star, Trophy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +15,11 @@ import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SyncedTabs } from "@/components/synced-tabs";
 import { InteractiveBall } from "@/components/interactive-ball";
 import { NotificationsButton } from "@/components/notifications-button";
-import { PenaltyLeaderboard } from "@/components/penalty-leaderboard";
 import { PlayersGallery } from "@/components/players-gallery";
 import { TeamShowcase } from "@/components/team-showcase";
 import { TeamCrest } from "@/components/team-crest";
+import { PlayoffBracket } from "./playoff-bracket";
+import { RankingCard } from "./ranking-card";
 import {
   formatKickoff,
   getTournamentData,
@@ -30,12 +31,14 @@ import {
   type TeamOfWeekWithPlayers,
 } from "@/lib/team-of-week";
 import { readableAccent } from "@/lib/team-color";
+import { cn } from "@/lib/utils";
 import {
-  EVENT_ICONS,
   FOOT_LABELS,
   POSITION_SHORT,
   STAGE_LABELS,
   type Match,
+  type MatchEventType,
+  type Player,
   type Team,
   cardName,
 } from "@/lib/types";
@@ -65,24 +68,124 @@ function teamName(teams: Team[], id: string | null): string {
   return teams.find((t) => t.id === id)?.name ?? "Por definir";
 }
 
-// Agrupa por jugador y tipo: "⚽ Juan ×2" en vez de dos entradas.
-function summarizeEvents(events: EventWithPlayer[]): string {
-  const counts = new Map<string, { label: string; count: number }>();
-  for (const event of events) {
-    const key = `${event.player_id}:${event.type}`;
-    const entry = counts.get(key);
-    if (entry) {
-      entry.count += 1;
-    } else {
-      counts.set(key, {
-        label: `${EVENT_ICONS[event.type]} ${event.players.full_name}`,
-        count: 1,
+/** Los eventos de UN equipo, agrupados por jugador y tipo.
+ *
+ *  El autogol va en la columna del equipo que se benefició, marcado
+ *  (e.c.): así los nombres de cada columna cuadran con su marcador.
+ *  Mismo criterio que la pieza de resultado. */
+function eventosDe(
+  eventos: EventWithPlayer[],
+  teamId: string | null,
+  rivalId: string | null,
+) {
+  const mios = eventos.filter(
+    (e) =>
+      (e.type === "own_goal" ? e.team_id === rivalId : e.team_id === teamId) &&
+      e.type !== "assist",
+  );
+  const asistencias = eventos.filter(
+    (e) => e.type === "assist" && e.team_id === teamId,
+  );
+
+  const agrupado = new Map<
+    string,
+    { tipo: MatchEventType; nombre: string; veces: number }
+  >();
+  for (const e of [...mios, ...asistencias]) {
+    const clave = `${e.player_id}:${e.type}`;
+    const previo = agrupado.get(clave);
+    if (previo) previo.veces += 1;
+    else
+      agrupado.set(clave, {
+        tipo: e.type,
+        nombre: e.players.full_name,
+        veces: 1,
       });
-    }
   }
-  return [...counts.values()]
-    .map((e) => (e.count > 1 ? `${e.label} ×${e.count}` : e.label))
-    .join(" · ");
+  // Primero los goles, que es lo que la gente busca.
+  const orden: MatchEventType[] = [
+    "goal",
+    "own_goal",
+    "assist",
+    "yellow_card",
+    "red_card",
+  ];
+  return [...agrupado.values()].sort(
+    (a, b) => orden.indexOf(a.tipo) - orden.indexOf(b.tipo),
+  );
+}
+
+/** Marca de cada evento.
+ *
+ *  A 14px un icono de línea detallado es una mancha: hay que poder
+ *  distinguir un gol de una asistencia de reojo, en una lista de doce.
+ *  Por eso son formas planas y no iconografía fina — un disco para el
+ *  gol, una "A" para la asistencia y los rectángulos de las tarjetas. */
+function MarcaEvento({ tipo }: { tipo: MatchEventType }) {
+  if (tipo === "yellow_card")
+    return (
+      <span
+        className="inline-block h-3.5 w-2.5 shrink-0 rounded-[2px] bg-yellow-400"
+        aria-label="Amarilla"
+      />
+    );
+  if (tipo === "red_card")
+    return (
+      <span
+        className="inline-block h-3.5 w-2.5 shrink-0 rounded-[2px] bg-red-500"
+        aria-label="Roja"
+      />
+    );
+  if (tipo === "assist")
+    return (
+      <span
+        className="inline-flex size-3.5 shrink-0 items-center justify-center rounded-[3px] bg-dt-blue/15 font-display text-[10px] leading-none text-dt-blue"
+        aria-label="Asistencia"
+      >
+        A
+      </span>
+    );
+  return (
+    <span
+      className={cn(
+        "inline-block size-2.5 shrink-0 rounded-full",
+        tipo === "own_goal"
+          ? "bg-transparent ring-1 ring-muted-foreground"
+          : "bg-volt",
+      )}
+      aria-label={tipo === "own_goal" ? "Autogol" : "Gol"}
+    />
+  );
+}
+
+function ColumnaEventos({
+  eventos,
+  alinearDerecha = false,
+}: {
+  eventos: ReturnType<typeof eventosDe>;
+  alinearDerecha?: boolean;
+}) {
+  if (eventos.length === 0) return <div />;
+  return (
+    <ul className="space-y-1">
+      {eventos.map((e, i) => (
+        <li
+          key={i}
+          className={cn(
+            "flex items-center gap-1.5 text-xs text-muted-foreground",
+            alinearDerecha && "sm:flex-row-reverse sm:text-right",
+          )}
+        >
+          <MarcaEvento tipo={e.tipo} />
+          <span className="min-w-0 truncate">
+            {e.nombre}
+            {e.tipo === "own_goal" ? " (e.c.)" : ""}
+            {e.veces > 1 ? ` ×${e.veces}` : ""}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function MatchRow({
@@ -100,40 +203,86 @@ function MatchRow({
 }) {
   const kickoff = formatKickoff(match.kickoff_at);
   const matchEvents = events.filter((e) => e.match_id === match.id);
+  const local = teams.find((t) => t.id === match.home_team_id);
+  const visita = teams.find((t) => t.id === match.away_team_id);
+  const jugado = match.status === "finished";
+  const porPenales =
+    match.home_penalties != null && match.away_penalties != null;
+
   return (
-    <div className="border-b border-border/40 py-3 last:border-b-0">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
-        <div className="flex w-40 shrink-0 flex-col">
-          <span className="text-xs tracking-widest text-dt-blue uppercase">
-            {STAGE_LABELS[match.stage]}
+    <div className="border-b border-separator py-5 last:border-b-0">
+      <p className="flex flex-wrap items-center gap-x-2 text-[11px] tracking-[0.18em] text-dt-blue uppercase">
+        {STAGE_LABELS[match.stage]}
+        {kickoff ? (
+          <span className="tracking-normal text-muted-foreground normal-case">
+            · {kickoff}
           </span>
-          {kickoff ? (
-            <span className="text-xs text-muted-foreground capitalize">{kickoff}</span>
-          ) : null}
+        ) : null}
+      </p>
+
+      {/* Escudo, nombre y marcador. El escudo hace de ancla visual: en una
+          lista de diez partidos los nombres solos se confunden. */}
+      <div className="mt-3 flex items-center gap-3 sm:gap-5">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
+          <span className="min-w-0 truncate text-sm font-medium sm:text-base">
+            {local?.name ?? "Por definir"}
+          </span>
+          <TeamCrest
+            name={local?.name ?? "Por definir"}
+            color={local?.color}
+            crestUrl={local?.crest_url}
+            className="size-8 shrink-0 sm:size-10"
+          />
         </div>
-        <div className="flex flex-1 items-center gap-3">
-          <span className="flex-1 text-right font-medium">
-            {teamName(teams, match.home_team_id)}
-          </span>
-          {match.status === "finished" ? (
-            <span className="font-display text-2xl text-volt-text">
-              {match.home_score} - {match.away_score}
-            </span>
+
+        <div className="shrink-0 text-center">
+          {jugado ? (
+            <>
+              <p className="font-display text-3xl leading-none tabular-nums sm:text-4xl">
+                {match.home_score}
+                <span className="px-1.5 text-muted-foreground">-</span>
+                {match.away_score}
+              </p>
+              {porPenales ? (
+                <p className="mt-1 text-[10px] tracking-widest text-muted-foreground uppercase tabular-nums">
+                  {match.home_penalties}-{match.away_penalties} pen
+                </p>
+              ) : null}
+            </>
           ) : (
-            <span className="font-display text-xl text-muted-foreground">VS</span>
+            <p className="font-display text-xl text-muted-foreground">VS</p>
           )}
-          <span className="flex-1 font-medium">
-            {teamName(teams, match.away_team_id)}
+        </div>
+
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <TeamCrest
+            name={visita?.name ?? "Por definir"}
+            color={visita?.color}
+            crestUrl={visita?.crest_url}
+            className="size-8 shrink-0 sm:size-10"
+          />
+          <span className="min-w-0 truncate text-sm font-medium sm:text-base">
+            {visita?.name ?? "Por definir"}
           </span>
         </div>
       </div>
-      {match.status === "finished" && matchEvents.length > 0 ? (
-        <p className="mt-1 text-center text-xs text-muted-foreground sm:pl-44">
-          {summarizeEvents(matchEvents)}
-        </p>
+
+      {/* Goleadores en dos columnas, una por equipo. Corridos en una sola
+          frase, un partido de nueve goles era un muro de texto. */}
+      {jugado && matchEvents.length > 0 ? (
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 sm:gap-6">
+          <ColumnaEventos
+            eventos={eventosDe(matchEvents, match.home_team_id, match.away_team_id)}
+            alinearDerecha
+          />
+          <ColumnaEventos
+            eventos={eventosDe(matchEvents, match.away_team_id, match.home_team_id)}
+          />
+        </div>
       ) : null}
+
       {mvp ? (
-        <p className="mt-1 flex items-center justify-center gap-1.5 text-xs sm:pl-44">
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-xs">
           <Trophy className="size-3.5 text-volt-text" aria-hidden />
           <span className="text-muted-foreground">Figura:</span>
           <Link
@@ -144,8 +293,9 @@ function MatchRow({
           </Link>
         </p>
       ) : null}
+
       {lineups.length > 0 ? (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:pl-44">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {lineups.map((lineup) => (
             <LineupBlock
               key={lineup.id}
@@ -161,6 +311,57 @@ function MatchRow({
 }
 
 // Once ideal de la fecha: los nueve por línea, con su equipo al lado.
+function FechaCard({
+  week,
+  matches,
+  teams,
+  events,
+  lineups,
+  approvedPlayers,
+  oncesIdeales,
+}: {
+  week: number;
+  matches: Match[];
+  teams: Team[];
+  events: EventWithPlayer[];
+  lineups: LineupWithPlayers[];
+  approvedPlayers: Player[];
+  oncesIdeales: TeamOfWeekWithPlayers[];
+}) {
+  return (
+    <Card className="bg-card shadow-card ring-0">
+      <CardHeader>
+        <CardTitle className="font-display text-2xl tracking-wide text-volt-text">
+          SEMANA {week}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {matches
+          .filter((m) => m.week === week)
+          .map((match) => (
+            <MatchRow
+              key={match.id}
+              match={match}
+              teams={teams}
+              events={events}
+              lineups={lineups.filter((l) => l.match_id === match.id)}
+              mvp={
+                match.mvp_player_id
+                  ? approvedPlayers.find((p) => p.id === match.mvp_player_id)
+                  : undefined
+              }
+            />
+          ))}
+        {oncesIdeales
+          .filter((t) => t.week === week)
+          .map((t) => (
+            <TeamOfWeekBlock key={t.id} totw={t} />
+          ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 function TeamOfWeekBlock({ totw }: { totw: TeamOfWeekWithPlayers }) {
   const porLinea = (line: string) =>
     totw.entries.filter((e) => e.line === line).map((e) => e.full_name);
@@ -309,7 +510,6 @@ export async function TournamentView({
     scorers,
     assists,
     cards,
-    penaltyLeaderboard,
   } = data;
   const captains = new Set(
     roster.filter((entry) => entry.is_captain).map((entry) => entry.player_id),
@@ -354,7 +554,37 @@ export async function TournamentView({
           a.name.localeCompare(b.name),
       ),
   }));
+  const torneoTerminado = tournament.status === "finished";
+  // Las figuras no tienen vista SQL: se cuentan de matches.mvp_player_id,
+  // que ya viene cargado. Solo entran los que tienen al menos una.
+  const vecesFigura = new Map<string, number>();
+  for (const m of matches) {
+    if (m.mvp_player_id) {
+      vecesFigura.set(m.mvp_player_id, (vecesFigura.get(m.mvp_player_id) ?? 0) + 1);
+    }
+  }
+  const figuras = [...vecesFigura.entries()]
+    .map(([playerId, valor]) => {
+      const jugador = approvedPlayers.find((p) => p.id === playerId);
+      const equipo = teamById.get(rosterEntryOf.get(playerId)?.team_id ?? "");
+      return {
+        playerId,
+        name: jugador ? cardName(jugador) : "—",
+        photoUrl: jugador?.photo_url ?? null,
+        teamName: equipo?.name ?? null,
+        valor,
+      };
+    })
+    .sort((a, b) => b.valor - a.valor || a.name.localeCompare(b.name));
+
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
+  // Las fechas de grupos y las de playoff se muestran aparte: en grupos lo
+  // que importa es cuándo se juega, y en playoff de dónde sale cada uno.
+  const esDePlayoff = (semana: number) =>
+    matches.some((m) => m.week === semana && m.stage !== "group");
+  const semanasDeGrupos = weeks.filter((w) => !esDePlayoff(w));
+  const semanasDePlayoff = weeks.filter(esDePlayoff);
+  const partidosDePlayoff = matches.filter((m) => m.stage !== "group");
 
   return (
     <div className="relative mx-auto max-w-5xl overflow-hidden px-4 py-12">
@@ -406,14 +636,11 @@ export async function TournamentView({
           <TabsTrigger value="equipos" className="col-span-2 py-1.5">
             Equipos
           </TabsTrigger>
-          <TabsTrigger value="jugadores" className="col-span-2 py-1.5">
+          <TabsTrigger value="jugadores" className="col-span-3 py-1.5">
             Jugadores
           </TabsTrigger>
-          <TabsTrigger value="goleadores" className="col-span-2 py-1.5">
-            Goleadores
-          </TabsTrigger>
-          <TabsTrigger value="penales" className="col-span-2 py-1.5">
-            Penales
+          <TabsTrigger value="goleadores" className="col-span-3 py-1.5">
+            Estadísticas
           </TabsTrigger>
         </TabsList>
 
@@ -501,40 +728,55 @@ export async function TournamentView({
               tanto: martes 8:00 PM y jueves 9:00 PM, cancha F8.
             </EmptyNote>
           ) : (
-            weeks.map((week) => (
-              <Card key={week} className="border-border/60 bg-card/70">
-                <CardHeader>
-                  <CardTitle className="font-display text-2xl tracking-wide text-volt-text">
-                    SEMANA {week}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {matches
-                    .filter((m) => m.week === week)
-                    .map((match) => (
-                      <MatchRow
-                        key={match.id}
-                        match={match}
+            <>
+              {semanasDeGrupos.length > 0 ? (
+                <section className="space-y-4">
+                  <h3 className="font-display text-xl tracking-[0.18em] text-muted-foreground uppercase">
+                    Fase de grupos
+                  </h3>
+                  {semanasDeGrupos.map((week) => (
+                    <FechaCard
+                      key={week}
+                      week={week}
+                      matches={matches}
+                      teams={teams}
+                      events={events}
+                      lineups={lineups}
+                      approvedPlayers={approvedPlayers}
+                      oncesIdeales={oncesIdeales}
+                    />
+                  ))}
+                </section>
+              ) : null}
+
+              {partidosDePlayoff.length > 0 ? (
+                <section className="space-y-4 pt-6">
+                  <h3 className="font-display text-xl tracking-[0.18em] text-muted-foreground uppercase">
+                    Playoff
+                  </h3>
+                  <Card className="bg-card shadow-card ring-0">
+                    <CardContent className="px-4 py-2 sm:px-6">
+                      <PlayoffBracket
+                        matches={partidosDePlayoff}
                         teams={teams}
-                        events={events}
-                        lineups={lineups.filter((l) => l.match_id === match.id)}
-                        mvp={
-                          match.mvp_player_id
-                            ? approvedPlayers.find(
-                                (p) => p.id === match.mvp_player_id,
-                              )
-                            : undefined
-                        }
                       />
-                    ))}
-                  {oncesIdeales
-                    .filter((t) => t.week === week)
-                    .map((t) => (
-                      <TeamOfWeekBlock key={t.id} totw={t} />
-                    ))}
-                </CardContent>
-              </Card>
-            ))
+                    </CardContent>
+                  </Card>
+                  {semanasDePlayoff.map((week) => (
+                    <FechaCard
+                      key={week}
+                      week={week}
+                      matches={matches}
+                      teams={teams}
+                      events={events}
+                      lineups={lineups}
+                      approvedPlayers={approvedPlayers}
+                      oncesIdeales={oncesIdeales}
+                    />
+                  ))}
+                </section>
+              ) : null}
+            </>
           )}
         </TabsContent>
 
@@ -562,107 +804,53 @@ export async function TournamentView({
           )}
         </TabsContent>
 
-        <TabsContent value="penales" className="mt-6">
-          <Card className="border-border/60 bg-card/70">
-            <CardHeader>
-              <CardTitle className="flex flex-wrap items-center gap-2 font-display text-2xl tracking-wide">
-                <Target className="size-5 text-volt-text" aria-hidden />
-                RETO DE PENALES
-                <Link
-                  href="/penales"
-                  className="ml-auto text-sm font-normal text-dt-blue underline-offset-4 hover:underline"
-                >
-                  Jugar →
-                </Link>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PenaltyLeaderboard rows={penaltyLeaderboard} limit={15} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="goleadores" className="mt-6 grid gap-4 lg:grid-cols-2">
-          <Card className="border-border/60 bg-card/70">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
-                <Goal className="size-5 text-volt-text" aria-hidden />
-                GOLEADORES
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {scorers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Todavía no hay goles. El que anote primero abre la lista.
-                </p>
-              ) : (
-                scorers.map((scorer, i) => (
-                  <div key={scorer.player_id} className="flex items-center gap-3">
-                    <span className="w-6 font-display text-lg text-volt-text">
-                      {i + 1}
-                    </span>
-                    <Avatar className="size-8">
-                      <AvatarImage src={scorer.photo_url ?? undefined} alt="" />
-                      <AvatarFallback>
-                        {scorer.full_name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="flex-1 truncate text-sm">
-                      {scorer.full_name}
-                      <span className="block text-xs text-muted-foreground">
-                        {scorer.team_name}
-                      </span>
-                    </span>
-                    <span className="font-display text-2xl text-volt-text">
-                      {scorer.goals}
-                    </span>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          <RankingCard
+            titulo="Goleadores"
+            tituloLider="Goleador del torneo"
+            icono={<Goal className="size-5 text-volt-text" aria-hidden />}
+            acento="volt"
+            sufijo={["gol", "goles"]}
+            coronar={torneoTerminado}
+            vacio="Todavía no hay goles. El que anote primero abre la lista."
+            filas={scorers.map((r) => ({
+              playerId: r.player_id,
+              name: r.full_name,
+              photoUrl: r.photo_url,
+              teamName: r.team_name,
+              valor: r.goals,
+            }))}
+          />
 
-          <Card className="border-border/60 bg-card/70">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
-                <Handshake className="size-5 text-dt-blue" aria-hidden />
-                ASISTENCIAS
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {assists.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Todavía no hay asistencias registradas. El que sirva el primer
-                  gol abre la lista.
-                </p>
-              ) : (
-                assists.map((assist, i) => (
-                  <div key={assist.player_id} className="flex items-center gap-3">
-                    <span className="w-6 font-display text-lg text-dt-blue">
-                      {i + 1}
-                    </span>
-                    <Avatar className="size-8">
-                      <AvatarImage src={assist.photo_url ?? undefined} alt="" />
-                      <AvatarFallback>
-                        {assist.full_name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="flex-1 truncate text-sm">
-                      {assist.full_name}
-                      <span className="block text-xs text-muted-foreground">
-                        {assist.team_name}
-                      </span>
-                    </span>
-                    <span className="font-display text-2xl text-dt-blue">
-                      {assist.assists}
-                    </span>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          <RankingCard
+            titulo="Asistencias"
+            tituloLider="Máximo asistidor"
+            icono={<Handshake className="size-5 text-dt-blue" aria-hidden />}
+            acento="blue"
+            sufijo={["asistencia", "asistencias"]}
+            coronar={torneoTerminado}
+            vacio="Todavía no hay asistencias registradas. El que sirva el primer gol abre la lista."
+            filas={assists.map((r) => ({
+              playerId: r.player_id,
+              name: r.full_name,
+              photoUrl: r.photo_url,
+              teamName: r.team_name,
+              valor: r.assists,
+            }))}
+          />
 
-          <Card className="border-border/60 bg-card/70">
+          <RankingCard
+            titulo="Figuras"
+            tituloLider="Más figuras del torneo"
+            icono={<Trophy className="size-5 text-volt-text" aria-hidden />}
+            acento="volt"
+            sufijo={["figura", "figuras"]}
+            coronar={torneoTerminado}
+            vacio="Las figuras del partido las elige la organización después de cada fecha."
+            filas={figuras}
+          />
+
+          <Card className="bg-card shadow-card ring-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display text-2xl tracking-wide">
                 <RectangleVertical
@@ -686,20 +874,20 @@ export async function TournamentView({
                         {row.full_name.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="flex-1 truncate text-sm">
+                    <span className="min-w-0 flex-1 truncate text-sm">
                       {row.full_name}
-                      <span className="block text-xs text-muted-foreground">
+                      <span className="block truncate text-xs text-muted-foreground">
                         {row.team_name}
                       </span>
                     </span>
                     {row.yellow_cards > 0 ? (
-                      <span className="flex items-center gap-1 text-sm">
+                      <span className="flex items-center gap-1 text-sm tabular-nums">
                         <span className="inline-block h-4 w-3 rounded-[2px] bg-yellow-400" />
                         {row.yellow_cards}
                       </span>
                     ) : null}
                     {row.red_cards > 0 ? (
-                      <span className="flex items-center gap-1 text-sm">
+                      <span className="flex items-center gap-1 text-sm tabular-nums">
                         <span className="inline-block h-4 w-3 rounded-[2px] bg-red-500" />
                         {row.red_cards}
                       </span>
