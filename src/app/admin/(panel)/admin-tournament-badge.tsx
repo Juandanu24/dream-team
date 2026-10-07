@@ -1,6 +1,6 @@
 import type { TournamentStatus } from "@/lib/types";
 
-const ESTADO: Record<TournamentStatus, { label: string; punto: string }> = {
+export const ESTADO: Record<TournamentStatus, { label: string; punto: string }> = {
   registration: { label: "Inscripciones abiertas", punto: "bg-volt" },
   in_progress: { label: "En juego", punto: "bg-dt-blue" },
   finished: { label: "Finalizado", punto: "bg-muted-foreground" },

@@ -11,6 +11,7 @@ import {
   Star,
   LayoutDashboard,
   Swords,
+  Trophy,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,13 +27,14 @@ export const ADMIN_NAV = [
   { href: "/admin/resultados", label: "Resultados", icon: ListChecks },
   { href: "/admin/once-ideal", label: "Once ideal", icon: Star },
   { href: "/admin/piezas", label: "Piezas", icon: ImageIcon },
+  { href: "/admin/torneos", label: "Torneos", icon: Trophy },
 ];
 
 export function esRutaActiva(pathname: string, href: string) {
   return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 }
 
-// Las nueve secciones, una debajo de otra en la barra lateral.
+// Las diez secciones, una debajo de otra en la barra lateral.
 //
 // Antes iban en el encabezado, en fila. Nueve botones no caben en una
 // barra de 14 de alto: en pantallas medianas el último quedaba cortado y

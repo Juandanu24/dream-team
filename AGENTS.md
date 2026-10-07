@@ -66,8 +66,8 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
   datos usan `force-dynamic` y degradan a estados vacíos si Supabase no
   responde.
 - `admin/login` + `admin/(panel)/` — panel, inscripciones (aprobar/rechazar),
-  equipos, partidos, `alineaciones`, `amistosos`, `once-ideal`, resultados y
-  `piezas` (generador de imágenes para redes).
+  equipos, partidos, `alineaciones`, `amistosos`, `once-ideal`, resultados,
+  `torneos` (lista de solo lectura) y `piezas` (generador de imágenes para redes).
 - Las fotos van al bucket público `player-photos`, comprimidas en el cliente
   (webp ≤ 250 KB) antes de la server action.
 
@@ -324,7 +324,7 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   mientras `/torneo` —dinámica, mismo código— lo mostraba bien. Con el
   catch afuera, la sección no se dibuja en ESE render y el siguiente lo
   vuelve a intentar.
-- **El admin va en barra lateral, no en el encabezado.** Son nueve
+- **El admin va en barra lateral, no en el encabezado.** Son diez
   secciones y en fila no caben: en pantallas medianas la última salía
   cortada y el scroll horizontal ni se notaba. La barra es fija desde `lg`;
   por debajo manda el menú de hamburguesa, que ya existía. Arriba de la

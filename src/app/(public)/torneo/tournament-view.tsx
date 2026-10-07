@@ -27,12 +27,14 @@ import { TeamShowcase } from "@/components/team-showcase";
 import { TeamCrest } from "@/components/team-crest";
 import { PlayoffBracket } from "./playoff-bracket";
 import { RankingCard } from "./ranking-card";
+import { TournamentSwitcher } from "./tournament-switcher";
 import {
   formatKickoff,
   getTournamentData,
   type EventWithPlayer,
 } from "@/lib/data";
 import { getPublishedLineups, type LineupWithPlayers } from "@/lib/lineups";
+import { getPublicTournamentList } from "@/lib/tournaments";
 import {
   getPublishedTeamsOfWeek,
   type TeamOfWeekWithPlayers,
@@ -504,6 +506,8 @@ export async function TournamentView({
   archivado?: boolean;
 }) {
   const data = await getTournamentData(slug);
+  // Sin el de pruebas: tiene equipos y jugadores inventados.
+  const otrosTorneos = await getPublicTournamentList();
   // Solo las publicadas: los borradores del admin no salen acá.
   const lineups = data ? await getPublishedLineups(data.tournament.id) : [];
   const oncesIdeales = data
@@ -637,9 +641,16 @@ export async function TournamentView({
         {archivado ? null : <NotificationsButton className="ml-auto" withLabel />}
       </div>
 
+      {/* Saltar a otro torneo sin tener que saberse la URL */}
+      <div className="mt-4">
+        <TournamentSwitcher torneos={otrosTorneos} slugActual={tournament.slug} />
+      </div>
+
       {archivado ? (
         <p className="mt-3 rounded-md border border-dt-blue/40 bg-dt-blue/5 px-4 py-3 text-sm">
-          Este torneo ya terminó. Estás viendo el archivo.{" "}
+          {tournament.status === "finished"
+            ? "Este torneo ya terminó. Estás viendo el archivo."
+            : "Este no es el torneo en curso."}{" "}
           <Link
             href="/torneo"
             className="text-dt-blue underline-offset-4 hover:underline"
