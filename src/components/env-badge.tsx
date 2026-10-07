@@ -1,6 +1,4 @@
-import { ACTIVE_TOURNAMENT_SLUG } from "@/lib/types";
-
-const TORNEO_DE_PRUEBA = "prueba-local";
+import { ACTIVE_TOURNAMENT_SLUG, TORNEO_DE_PRUEBA } from "@/lib/types";
 
 /** Aviso de "no estás en producción", con el torneo al que apunta.
  *

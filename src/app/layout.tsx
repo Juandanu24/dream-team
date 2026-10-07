@@ -77,10 +77,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f6f4" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
+  // Uno solo mientras el tema esté fijo en oscuro: con los dos, el
+  // navegador pintaría su barra de claro sobre una web oscura.
+  themeColor: "#070b12",
 };
 
 export default function RootLayout({

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ACTIVE_TOURNAMENT_SLUG } from "@/lib/types";
 import { TournamentView } from "../../torneo/tournament-view";
 
 // Dinámica a propósito, aunque los datos estén cacheados. Prerenderizar
@@ -42,5 +43,10 @@ export default async function ArchivedTournamentPage({ params }: Params) {
   // configurado": eso confunde. Es un 404.
   if (!(await tournamentName(slug))) notFound();
 
-  return <TournamentView slug={slug} archivado />;
+  // `archivado` no es "terminado": es "este no es el torneo en curso".
+  // Antes iba fijo en true y esta ruta le decía "ya terminó, estás viendo
+  // el archivo" hasta al torneo activo si alguien entraba por su slug.
+  return (
+    <TournamentView slug={slug} archivado={slug !== ACTIVE_TOURNAMENT_SLUG} />
+  );
 }

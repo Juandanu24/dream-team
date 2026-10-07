@@ -77,6 +77,15 @@ cuenta el proceso y el calendario sale de la base. `/admin/partidos` ya
 no supone cuántos equipos hay ni cuántos partidos tiene una fecha, así
 que el formato que se elija no obliga a tocar código.
 
+**El admin no puede cambiar de torneo, y es a propósito.** `/admin/torneos`
+lista los tres y enlaza a su tablero público, pero es solo lectura: la
+barrera que impide editar el torneo equivocado no está en la escritura
+sino en la LECTURA —de las ~32 acciones del admin, unas 25 escriben por
+id de fila y solo las listas las mantienen dentro del torneo activo—, así
+que un selector que cambiara lo que se lista haría que las 7 que resuelven
+por slug escribieran en el torneo del env var sin avisar. Para hacerlo de
+verdad hay que cerrar esas 7 primero.
+
 La web ya cuenta todo eso: `/historia` (palmarés), `/torneos/[slug]` (el
 tablero de un torneo archivado) y la sección del home que lo resume y
 empuja a inscribirse.

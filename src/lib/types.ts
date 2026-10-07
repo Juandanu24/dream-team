@@ -368,6 +368,10 @@ export function formatHeight(cm?: number | null): string | null {
   return (cm / 100).toFixed(2).replace(".", ",");
 }
 
+/** El torneo de pruebas. No sale en ninguna lista pública: tiene equipos
+ *  y jugadores inventados y pasaría por real. */
+export const TORNEO_DE_PRUEBA = "prueba-local";
+
 // Slug del torneo activo (el que muestran la landing y la inscripción).
 // Se puede apuntar a otro torneo con NEXT_PUBLIC_TOURNAMENT_SLUG, que es
 // como se prueba en local sin tocar los datos del torneo real.
