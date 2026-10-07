@@ -16,6 +16,7 @@
   --color-gold: var(--gold);
   --color-surface-2: var(--surface-2);
   --color-separator: var(--separator);
+  --color-separator-strong: var(--separator-strong);
   --color-dt-blue: var(--dt-blue);
   --color-dt-blue-soft: var(--dt-blue-soft);
   --color-dt-blue-ink: var(--dt-blue-ink);
@@ -240,6 +241,52 @@
 @utility divide-hairline {
   & > * + * {
     border-top: 1px solid var(--separator);
+  }
+}
+
+/* Las líneas de la llave se trazan solas al entrar en pantalla.
+   Mismo criterio que animate-reveal: la animación avanza con el scroll
+   (`view()`), no con un reloj, porque en una página que se sirve ya
+   renderizada una animación de montaje termina antes de que el visitante
+   llegue. El origen lo pone quien la usa (`origin-left` u `origin-top`),
+   así la misma utilidad sirve para los tramos horizontales y el vertical. */
+@utility animate-draw {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation: dt-draw linear both;
+      animation-timeline: view();
+      animation-range: entry 14% cover 34%;
+    }
+  }
+}
+
+@keyframes dt-draw {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Destello que cruza la tarjeta del campeón una vez, al aparecer. Es el
+   único adorno de la llave: el resto lo cuenta la estructura. */
+@utility animate-sheen {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation: dt-sheen linear both;
+      animation-timeline: view();
+      animation-range: entry 20% cover 46%;
+    }
+  }
+}
+
+@keyframes dt-sheen {
+  from {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(330%) skewX(-18deg);
   }
 }
 
