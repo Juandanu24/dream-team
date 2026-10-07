@@ -17,13 +17,20 @@ import {
 } from "@/components/ui/table";
 import { TeamCrest } from "@/components/team-crest";
 import { formatKickoff, getTournamentData } from "@/lib/data";
+import { getFechaDeHoy, getPanelDeInscripcion } from "@/lib/admin-pendientes";
+import { FechaDeHoyCard } from "./fecha-de-hoy";
+import { PanelDeInscripcionCard } from "./panel-inscripcion";
 import { STAGE_LABELS } from "@/lib/types";
 import { TournamentStatusCard } from "./tournament-status";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
-  const data = await getTournamentData();
+  const [data, fechaDeHoy, panelInscripcion] = await Promise.all([
+    getTournamentData(),
+    getFechaDeHoy(),
+    getPanelDeInscripcion(),
+  ]);
 
   if (!data) {
     return (
@@ -99,6 +106,12 @@ export default async function AdminHomePage() {
           ))}
         </div>
       </div>
+
+      {fechaDeHoy ? <FechaDeHoyCard fecha={fechaDeHoy} /> : null}
+
+      {data.tournament.status === "registration" && panelInscripcion ? (
+        <PanelDeInscripcionCard panel={panelInscripcion} />
+      ) : null}
 
       <TournamentStatusCard status={data.tournament.status} />
 
