@@ -5,6 +5,7 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { TEMA_FIJO } from "@/components/theme-provider";
 
 const CYCLE = ["system", "light", "dark"] as const;
 
@@ -37,6 +38,11 @@ export function ThemeToggle({ withLabel = false }: { withLabel?: boolean }) {
       : current === "dark"
         ? Moon
         : Monitor;
+
+  // Con un tema fijo el botón no haría nada: se esconde en vez de dejar
+  // un control muerto. Vuelve solo al quitar TEMA_FIJO. Va DESPUÉS de los
+  // hooks: si no, React pierde el orden entre renders.
+  if (TEMA_FIJO) return null;
 
   return (
     <Button

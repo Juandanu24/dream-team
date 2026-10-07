@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Goal, Handshake, RectangleVertical, Star, Trophy } from "lucide-react";
+import {
+  ChevronRight,
+  Goal,
+  Handshake,
+  RectangleVertical,
+  Star,
+  Trophy,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -319,6 +326,7 @@ function FechaCard({
   lineups,
   approvedPlayers,
   oncesIdeales,
+  abierta,
 }: {
   week: number;
   matches: Match[];
@@ -327,18 +335,35 @@ function FechaCard({
   lineups: LineupWithPlayers[];
   approvedPlayers: Player[];
   oncesIdeales: TeamOfWeekWithPlayers[];
+  /** La fecha que arranca desplegada. */
+  abierta: boolean;
 }) {
+  const deLaFecha = matches.filter((m) => m.week === week);
+  const jugados = deLaFecha.filter((m) => m.status === "finished").length;
+  const resumen =
+    jugados === deLaFecha.length
+      ? `${deLaFecha.length} partido${deLaFecha.length === 1 ? "" : "s"}`
+      : `${jugados} de ${deLaFecha.length} jugado${jugados === 1 ? "" : "s"}`;
+
   return (
-    <Card className="bg-card shadow-card ring-0">
-      <CardHeader>
-        <CardTitle className="font-display text-2xl tracking-wide text-volt-text">
-          SEMANA {week}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {matches
-          .filter((m) => m.week === week)
-          .map((match) => (
+    <Card className="bg-card py-0 shadow-card ring-0">
+      {/* `details` y no estado en React: con diez fechas el acordeón no
+          justifica hidratar la página entera, y así funciona sin JS. */}
+      <details open={abierta} className="group">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
+          <ChevronRight
+            className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+            aria-hidden
+          />
+          <span className="font-display text-2xl tracking-wide text-volt-text">
+            SEMANA {week}
+          </span>
+          <span className="ml-auto text-xs text-muted-foreground">
+            {resumen}
+          </span>
+        </summary>
+        <div className="px-5 pb-4">
+          {deLaFecha.map((match) => (
             <MatchRow
               key={match.id}
               match={match}
@@ -352,12 +377,13 @@ function FechaCard({
               }
             />
           ))}
-        {oncesIdeales
-          .filter((t) => t.week === week)
-          .map((t) => (
-            <TeamOfWeekBlock key={t.id} totw={t} />
-          ))}
-      </CardContent>
+          {oncesIdeales
+            .filter((t) => t.week === week)
+            .map((t) => (
+              <TeamOfWeekBlock key={t.id} totw={t} />
+            ))}
+        </div>
+      </details>
     </Card>
   );
 }
@@ -578,6 +604,10 @@ export async function TournamentView({
     .sort((a, b) => b.valor - a.valor || a.name.localeCompare(b.name));
 
   const weeks = [...new Set(matches.map((m) => m.week))].sort((a, b) => a - b);
+  const jugadas = weeks.filter((w) =>
+    matches.some((m) => m.week === w && m.status === "finished"),
+  );
+  const semanaAbierta = jugadas.at(-1) ?? weeks[0];
   // Las fechas de grupos y las de playoff se muestran aparte: en grupos lo
   // que importa es cuándo se juega, y en playoff de dónde sale cada uno.
   const esDePlayoff = (semana: number) =>
@@ -644,7 +674,7 @@ export async function TournamentView({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="posiciones" className="mt-6">
+        <TabsContent value="posiciones" className="mt-6 space-y-4">
           {standings.length === 0 ? (
             <EmptyNote>
               La tabla aparece cuando se sorteen los equipos.
@@ -719,6 +749,23 @@ export async function TournamentView({
               </CardContent>
             </Card>
           )}
+
+          {partidosDePlayoff.length > 0 ? (
+            <Card className="bg-card shadow-card ring-0">
+              <CardHeader>
+                <CardTitle className="font-display text-2xl tracking-wide">
+                  PLAYOFF
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  El puesto final no sale de esta tabla: sale de la final y del
+                  partido por el tercer puesto.
+                </p>
+              </CardHeader>
+              <CardContent className="px-4 pb-2 sm:px-6">
+                <PlayoffBracket matches={partidosDePlayoff} teams={teams} />
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="calendario" className="mt-6 space-y-4">
@@ -744,6 +791,7 @@ export async function TournamentView({
                       lineups={lineups}
                       approvedPlayers={approvedPlayers}
                       oncesIdeales={oncesIdeales}
+                      abierta={week === semanaAbierta}
                     />
                   ))}
                 </section>
@@ -754,14 +802,6 @@ export async function TournamentView({
                   <h3 className="font-display text-xl tracking-[0.18em] text-muted-foreground uppercase">
                     Playoff
                   </h3>
-                  <Card className="bg-card shadow-card ring-0">
-                    <CardContent className="px-4 py-2 sm:px-6">
-                      <PlayoffBracket
-                        matches={partidosDePlayoff}
-                        teams={teams}
-                      />
-                    </CardContent>
-                  </Card>
                   {semanasDePlayoff.map((week) => (
                     <FechaCard
                       key={week}
@@ -772,6 +812,7 @@ export async function TournamentView({
                       lineups={lineups}
                       approvedPlayers={approvedPlayers}
                       oncesIdeales={oncesIdeales}
+                      abierta={week === semanaAbierta}
                     />
                   ))}
                 </section>
