@@ -66,8 +66,8 @@ los mapas `*_LABELS` de `src/lib/types.ts`.
   datos usan `force-dynamic` y degradan a estados vacíos si Supabase no
   responde.
 - `admin/login` + `admin/(panel)/` — panel, inscripciones (aprobar/rechazar),
-  equipos, partidos, `alineaciones`, `amistosos`, `once-ideal`, resultados,
-  `torneos` (lista de solo lectura) y `piezas` (generador de imágenes para redes).
+  equipos, `sorteo`, partidos, `alineaciones`, `amistosos`, `once-ideal`,
+  resultados, `torneos` (lista de solo lectura) y `piezas` (generador de imágenes para redes).
 - Las fotos van al bucket público `player-photos`, comprimidas en el cliente
   (webp ≤ 250 KB) antes de la server action.
 
@@ -324,7 +324,7 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   mientras `/torneo` —dinámica, mismo código— lo mostraba bien. Con el
   catch afuera, la sección no se dibuja en ESE render y el siguiente lo
   vuelve a intentar.
-- **El admin va en barra lateral, no en el encabezado.** Son diez
+- **El admin va en barra lateral, no en el encabezado.** Son once
   secciones y en fila no caben: en pantallas medianas la última salía
   cortada y el scroll horizontal ni se notaba. La barra es fija desde `lg`;
   por debajo manda el menú de hamburguesa, que ya existía. Arriba de la
@@ -381,5 +381,34 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   cargados, porque cero autores en un 10-6 es una decisión válida.
   Y lo que todavía no toca sale en gris, no en amarillo: un partido sin
   jugar no tiene "marcador pendiente".
+- **En el sorteo lo único aleatorio es el ORDEN** (migración 00019). A los
+  jugadores los ELIGEN los capitanes, uno por turno; el azar solo decide
+  quién elige primero. Dos modos: `pool` (un bombo con todos los que no
+  tienen equipo) y `pots` (bombos tipo Champions, armados antes por nivel
+  de juego), y en `pots` el orden se sortea una vez o en cada bombo.
+- **El orden se sortea en el SERVIDOR y se guarda.** Si el azar viviera en
+  el navegador, recargar la página sería volver a tirar los dados hasta
+  que salga el orden que uno quiere. La acción devuelve el resultado y la
+  animación del cliente solo lo revela.
+- **El bombo no es una tabla: son los aprobados sin equipo.** Elegir a
+  alguien lo mete en `team_players` y con eso sale del bombo solo, sin un
+  segundo sitio que mantener sincronizado. `draft_pot_players` guarda
+  únicamente en qué bombo quedó cada uno, y solo se usa en modo `pots`.
+- **Al elegir se escribe primero `draft_picks` y después `team_players`.**
+  Ese orden importa: `draft_picks` tiene único por jugador, así que si dos
+  capitanes tocan el mismo nombre a la vez el segundo rebota ahí y nadie
+  termina en dos equipos. Si el segundo paso falla se borra la elección,
+  para no dejarla sin reparto. Y `pick_number` también es único: dos
+  elecciones simultáneas calculan el mismo número y una de las dos rebota.
+- **La lógica del turno es pura y vive en `draft-turn.ts`**, sin imports,
+  para poder simularla con `node --experimental-strip-types` igual que el
+  reto de penales. La ronda termina cuando eligieron todos O cuando el
+  bombo se quedó vacío: con cinco equipos y un bombo de tres, dos se
+  quedan sin elegir de ese bombo y hay que pasar al siguiente en vez de
+  trabarse esperando un turno imposible.
+- **`getDraftData()` NO se cachea**, al revés que el resto de loaders: el
+  sorteo cambia cada pocos segundos y servir una versión de hace un minuto
+  sería mostrar un turno que ya pasó. La pública se refresca sola cada 12
+  segundos con `AutoRefresh`, que se detiene si la pestaña no está visible.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

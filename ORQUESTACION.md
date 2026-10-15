@@ -99,8 +99,13 @@ empuja a inscribirse.
 - **Hay 6 suscritos a push.** Es el canal directo y está bajísimo; subirlo
   vale más que cualquier pieza nueva.
 
-Migraciones aplicadas hasta **`00018_semanas_hasta_20.sql`**, todas
-corridas. Comprobado contra la base: la semana 11 ya se acepta.
+Migraciones aplicadas hasta **`00018_semanas_hasta_20.sql`**.
+**Pendiente de correr: `00019_sorteo.sql`** (el sorteo de jugadores).
+Verificada en un Postgres desechable: re-ejecutable, y los constraints
+rechazan dos sorteos por torneo, un modo inventado, un equipo repetido,
+un jugador en dos bombos, un bombo fuera de rango, elegir dos veces al
+mismo jugador y repetir el número de elección. Borrar el sorteo arrastra
+equipos, bombos y elecciones.
 
 
 ### Lo que de verdad falta

@@ -368,6 +368,64 @@ export function formatHeight(cm?: number | null): string | null {
   return (cm / 100).toFixed(2).replace(".", ",");
 }
 
+// ---------- Sorteo de jugadores (migración 00019) ----------
+
+export type DraftMode = "pool" | "pots";
+export type DraftOrderMode = "once" | "per_round";
+export type DraftStatus = "setup" | "running" | "finished";
+
+export interface Draft {
+  id: string;
+  tournament_id: string;
+  mode: DraftMode;
+  order_mode: DraftOrderMode;
+  status: DraftStatus;
+  /** En modo bombos es el bombo en curso; en modo bolsa, la vuelta. */
+  current_round: number;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
+export interface DraftTeam {
+  id: string;
+  draft_id: string;
+  team_id: string;
+  participates: boolean;
+  /** 1 = elige primero. Nulo hasta que se sortee el orden. */
+  position: number | null;
+  created_at: string;
+}
+
+export interface DraftPotPlayer {
+  id: string;
+  draft_id: string;
+  player_id: string;
+  pot: number;
+  created_at: string;
+}
+
+export interface DraftPick {
+  id: string;
+  draft_id: string;
+  team_id: string;
+  player_id: string;
+  pot: number | null;
+  round: number;
+  pick_number: number;
+  created_at: string;
+}
+
+export const DRAFT_MODE_LABELS: Record<DraftMode, string> = {
+  pool: "Un solo bombo",
+  pots: "Por bombos",
+};
+
+export const DRAFT_ORDER_LABELS: Record<DraftOrderMode, string> = {
+  once: "Se sortea una vez y se mantiene",
+  per_round: "Se vuelve a sortear en cada bombo",
+};
+
 /** El torneo de pruebas. No sale en ninguna lista pública: tiene equipos
  *  y jugadores inventados y pasaría por real. */
 export const TORNEO_DE_PRUEBA = "prueba-local";
