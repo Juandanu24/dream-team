@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   ClipboardList,
+  Dices,
   ListChecks,
   Image as ImageIcon,
   ClipboardCheck,
@@ -21,6 +22,7 @@ export const ADMIN_NAV = [
   { href: "/admin", label: "Panel", icon: LayoutDashboard },
   { href: "/admin/inscripciones", label: "Inscripciones", icon: ClipboardList },
   { href: "/admin/equipos", label: "Equipos", icon: Users },
+  { href: "/admin/sorteo", label: "Sorteo", icon: Dices },
   { href: "/admin/partidos", label: "Calendario", icon: CalendarDays },
   { href: "/admin/alineaciones", label: "Alineaciones", icon: ClipboardCheck },
   { href: "/admin/amistosos", label: "Amistosos", icon: Swords },
@@ -34,7 +36,7 @@ export function esRutaActiva(pathname: string, href: string) {
   return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 }
 
-// Las diez secciones, una debajo de otra en la barra lateral.
+// Las once secciones, una debajo de otra en la barra lateral.
 //
 // Antes iban en el encabezado, en fila. Nueve botones no caben en una
 // barra de 14 de alto: en pantallas medianas el último quedaba cortado y

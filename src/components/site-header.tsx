@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Dices,
   Home,
   Medal,
   Menu,
@@ -30,6 +31,7 @@ const links = [
   { href: "/torneo", label: "Torneo", icon: Trophy },
   // Se llama "Palmarés" y no "Historia" porque así se titula la página.
   { href: "/historia", label: "Palmarés", icon: Medal },
+  { href: "/sorteo", label: "Sorteo", icon: Dices },
   { href: "/penales", label: "Penales", icon: Target },
 ];
 
