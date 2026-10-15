@@ -31,6 +31,8 @@ export interface EquipoDelSorteo {
   crestUrl: string | null;
   participates: boolean;
   position: number | null;
+  /** Quién elige por el equipo. Null si no se marcó capitán. */
+  capitan: string | null;
   /** Cuántos tiene hoy, contando los que ya eligió. */
   jugadores: number;
   /** Los que eligió en este sorteo, en orden. */
@@ -115,7 +117,7 @@ export async function getDraftData(
         supabase.from("draft_teams").select("*").eq("draft_id", draft.id),
         supabase
           .from("team_players")
-          .select("player_id, team_id")
+          .select("player_id, team_id, is_captain")
           .eq("tournament_id", tournamentId),
         supabase
           .from("registrations")
@@ -133,7 +135,11 @@ export async function getDraftData(
     const teams = (teamsRes.data as Team[]) ?? [];
     const draftTeams = (draftTeamsRes.data as DraftTeam[]) ?? [];
     const roster =
-      (rosterRes.data as { player_id: string; team_id: string }[]) ?? [];
+      (rosterRes.data as {
+        player_id: string;
+        team_id: string;
+        is_captain: boolean | null;
+      }[]) ?? [];
     const aprobados = ((regsRes.data as { player_id: string }[]) ?? []).map(
       (r) => r.player_id,
     );
@@ -144,7 +150,10 @@ export async function getDraftData(
     // y los que ya fueron elegidos.
     const conEquipo = new Set(roster.map((r) => r.player_id));
     const sinEquipo = aprobados.filter((id) => !conEquipo.has(id));
-    const necesarios = [...new Set([...sinEquipo, ...picks.map((p) => p.player_id)])];
+    const capitanes = roster.filter((r) => r.is_captain).map((r) => r.player_id);
+    const necesarios = [
+      ...new Set([...sinEquipo, ...picks.map((p) => p.player_id), ...capitanes]),
+    ];
     const { data: playerRows } = necesarios.length
       ? await supabase.from("players").select("*").in("id", necesarios)
       : { data: [] as Player[] };
@@ -184,6 +193,13 @@ export async function getDraftData(
             crestUrl: t.crest_url ?? null,
             participates: dt.participates,
             position: dt.position,
+            capitan: (() => {
+              const c = roster.find(
+                (r) => r.team_id === dt.team_id && r.is_captain,
+              );
+              const p = c ? jugadores.get(c.player_id) : undefined;
+              return p ? cardName(p) : null;
+            })(),
             jugadores: roster.filter((r) => r.team_id === dt.team_id).length,
             elegidos: picksDetalle
               .filter((p) => p.teamId === dt.team_id)

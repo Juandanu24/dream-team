@@ -308,9 +308,65 @@ export async function cerrarSorteo() {
   revalidarSorteo();
 }
 
+/** Deja el sorteo como antes de empezar y DEVUELVE al bombo a los que se
+ *  repartieron en él.
+ *
+ *  Es para los ensayos: se prueba el recorrido completo y después se
+ *  vuelve a la base sin tocar a nadie más. Lo que se saca de los equipos
+ *  son exactamente los jugadores que están en `draft_picks` —no "los que
+ *  sobran" ni "los últimos"—, así que la nómina con la que cada equipo
+ *  llegó al sorteo queda intacta por construcción.
+ *
+ *  Los bombos se conservan: rearmarlos en cada ensayo sería el trabajo
+ *  aburrido de la pantalla. El orden sí se borra, porque un sorteo nuevo
+ *  empieza con un orden nuevo. */
+export async function reiniciarSorteo(): Promise<number> {
+  await requireAdmin();
+  const data = await getDraftData();
+  if (!data) throw new Error("No hay sorteo");
+
+  const supabase = createAdminClient();
+  const elegidos = data.picks.map((p) => p.jugador.id);
+
+  if (elegidos.length > 0) {
+    const { error } = await supabase
+      .from("team_players")
+      .delete()
+      .eq("tournament_id", data.tournamentId)
+      .in("player_id", elegidos);
+    if (error) throw error;
+  }
+
+  const { error: e2 } = await supabase
+    .from("draft_picks")
+    .delete()
+    .eq("draft_id", data.draft.id);
+  if (e2) throw e2;
+
+  await supabase
+    .from("draft_teams")
+    .update({ position: null })
+    .eq("draft_id", data.draft.id);
+
+  const { error: e3 } = await supabase
+    .from("drafts")
+    .update({
+      status: "setup",
+      current_round: 1,
+      started_at: null,
+      finished_at: null,
+    })
+    .eq("id", data.draft.id);
+  if (e3) throw e3;
+
+  revalidarSorteo();
+  return elegidos.length;
+}
+
 /** Borra el sorteo entero. No toca `team_players`: los jugadores que ya
  *  se repartieron se quedan en su equipo, porque borrar el sorteo es
- *  rehacer el proceso, no deshacer lo acordado. */
+ *  rehacer el proceso, no deshacer lo acordado. Para deshacerlo está
+ *  `reiniciarSorteo`. */
 export async function borrarSorteo() {
   await requireAdmin();
   const supabase = createAdminClient();

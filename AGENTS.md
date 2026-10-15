@@ -406,6 +406,21 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   bombo se quedó vacío: con cinco equipos y un bombo de tres, dos se
   quedan sin elegir de ese bombo y hay que pasar al siguiente en vez de
   trabarse esperando un turno imposible.
+- **El sorteo se hace desde el CELULAR**, pasando el teléfono entre
+  capitanes, y por eso la pantalla está pensada a 390px antes que a
+  escritorio: el turno va pegado arriba (`sticky`) porque con veintiún
+  nombres en la lista se perdía de vista de quién era, la lista de
+  jugadores es de UNA columna con el área táctil en 68px —dos columnas
+  dejaban el nombre cortado y el blanco demasiado chico para una acción
+  que no se puede deshacer sin que todos lo vean—, y los botones de la
+  ronda van a lo ancho.
+- **`reiniciarSorteo()` es para los ensayos**: devuelve al bombo
+  exactamente a los que están en `draft_picks` —no "los que sobran" ni
+  "los últimos"—, así que la nómina con la que cada equipo llegó queda
+  intacta por construcción. Conserva los bombos, que rearmarlos en cada
+  ensayo sería el trabajo aburrido, y borra el orden, porque un sorteo
+  nuevo empieza con un orden nuevo. `borrarSorteo()` es otra cosa: borra
+  el proceso y DEJA a los jugadores donde quedaron.
 - **`getDraftData()` NO se cachea**, al revés que el resto de loaders: el
   sorteo cambia cada pocos segundos y servir una versión de hace un minuto
   sería mostrar un turno que ya pasó. La pública se refresca sola cada 12
