@@ -46,7 +46,7 @@ export default async function SorteoPage() {
   const participantes = equipos.filter((e) => e.participates && e.position);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:py-12">
       {/* Mientras corre, la página se refresca sola: el que lo está
           siguiendo no tiene que recargar a mano. */}
       {enCurso ? <AutoRefresh segundos={12} /> : null}
@@ -69,8 +69,8 @@ export default async function SorteoPage() {
 
       {/* Turno */}
       {enCurso ? (
-        <Card className="mt-6 border border-volt/40 bg-card shadow-card ring-0">
-          <CardContent className="px-5">
+        <Card className="sticky top-16 z-20 mt-6 border border-volt/40 bg-card shadow-card ring-0">
+          <CardContent className="px-4 sm:px-5">
             <p className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase">
               {draft.mode === "pots"
                 ? nombreDeBombo(draft.current_round)
@@ -88,11 +88,17 @@ export default async function SorteoPage() {
                 />
                 ELIGE {equipoEnTurno.name.toUpperCase()}
               </p>
-            ) : (
+            ) : null}
+            {equipoEnTurno?.capitan ? (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Al bate: {equipoEnTurno.capitan}
+              </p>
+            ) : null}
+            {!equipoEnTurno ? (
               <p className="mt-1 font-display text-2xl tracking-wide text-muted-foreground">
                 Ronda completa
               </p>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       ) : null}

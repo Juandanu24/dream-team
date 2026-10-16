@@ -37,6 +37,7 @@ import {
   cerrarSorteo,
   deshacerUltima,
   elegirJugador,
+  reiniciarSorteo,
   guardarConfiguracion,
   siguienteRonda,
   sortearOrden,
@@ -158,7 +159,7 @@ export function DraftStudio({ data }: { data: DraftData }) {
       <Avisos data={data} pending={pending} />
 
       <Card className="bg-card shadow-card ring-0">
-        <CardContent className="flex flex-wrap items-center gap-3 px-5">
+        <CardContent className="flex flex-wrap items-center gap-2 px-4 sm:px-5">
           {corriendo ? (
             <Button
               variant="outline"
@@ -166,6 +167,32 @@ export function DraftStudio({ data }: { data: DraftData }) {
               onClick={() => correr(cerrarSorteo, "Sorteo cerrado")}
             >
               Cerrar el sorteo
+            </Button>
+          ) : null}
+          {picks.length > 0 ? (
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                if (
+                  !confirm(
+                    `¿Reiniciar? Vuelven al bombo los ${picks.length} jugadores elegidos en este sorteo. La nómina con la que cada equipo llegó NO se toca, y los bombos se conservan.`,
+                  )
+                )
+                  return;
+                startTransition(async () => {
+                  try {
+                    const n = await reiniciarSorteo();
+                    toast.success(`${n} jugador(es) de vuelta al bombo`);
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "No se pudo",
+                    );
+                  }
+                });
+              }}
+            >
+              <RotateCcw aria-hidden /> Reiniciar (ensayo)
             </Button>
           ) : null}
           <Button
@@ -187,7 +214,7 @@ export function DraftStudio({ data }: { data: DraftData }) {
           <p className="text-xs text-muted-foreground">
             Quedan {disponibles.length} sin equipo
             {draft.mode === "pots"
-              ? ` · ${disponiblesEnLaRonda.length} en el ${nombreDeBombo(draft.current_round).toLowerCase()}`
+              ? ` · ${disponiblesEnLaRonda.length} en el ${nombreDeBombo(draft.current_round)}`
               : ""}
           </p>
         </CardContent>
@@ -214,7 +241,7 @@ function Configuracion({
 
   return (
     <Card className="bg-card shadow-card ring-0">
-      <CardContent className="space-y-5 px-5">
+      <CardContent className="space-y-5 px-4 sm:px-5">
         <div>
           <p className="font-display text-xl tracking-wide">CÓMO SE SORTEA</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -327,7 +354,7 @@ function OrdenDeEleccion({
 
   return (
     <Card className="bg-card shadow-card ring-0">
-      <CardContent className="px-5">
+      <CardContent className="px-4 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="font-display text-xl tracking-wide">ORDEN DE ELECCIÓN</p>
           <Button
@@ -395,7 +422,7 @@ function Bombos({
 
   return (
     <Card className="bg-card shadow-card ring-0">
-      <CardContent className="space-y-4 px-5">
+      <CardContent className="space-y-4 px-4 sm:px-5">
         <div>
           <p className="font-display text-xl tracking-wide">LOS BOMBOS</p>
           <p className="text-xs text-muted-foreground">
@@ -516,8 +543,8 @@ function EnCurso({
   const { draft, turno, equipoEnTurno, disponiblesEnLaRonda, picks } = data;
 
   return (
-    <Card className="border border-volt/40 bg-card shadow-card ring-0">
-      <CardContent className="space-y-4 px-5">
+    <Card className="sticky top-16 z-20 border border-volt/40 bg-card shadow-card ring-0 lg:top-4">
+      <CardContent className="space-y-4 px-4 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase">
@@ -526,26 +553,34 @@ function EnCurso({
                 : `Vuelta ${draft.current_round}`}
             </p>
             {equipoEnTurno ? (
-              <p className="flex items-center gap-2 font-display text-3xl tracking-wide">
-                <TeamCrest
-                  name={equipoEnTurno.name}
-                  color={equipoEnTurno.color}
-                  crestUrl={equipoEnTurno.crestUrl}
-                  className="size-8 shrink-0"
-                />
-                {equipoEnTurno.name.toUpperCase()}
-              </p>
+              <>
+                <p className="flex items-center gap-2 font-display text-3xl tracking-wide">
+                  <TeamCrest
+                    name={equipoEnTurno.name}
+                    color={equipoEnTurno.color}
+                    crestUrl={equipoEnTurno.crestUrl}
+                    className="size-8 shrink-0"
+                  />
+                  {equipoEnTurno.name.toUpperCase()}
+                </p>
+                {equipoEnTurno.capitan ? (
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    Elige {equipoEnTurno.capitan}
+                  </p>
+                ) : null}
+              </>
             ) : (
               <p className="font-display text-2xl tracking-wide text-muted-foreground">
                 RONDA COMPLETA
               </p>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full justify-end gap-2 sm:w-auto">
             {picks.length > 0 ? (
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-11"
                 disabled={pending}
                 onClick={() => correr(deshacerUltima, "Elección deshecha")}
               >
@@ -554,7 +589,7 @@ function EnCurso({
             ) : null}
             {turno.rondaCompleta ? (
               <Button
-                className="rounded-full"
+                className="h-11 flex-1 rounded-full sm:flex-none"
                 disabled={pending}
                 onClick={onSiguienteRonda}
               >
@@ -580,24 +615,24 @@ function EnCurso({
               Faltan {turno.faltanEnRonda} por elegir en esta ronda. Toca un
               jugador para asignarlo.
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {disponiblesEnLaRonda.map((j) => (
                 <button
                   key={j.id}
                   type="button"
                   disabled={pending}
                   onClick={() => onElegir(j)}
-                  className="flex items-center gap-2.5 rounded-xl bg-surface-2 p-2 text-left transition-transform hover:-translate-y-0.5 disabled:opacity-50"
+                  className="flex min-h-14 items-center gap-3 rounded-xl bg-surface-2 p-2.5 text-left transition-transform active:scale-[0.98] disabled:opacity-50 sm:hover:-translate-y-0.5"
                 >
                   <PlayerPhoto
                     src={j.photoUrl}
                     alt={j.nombre}
                     offsetY={0.16}
                     fallback={j.nombre.slice(0, 2).toUpperCase()}
-                    className="size-11 shrink-0 rounded-lg"
+                    className="size-12 shrink-0 rounded-lg"
                   />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">
+                    <span className="block truncate text-base font-medium">
                       {j.nombre}
                     </span>
                     <span className="block text-[11px] text-muted-foreground">
@@ -619,7 +654,7 @@ function EnCurso({
 function Historial({ data }: { data: DraftData }) {
   return (
     <Card className="bg-card shadow-card ring-0">
-      <CardContent className="px-5">
+      <CardContent className="px-4 sm:px-5">
         <p className="font-display text-xl tracking-wide">
           LO QUE VA ({data.picks.length})
         </p>
@@ -654,7 +689,7 @@ function Avisos({ data, pending }: { data: DraftData; pending: boolean }) {
 
   return (
     <Card className="bg-card shadow-card ring-0">
-      <CardContent className="space-y-3 px-5">
+      <CardContent className="space-y-3 px-4 sm:px-5">
         <div>
           <p className="font-display text-xl tracking-wide">AVISAR</p>
           <p className="text-xs text-muted-foreground">
