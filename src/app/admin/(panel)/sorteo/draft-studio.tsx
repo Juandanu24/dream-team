@@ -1,15 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import {
   Dices,
   Loader2,
   Play,
-  Plus,
   RotateCcw,
 
   Trash2,
   Undo2,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,9 +24,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ShareTextButton } from "@/components/share-text-button";
 import { TeamCrest } from "@/components/team-crest";
+import { readableAccent } from "@/lib/team-color";
 import { PlayerPhoto } from "@/components/player-photo";
+import { PotsEditor } from "./pots-editor";
 import { nombreDeBombo } from "@/lib/draft-turn";
-import type { DraftData, JugadorDelSorteo } from "@/lib/draft";
+import {
+  cambiarSonido,
+  sonarEleccion,
+  sonidoActivo,
+  suscribirSonido,
+} from "@/lib/draft-sound";
+import type {
+  DraftData,
+  EquipoDelSorteo,
+  JugadorDelSorteo,
+} from "@/lib/draft";
 import {
   DRAFT_MODE_LABELS,
   DRAFT_ORDER_LABELS,
@@ -43,18 +62,20 @@ import {
   sortearOrden,
 } from "./actions";
 
-const MAX_BOMBOS = 6;
-
 export function DraftStudio({ data }: { data: DraftData }) {
   const [pending, startTransition] = useTransition();
-  const { draft, equipos, disponibles, disponiblesEnLaRonda, picks } = data;
+  const { draft, equipos, disponibles, disponiblesEnLaRonda, picks, potActual } =
+    data;
   const enSetup = draft.status === "setup";
   const corriendo = draft.status === "running";
 
   // El sorteo del orden y la elección se animan: el resultado ya viene
   // decidido del servidor y acá solo se revela.
   const [ruleta, setRuleta] = useState<string[] | null>(null);
-  const [recienElegido, setRecienElegido] = useState<JugadorDelSorteo | null>(null);
+  const [recienElegido, setRecienElegido] = useState<{
+    jugador: JugadorDelSorteo;
+    equipo: EquipoDelSorteo;
+  } | null>(null);
 
   const correr = (fn: () => Promise<unknown>, exito?: string) =>
     startTransition(async () => {
@@ -72,8 +93,9 @@ export function DraftStudio({ data }: { data: DraftData }) {
         <RuletaDeOrden nombres={ruleta} onFin={() => setRuleta(null)} />
       ) : null}
       {recienElegido ? (
-        <CartaElegido
-          jugador={recienElegido}
+        <FichaElegido
+          jugador={recienElegido.jugador}
+          equipo={recienElegido.equipo}
           onFin={() => setRecienElegido(null)}
         />
       ) : null}
@@ -114,7 +136,11 @@ export function DraftStudio({ data }: { data: DraftData }) {
       ) : null}
 
       {draft.mode === "pots" && enSetup ? (
-        <Bombos data={data} pending={pending} correr={correr} />
+        <PotsEditor
+          jugadores={disponibles}
+          pending={pending}
+          onMover={(id, pot) => correr(() => asignarBombo(id, pot))}
+        />
       ) : null}
 
       {corriendo ? (
@@ -125,8 +151,10 @@ export function DraftStudio({ data }: { data: DraftData }) {
           onElegir={(j) =>
             startTransition(async () => {
               try {
+                const destino = data.equipoEnTurno;
                 await elegirJugador(j.id);
-                setRecienElegido(j);
+                sonarEleccion();
+                if (destino) setRecienElegido({ jugador: j, equipo: destino });
               } catch (error) {
                 toast.error(
                   error instanceof Error ? error.message : "No se pudo elegir",
@@ -159,64 +187,96 @@ export function DraftStudio({ data }: { data: DraftData }) {
       <Avisos data={data} pending={pending} />
 
       <Card className="bg-card shadow-card ring-0">
-        <CardContent className="flex flex-wrap items-center gap-2 px-4 sm:px-5">
+        <CardContent className="space-y-3 px-4 sm:px-5">
+          <p className="text-xs text-muted-foreground">
+            Quedan {disponibles.length} sin equipo
+            {draft.mode === "pots"
+              ? potActual
+                ? ` · ${disponiblesEnLaRonda.length} en el ${nombreDeBombo(potActual)}`
+                : ""
+              : ""}
+          </p>
+
           {corriendo ? (
             <Button
               variant="outline"
+              className="h-11 w-full sm:w-auto"
               disabled={pending}
               onClick={() => correr(cerrarSorteo, "Sorteo cerrado")}
             >
               Cerrar el sorteo
             </Button>
           ) : null}
-          {picks.length > 0 ? (
-            <Button
-              variant="outline"
-              disabled={pending}
-              onClick={() => {
-                if (
-                  !confirm(
-                    `¿Reiniciar? Vuelven al bombo los ${picks.length} jugadores elegidos en este sorteo. La nómina con la que cada equipo llegó NO se toca, y los bombos se conservan.`,
+
+          {/* Los dos destruyen cosas distintas, así que cada uno dice en
+              una línea qué pasa con los JUGADORES, que es lo único que
+              de verdad los diferencia. */}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {picks.length > 0 ? (
+              <div className="rounded-xl bg-surface-2 p-3">
+                <Button
+                  variant="outline"
+                  className="h-11 w-full"
+                  disabled={pending}
+                  onClick={() => {
+                    if (
+                      !confirm(
+                        `¿Reiniciar? Vuelven al bombo los ${picks.length} jugadores elegidos en este sorteo. La nómina con la que cada equipo llegó NO se toca, y los bombos se conservan.`,
+                      )
+                    )
+                      return;
+                    startTransition(async () => {
+                      try {
+                        const n = await reiniciarSorteo();
+                        toast.success(`${n} jugador(es) de vuelta al bombo`);
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error ? error.message : "No se pudo",
+                        );
+                      }
+                    });
+                  }}
+                >
+                  <RotateCcw aria-hidden /> Reiniciar
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  <span className="text-foreground">
+                    Los {picks.length} elegidos vuelven al bombo.
+                  </span>{" "}
+                  Se conservan los bombos y quién participa; se borra el orden.
+                  Es lo que quieres después de un ensayo.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="rounded-xl bg-surface-2 p-3">
+              <Button
+                variant="ghost"
+                className="h-11 w-full text-muted-foreground hover:text-destructive"
+                disabled={pending}
+                onClick={() => {
+                  if (
+                    !confirm(
+                      picks.length > 0
+                        ? `¿Borrar el sorteo? OJO: los ${picks.length} jugadores ya elegidos SE QUEDAN en su equipo. Si lo que quieres es deshacer un ensayo, usa Reiniciar.`
+                        : "¿Borrar el sorteo? Se pierde la configuración y los bombos.",
+                    )
                   )
-                )
-                  return;
-                startTransition(async () => {
-                  try {
-                    const n = await reiniciarSorteo();
-                    toast.success(`${n} jugador(es) de vuelta al bombo`);
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error ? error.message : "No se pudo",
-                    );
-                  }
-                });
-              }}
-            >
-              <RotateCcw aria-hidden /> Reiniciar (ensayo)
-            </Button>
-          ) : null}
-          <Button
-            variant="ghost"
-            className="text-muted-foreground hover:text-destructive"
-            disabled={pending}
-            onClick={() => {
-              if (
-                !confirm(
-                  "¿Borrar el sorteo? Los jugadores ya repartidos se quedan en su equipo; se borra solo el proceso.",
-                )
-              )
-                return;
-              correr(borrarSorteo, "Sorteo borrado");
-            }}
-          >
-            <Trash2 aria-hidden /> Borrar el sorteo
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Quedan {disponibles.length} sin equipo
-            {draft.mode === "pots"
-              ? ` · ${disponiblesEnLaRonda.length} en el ${nombreDeBombo(draft.current_round)}`
-              : ""}
-          </p>
+                    return;
+                  correr(borrarSorteo, "Sorteo borrado");
+                }}
+              >
+                <Trash2 aria-hidden /> Borrar el sorteo
+              </Button>
+              <p className="mt-2 text-xs text-muted-foreground">
+                <span className="text-foreground">
+                  Los jugadores se quedan donde quedaron.
+                </span>{" "}
+                Borra el proceso entero: configuración, bombos, orden e
+                historial. Para cuando el sorteo real ya terminó.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -403,128 +463,6 @@ function OrdenDeEleccion({
   );
 }
 
-// ---------- Bombos ----------
-
-function Bombos({
-  data,
-  pending,
-  correr,
-}: {
-  data: DraftData;
-  pending: boolean;
-  correr: (fn: () => Promise<unknown>, exito?: string) => void;
-}) {
-  const usados = [...new Set(data.disponibles.map((j) => j.pot ?? 0))].filter(
-    (p) => p > 0,
-  );
-  const cuantos = Math.max(1, ...usados);
-  const sinBombo = data.disponibles.filter((j) => !j.pot);
-
-  return (
-    <Card className="bg-card shadow-card ring-0">
-      <CardContent className="space-y-4 px-4 sm:px-5">
-        <div>
-          <p className="font-display text-xl tracking-wide">LOS BOMBOS</p>
-          <p className="text-xs text-muted-foreground">
-            Arma los bombos antes de empezar: en el A los que más juegan, y así
-            hasta el último. Cada vuelta se elige de un bombo.
-          </p>
-        </div>
-
-        {sinBombo.length > 0 ? (
-          <div className="rounded-xl bg-surface-2 p-3">
-            <p className="text-xs tracking-widest text-yellow-500 uppercase">
-              Sin bombo · {sinBombo.length}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {sinBombo.map((j) => (
-                <ChipJugador
-                  key={j.id}
-                  jugador={j}
-                  pending={pending}
-                  bombos={cuantos}
-                  onMover={(pot) => correr(() => asignarBombo(j.id, pot))}
-                />
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {Array.from({ length: cuantos }, (_, i) => i + 1).map((pot) => {
-          const dentro = data.disponibles.filter((j) => j.pot === pot);
-          return (
-            <div key={pot} className="rounded-xl bg-surface-2 p-3">
-              <p className="text-xs tracking-widest text-dt-blue uppercase">
-                {nombreDeBombo(pot)} · {dentro.length}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {dentro.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">Vacío</span>
-                ) : (
-                  dentro.map((j) => (
-                    <ChipJugador
-                      key={j.id}
-                      jugador={j}
-                      pending={pending}
-                      bombos={cuantos}
-                      onMover={(p) => correr(() => asignarBombo(j.id, p))}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {cuantos < MAX_BOMBOS && sinBombo.length > 0 ? (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={pending}
-            onClick={() =>
-              correr(() => asignarBombo(sinBombo[0].id, cuantos + 1))
-            }
-          >
-            <Plus aria-hidden /> Abrir {nombreDeBombo(cuantos + 1)}
-          </Button>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ChipJugador({
-  jugador,
-  bombos,
-  pending,
-  onMover,
-}: {
-  jugador: JugadorDelSorteo;
-  bombos: number;
-  pending: boolean;
-  onMover: (pot: number | null) => void;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-card py-1 pr-1 pl-2.5 text-xs">
-      {jugador.nombre}
-      <select
-        aria-label={`Bombo de ${jugador.nombre}`}
-        className="rounded-full bg-transparent px-1 text-[11px] text-muted-foreground outline-none [&>option]:bg-popover"
-        value={jugador.pot ?? ""}
-        disabled={pending}
-        onChange={(e) => onMover(e.target.value ? Number(e.target.value) : null)}
-      >
-        <option value="">—</option>
-        {Array.from({ length: bombos }, (_, i) => i + 1).map((p) => (
-          <option key={p} value={p}>
-            {String.fromCharCode(64 + p)}
-          </option>
-        ))}
-      </select>
-    </span>
-  );
-}
-
 // ---------- En curso ----------
 
 function EnCurso({
@@ -540,7 +478,15 @@ function EnCurso({
   onElegir: (j: JugadorDelSorteo) => void;
   onSiguienteRonda: () => void;
 }) {
-  const { draft, turno, equipoEnTurno, disponiblesEnLaRonda, picks } = data;
+  const { draft, turno, equipoEnTurno, disponiblesEnLaRonda, picks, potActual } =
+    data;
+  // En el servidor no hay localStorage: el valor inicial es "con
+  // sonido" y el real llega al hidratar, sin efectos ni parpadeo.
+  const conSonido = useSyncExternalStore(
+    suscribirSonido,
+    sonidoActivo,
+    () => true,
+  );
 
   return (
     <Card className="sticky top-16 z-20 border border-volt/40 bg-card shadow-card ring-0 lg:top-4">
@@ -548,8 +494,8 @@ function EnCurso({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase">
-              {draft.mode === "pots"
-                ? nombreDeBombo(draft.current_round)
+              {draft.mode === "pots" && potActual
+                ? `${nombreDeBombo(potActual)} · vuelta ${draft.current_round}`
                 : `Vuelta ${draft.current_round}`}
             </p>
             {equipoEnTurno ? (
@@ -575,7 +521,25 @@ function EnCurso({
               </p>
             )}
           </div>
-          <div className="flex w-full justify-end gap-2 sm:w-auto">
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-11"
+              title={conSonido ? "Silenciar" : "Activar sonido"}
+              aria-pressed={conSonido}
+              onClick={() => {
+                const nuevo = !conSonido;
+                cambiarSonido(nuevo);
+                if (nuevo) sonarEleccion();
+              }}
+            >
+              {conSonido ? (
+                <Volume2 aria-label="Sonido activado" />
+              ) : (
+                <VolumeX aria-label="Sonido silenciado" />
+              )}
+            </Button>
             {picks.length > 0 ? (
               <Button
                 variant="ghost"
@@ -594,7 +558,7 @@ function EnCurso({
                 onClick={onSiguienteRonda}
               >
                 <RotateCcw aria-hidden />
-                {draft.mode === "pots" ? "Siguiente bombo" : "Siguiente vuelta"}
+                Siguiente vuelta
               </Button>
             ) : null}
           </div>
@@ -603,8 +567,8 @@ function EnCurso({
         {turno.rondaCompleta ? (
           <p className="text-sm text-muted-foreground">
             {disponiblesEnLaRonda.length === 0
-              ? "No quedan jugadores en esta ronda."
-              : "Ya eligieron todos."}{" "}
+              ? "Este bombo quedó vacío."
+              : `Ya eligieron todos. Quedan ${disponiblesEnLaRonda.length} en este bombo.`}{" "}
             {data.disponibles.length === 0
               ? "El bombo quedó vacío: puedes cerrar el sorteo."
               : null}
@@ -615,29 +579,40 @@ function EnCurso({
               Faltan {turno.faltanEnRonda} por elegir en esta ronda. Toca un
               jugador para asignarlo.
             </p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Cuadrados en rejilla, no una lista.
+                En una columna los veintiún nombres son mil cuatrocientos
+                píxeles de scroll y para escoger hay que comparar, no
+                leer en fila. A tres columnas se ven nueve de un golpe en
+                un celular y cada cuadro sigue midiendo 114px de lado,
+                muy por encima del mínimo táctil. Las cartas FIFA que ya
+                existen se descartaron acá: son altas (proporción 0,7) y
+                la rejilla quedaría MÁS larga que la lista. */}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               {disponiblesEnLaRonda.map((j) => (
                 <button
                   key={j.id}
                   type="button"
                   disabled={pending}
+                  title={j.nombreCompleto}
                   onClick={() => onElegir(j)}
-                  className="flex min-h-14 items-center gap-3 rounded-xl bg-surface-2 p-2.5 text-left transition-transform active:scale-[0.98] disabled:opacity-50 sm:hover:-translate-y-0.5"
+                  className="group/sel relative aspect-square overflow-hidden rounded-xl bg-surface-2 text-left transition-transform active:scale-[0.97] disabled:opacity-50 sm:hover:-translate-y-0.5"
                 >
                   <PlayerPhoto
                     src={j.photoUrl}
-                    alt={j.nombre}
+                    alt=""
                     offsetY={0.16}
                     fallback={j.nombre.slice(0, 2).toUpperCase()}
-                    className="size-12 shrink-0 rounded-lg"
+                    className="absolute inset-0 size-full"
                   />
-                  <span className="min-w-0">
-                    <span className="block truncate text-base font-medium">
+                  {/* Degradado para que el nombre se lea sobre cualquier
+                      foto, clara u oscura. */}
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent px-1.5 pt-5 pb-1.5">
+                    <span className="block truncate text-[11px] leading-tight font-semibold text-white">
                       {j.nombre}
                     </span>
-                    <span className="block text-[11px] text-muted-foreground">
-                      {POSITION_SHORT[j.position]} · {j.memberSince}
-                    </span>
+                  </span>
+                  <span className="absolute top-1 left-1 rounded bg-black/55 px-1 text-[9px] font-semibold tracking-wider text-white uppercase">
+                    {POSITION_SHORT[j.position]}
                   </span>
                 </button>
               ))}
@@ -652,27 +627,60 @@ function EnCurso({
 // ---------- Historial ----------
 
 function Historial({ data }: { data: DraftData }) {
+  // Agrupado por equipo y no en orden de elección: la pregunta que uno
+  // se hace mirando esto es "¿a quién tiene cada uno?", y en una lista
+  // corrida hay que leerla entera para responderla. El número de ronda
+  // va al lado de cada nombre, que es lo que se pierde al agrupar.
+  const porEquipo = data.equipos
+    .map((e) => ({
+      equipo: e,
+      picks: data.picks.filter((p) => p.teamId === e.teamId),
+    }))
+    .filter((x) => x.picks.length > 0);
+
   return (
     <Card className="bg-card shadow-card ring-0">
       <CardContent className="px-4 sm:px-5">
         <p className="font-display text-xl tracking-wide">
           LO QUE VA ({data.picks.length})
         </p>
-        <ol className="mt-3 space-y-1.5">
-          {[...data.picks].reverse().map((p) => (
-            <li key={p.pickNumber} className="flex items-center gap-2.5 text-sm">
-              <span className="w-6 shrink-0 text-right font-display text-muted-foreground tabular-nums">
-                {p.pickNumber}
-              </span>
-              <span className="min-w-0 flex-1 truncate font-medium">
-                {p.jugador.nombre}
-              </span>
-              <span className="shrink-0 truncate text-xs text-muted-foreground">
-                → {p.teamName}
-              </span>
-            </li>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {porEquipo.map(({ equipo, picks }) => (
+            <div key={equipo.teamId} className="rounded-xl bg-surface-2 p-3">
+              <p className="flex items-center gap-2">
+                <TeamCrest
+                  name={equipo.name}
+                  color={equipo.color}
+                  crestUrl={equipo.crestUrl}
+                  className="size-5 shrink-0"
+                />
+                <span className="min-w-0 flex-1 truncate font-display text-base tracking-wide">
+                  {equipo.name.toUpperCase()}
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                  +{picks.length}
+                </span>
+              </p>
+              <ul className="mt-2 space-y-1">
+                {picks.map((p) => (
+                  <li
+                    key={p.pickNumber}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {p.jugador.nombre}
+                    </span>
+                    <span className="shrink-0 rounded bg-card px-1.5 text-[10px] tracking-wider text-muted-foreground uppercase tabular-nums">
+                      {data.draft.mode === "pots"
+                        ? `Bombo ${String.fromCharCode(64 + p.round)}`
+                        : `Ronda ${p.round}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ol>
+        </div>
       </CardContent>
     </Card>
   );
@@ -813,17 +821,28 @@ function RuletaDeOrden({
   );
 }
 
-/** El jugador elegido, en grande. La carta entra girando y se asienta,
- *  que es el momento que la gente quiere ver en un sorteo en vivo. */
-function CartaElegido({
+/** La revelación del elegido, al estilo de abrir un sobre.
+ *
+ *  El orden es lo que la hace: primero el equipo arriba —a quién se lo
+ *  llevan—, después la carta girando sobre su eje con los rayos detrás,
+ *  el destello cruzándola, y al final el nombre subiendo. Si llegara
+ *  todo junto sería un cartel; escalonado es un momento.
+ *
+ *  Los rayos toman el color del equipo, que es lo que amarra la
+ *  animación al sorteo y no a una plantilla cualquiera. */
+function FichaElegido({
   jugador,
+  equipo,
   onFin,
 }: {
   jugador: JugadorDelSorteo;
+  equipo: EquipoDelSorteo;
   onFin: () => void;
 }) {
+  const acento = readableAccent(equipo.color);
+
   useEffect(() => {
-    const t = window.setTimeout(onFin, 2600);
+    const t = window.setTimeout(onFin, 3400);
     return () => window.clearTimeout(t);
   }, [onFin]);
 
@@ -832,21 +851,65 @@ function CartaElegido({
       type="button"
       onClick={onFin}
       aria-label="Cerrar"
-      className="fixed inset-0 z-100 flex items-center justify-center bg-background/92 p-6"
+      className="fixed inset-0 z-100 flex flex-col items-center justify-center gap-5 bg-background/95 p-6"
     >
-      <div className="animate-pop text-center">
-        <PlayerPhoto
-          src={jugador.photoUrl}
-          alt={jugador.nombre}
-          offsetY={0.16}
-          fallback={jugador.nombre.slice(0, 2).toUpperCase()}
-          className="mx-auto size-44 rounded-2xl shadow-card ring-2 ring-volt"
+      {/* El equipo, arriba */}
+      <div className="animate-ficha-equipo text-center">
+        <p className="text-[11px] tracking-[0.3em] text-muted-foreground uppercase">
+          Ficha para
+        </p>
+        <p className="mt-1 flex items-center justify-center gap-2">
+          <TeamCrest
+            name={equipo.name}
+            color={equipo.color}
+            crestUrl={equipo.crestUrl}
+            className="size-7 shrink-0"
+          />
+          <span
+            className="font-display text-2xl tracking-wide"
+            style={{ color: acento }}
+          >
+            {equipo.name.toUpperCase()}
+          </span>
+        </p>
+      </div>
+
+      {/* La carta, con los rayos detrás */}
+      <div className="relative flex items-center justify-center">
+        <span
+          aria-hidden
+          className="animate-ficha-rayos pointer-events-none absolute size-[22rem] rounded-full"
+          style={{
+            background: `conic-gradient(from 0deg, transparent 0deg, ${acento}55 18deg, transparent 36deg, transparent 90deg, ${acento}44 108deg, transparent 126deg, transparent 180deg, ${acento}55 198deg, transparent 216deg, transparent 270deg, ${acento}44 288deg, transparent 306deg)`,
+            maskImage:
+              "radial-gradient(circle, transparent 28%, black 42%, transparent 72%)",
+          }}
         />
-        <p className="mt-5 font-display text-5xl tracking-wide text-volt-text">
+        <div
+          className="animate-ficha-carta relative overflow-hidden rounded-2xl"
+          style={{ boxShadow: `0 0 60px -10px ${acento}aa` }}
+        >
+          <PlayerPhoto
+            src={jugador.photoUrl}
+            alt={jugador.nombre}
+            offsetY={0.16}
+            fallback={jugador.nombre.slice(0, 2).toUpperCase()}
+            className="size-48 rounded-2xl ring-2 sm:size-56"
+          />
+          <span
+            aria-hidden
+            className="animate-ficha-destello pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/45 to-transparent"
+          />
+        </div>
+      </div>
+
+      {/* El nombre, al final */}
+      <div className="animate-ficha-nombre text-center">
+        <p className="mx-auto max-w-[90vw] text-balance font-display text-3xl leading-none tracking-wide text-volt-text sm:text-5xl">
           {jugador.nombre.toUpperCase()}
         </p>
-        <p className="mt-1 text-sm tracking-widest text-muted-foreground uppercase">
-          {POSITION_SHORT[jugador.position]} · elegido
+        <p className="mt-2 text-xs tracking-[0.25em] text-muted-foreground uppercase">
+          {POSITION_SHORT[jugador.position]} · {jugador.memberSince} en el DT
         </p>
       </div>
     </button>

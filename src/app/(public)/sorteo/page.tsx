@@ -40,8 +40,10 @@ export default async function SorteoPage() {
     );
   }
 
-  const { draft, equipos, disponibles, disponiblesEnLaRonda, picks, equipoEnTurno } =
-    data;
+  const {
+    draft, equipos, disponibles, disponiblesEnLaRonda, picks, equipoEnTurno,
+    potActual,
+  } = data;
   const enCurso = draft.status === "running";
   const participantes = equipos.filter((e) => e.participates && e.position);
 
@@ -72,8 +74,8 @@ export default async function SorteoPage() {
         <Card className="sticky top-16 z-20 mt-6 border border-volt/40 bg-card shadow-card ring-0">
           <CardContent className="px-4 sm:px-5">
             <p className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase">
-              {draft.mode === "pots"
-                ? nombreDeBombo(draft.current_round)
+              {draft.mode === "pots" && potActual
+                ? `${nombreDeBombo(potActual)} · vuelta ${draft.current_round}`
                 : `Vuelta ${draft.current_round}`}
               {" · "}
               {disponiblesEnLaRonda.length} por elegir
