@@ -310,6 +310,40 @@ export async function cerrarSorteo() {
   revalidarSorteo();
 }
 
+/** Saca a UN jugador de su equipo y lo devuelve al bombo.
+ *
+ *  Hace falta porque `borrarSorteo()` deja a los repartidos donde
+ *  quedaron, y entonces no hay forma de recuperarlos: el sorteo que los
+ *  asignó ya no existe. Pasó en vivo —dieciocho jugadores repartidos por
+ *  una corrida anterior y el bombo nuevo con seis— y la única salida era
+ *  ir a `/admin/equipos` a sacarlos de a uno.
+ *
+ *  Si el jugador también está en las elecciones del sorteo en curso, se
+ *  borra esa elección: dejarla apuntando a alguien que ya no está en el
+ *  equipo sería historial falso. */
+export async function devolverAlBombo(playerId: string) {
+  await requireAdmin();
+  const supabase = createAdminClient();
+  const tid = await tournamentId();
+
+  const { error } = await supabase
+    .from("team_players")
+    .delete()
+    .eq("tournament_id", tid)
+    .eq("player_id", playerId);
+  if (error) throw error;
+
+  const data = await getDraftData();
+  if (data) {
+    await supabase
+      .from("draft_picks")
+      .delete()
+      .eq("draft_id", data.draft.id)
+      .eq("player_id", playerId);
+  }
+  revalidarSorteo();
+}
+
 /** Deja el sorteo como antes de empezar y DEVUELVE al bombo a los que se
  *  repartieron en él.
  *

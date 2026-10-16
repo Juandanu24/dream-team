@@ -13,9 +13,11 @@ import {
   Play,
   RotateCcw,
 
+  ChevronRight,
   Trash2,
   Undo2,
   Volume2,
+  X,
   VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -55,6 +57,7 @@ import {
   borrarSorteo,
   cerrarSorteo,
   deshacerUltima,
+  devolverAlBombo,
   elegirJugador,
   reiniciarSorteo,
   guardarConfiguracion,
@@ -133,6 +136,10 @@ export function DraftStudio({ data }: { data: DraftData }) {
         >
           <Play aria-hidden /> Arrancar el sorteo
         </Button>
+      ) : null}
+
+      {enSetup ? (
+        <DevolverAlBombo data={data} pending={pending} correr={correr} />
       ) : null}
 
       {draft.mode === "pots" && enSetup ? (
@@ -394,6 +401,102 @@ function Configuracion({
             ))}
           </div>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Sacar jugadores de sus equipos y mandarlos de vuelta al bombo.
+ *
+ *  Es la salida cuando una corrida anterior dejó gente repartida y el
+ *  bombo nuevo arranca corto. Lista TODOS los que tienen equipo, no solo
+ *  los de este sorteo, porque el caso que lo motivó fueron jugadores de
+ *  un sorteo ya borrado: si filtrara por las elecciones de ahora, los
+ *  que uno necesita sacar no aparecerían. */
+function DevolverAlBombo({
+  data,
+  pending,
+  correr,
+}: {
+  data: DraftData;
+  pending: boolean;
+  correr: (fn: () => Promise<unknown>, exito?: string) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const conGente = data.equipos.filter((e) => e.jugadores > 0);
+
+  return (
+    <Card className="bg-card shadow-card ring-0">
+      <CardContent className="px-4 sm:px-5">
+        <button
+          type="button"
+          onClick={() => setAbierto((v) => !v)}
+          className="flex w-full items-center gap-2 text-left"
+          aria-expanded={abierto}
+        >
+          <ChevronRight
+            className={cn(
+              "size-4 shrink-0 text-muted-foreground transition-transform",
+              abierto && "rotate-90",
+            )}
+            aria-hidden
+          />
+          <span className="font-display text-xl tracking-wide">
+            DEVOLVER AL BOMBO
+          </span>
+          <span className="ml-auto text-xs text-muted-foreground">
+            {data.disponibles.length} en el bombo
+          </span>
+        </button>
+
+        {abierto ? (
+          <div className="mt-3 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Saca de su equipo a quien deba volver al bombo. Útil cuando una
+              corrida anterior dejó gente repartida: borrar el sorteo no los
+              devuelve.
+            </p>
+            {conGente.map((e) => (
+              <div key={e.teamId} className="rounded-xl bg-surface-2 p-3">
+                <p className="flex items-center gap-2">
+                  <TeamCrest
+                    name={e.name}
+                    color={e.color}
+                    crestUrl={e.crestUrl}
+                    className="size-5 shrink-0"
+                  />
+                  <span className="min-w-0 flex-1 truncate font-display text-base tracking-wide">
+                    {e.name.toUpperCase()}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {e.jugadores}
+                  </span>
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {e.plantel.map((j) => (
+                    <button
+                      key={j.id}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => {
+                        if (!confirm(`¿Sacar a ${j.nombre} de ${e.name} y devolverlo al bombo?`))
+                          return;
+                        correr(
+                          () => devolverAlBombo(j.id),
+                          `${j.nombre} volvió al bombo`,
+                        );
+                      }}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-card px-3 text-xs transition-colors hover:text-destructive"
+                    >
+                      {j.nombre}
+                      <X className="size-3 shrink-0" aria-hidden />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

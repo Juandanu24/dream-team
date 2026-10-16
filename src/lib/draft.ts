@@ -41,6 +41,8 @@ export interface EquipoDelSorteo {
   jugadores: number;
   /** Los que eligió en este sorteo, en orden. */
   elegidos: JugadorDelSorteo[];
+  /** Todos los que tiene hoy, para poder devolverlos al bombo. */
+  plantel: JugadorDelSorteo[];
 }
 
 export interface PickDelSorteo {
@@ -160,9 +162,14 @@ export async function getDraftData(
     // y los que ya fueron elegidos.
     const conEquipo = new Set(roster.map((r) => r.player_id));
     const sinEquipo = aprobados.filter((id) => !conEquipo.has(id));
-    const capitanes = roster.filter((r) => r.is_captain).map((r) => r.player_id);
+    // Se piden también los que YA tienen equipo: el panel de "devolver
+    // al bombo" los necesita, y son los mismos del torneo.
     const necesarios = [
-      ...new Set([...sinEquipo, ...picks.map((p) => p.player_id), ...capitanes]),
+      ...new Set([
+        ...sinEquipo,
+        ...picks.map((p) => p.player_id),
+        ...roster.map((r) => r.player_id),
+      ]),
     ];
     const { data: playerRows } = necesarios.length
       ? await supabase.from("players").select("*").in("id", necesarios)
@@ -214,6 +221,13 @@ export async function getDraftData(
             elegidos: picksDetalle
               .filter((p) => p.teamId === dt.team_id)
               .map((p) => p.jugador),
+            plantel: roster
+              .filter((r) => r.team_id === dt.team_id)
+              .flatMap((r) => {
+                const p = jugadores.get(r.player_id);
+                return p ? [aJugador(p, potDe.get(r.player_id) ?? null)] : [];
+              })
+              .sort((a, b) => a.nombre.localeCompare(b.nombre)),
           },
         ];
       })
