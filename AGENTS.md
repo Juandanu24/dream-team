@@ -421,6 +421,20 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   ensayo sería el trabajo aburrido, y borra el orden, porque un sorteo
   nuevo empieza con un orden nuevo. `borrarSorteo()` es otra cosa: borra
   el proceso y DEJA a los jugadores donde quedaron.
+- **El bombo en curso es el MÁS BAJO con gente, no el número de ronda.**
+  Atarlo a la ronda fue un error que se vio en vivo: con cuatro equipos
+  y bombos de siete, una vuelta deja tres sin elegir en ese bombo, y
+  avanzar la ronda los abandonaba. El sorteo real terminó en la ronda 7
+  con solo tres bombos y **nueve jugadores inalcanzables**. Derivándolo
+  no hay estado que se desincronice: el bombo avanza solo cuando el
+  anterior se vacía, y otra vuelta sobre el mismo bombo es simplemente la
+  ronda siguiente. "Siguiente vuelta" abre una pasada, no cambia de bombo.
+- **Los bombos se arman arrastrando, con Pointer Events.** No con el
+  arrastre nativo de HTML5, que en táctil no dispara, y el sorteo se hace
+  desde el celular. En táctil hay que SOSTENER 220 ms antes de que la
+  carta se despegue, porque si empezara al primer movimiento no se podría
+  bajar la página. El `<select>` de cada carta se queda y no es
+  redundante: arrastrar no se puede con teclado ni con lector de pantalla.
 - **`getDraftData()` NO se cachea**, al revés que el resto de loaders: el
   sorteo cambia cada pocos segundos y servir una versión de hace un minuto
   sería mostrar un turno que ya pasó. La pública se refresca sola cada 12

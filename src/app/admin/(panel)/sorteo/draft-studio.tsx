@@ -11,7 +11,6 @@ import {
   Dices,
   Loader2,
   Play,
-  Plus,
   RotateCcw,
 
   Trash2,
@@ -27,6 +26,7 @@ import { ShareTextButton } from "@/components/share-text-button";
 import { TeamCrest } from "@/components/team-crest";
 import { readableAccent } from "@/lib/team-color";
 import { PlayerPhoto } from "@/components/player-photo";
+import { PotsEditor } from "./pots-editor";
 import { nombreDeBombo } from "@/lib/draft-turn";
 import {
   cambiarSonido,
@@ -62,11 +62,10 @@ import {
   sortearOrden,
 } from "./actions";
 
-const MAX_BOMBOS = 6;
-
 export function DraftStudio({ data }: { data: DraftData }) {
   const [pending, startTransition] = useTransition();
-  const { draft, equipos, disponibles, disponiblesEnLaRonda, picks } = data;
+  const { draft, equipos, disponibles, disponiblesEnLaRonda, picks, potActual } =
+    data;
   const enSetup = draft.status === "setup";
   const corriendo = draft.status === "running";
 
@@ -137,7 +136,11 @@ export function DraftStudio({ data }: { data: DraftData }) {
       ) : null}
 
       {draft.mode === "pots" && enSetup ? (
-        <Bombos data={data} pending={pending} correr={correr} />
+        <PotsEditor
+          jugadores={disponibles}
+          pending={pending}
+          onMover={(id, pot) => correr(() => asignarBombo(id, pot))}
+        />
       ) : null}
 
       {corriendo ? (
@@ -188,7 +191,9 @@ export function DraftStudio({ data }: { data: DraftData }) {
           <p className="text-xs text-muted-foreground">
             Quedan {disponibles.length} sin equipo
             {draft.mode === "pots"
-              ? ` · ${disponiblesEnLaRonda.length} en el ${nombreDeBombo(draft.current_round)}`
+              ? potActual
+                ? ` · ${disponiblesEnLaRonda.length} en el ${nombreDeBombo(potActual)}`
+                : ""
               : ""}
           </p>
 
@@ -458,128 +463,6 @@ function OrdenDeEleccion({
   );
 }
 
-// ---------- Bombos ----------
-
-function Bombos({
-  data,
-  pending,
-  correr,
-}: {
-  data: DraftData;
-  pending: boolean;
-  correr: (fn: () => Promise<unknown>, exito?: string) => void;
-}) {
-  const usados = [...new Set(data.disponibles.map((j) => j.pot ?? 0))].filter(
-    (p) => p > 0,
-  );
-  const cuantos = Math.max(1, ...usados);
-  const sinBombo = data.disponibles.filter((j) => !j.pot);
-
-  return (
-    <Card className="bg-card shadow-card ring-0">
-      <CardContent className="space-y-4 px-4 sm:px-5">
-        <div>
-          <p className="font-display text-xl tracking-wide">LOS BOMBOS</p>
-          <p className="text-xs text-muted-foreground">
-            Arma los bombos antes de empezar: en el A los que más juegan, y así
-            hasta el último. Cada vuelta se elige de un bombo.
-          </p>
-        </div>
-
-        {sinBombo.length > 0 ? (
-          <div className="rounded-xl bg-surface-2 p-3">
-            <p className="text-xs tracking-widest text-yellow-500 uppercase">
-              Sin bombo · {sinBombo.length}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {sinBombo.map((j) => (
-                <ChipJugador
-                  key={j.id}
-                  jugador={j}
-                  pending={pending}
-                  bombos={cuantos}
-                  onMover={(pot) => correr(() => asignarBombo(j.id, pot))}
-                />
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {Array.from({ length: cuantos }, (_, i) => i + 1).map((pot) => {
-          const dentro = data.disponibles.filter((j) => j.pot === pot);
-          return (
-            <div key={pot} className="rounded-xl bg-surface-2 p-3">
-              <p className="text-xs tracking-widest text-dt-blue uppercase">
-                {nombreDeBombo(pot)} · {dentro.length}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {dentro.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">Vacío</span>
-                ) : (
-                  dentro.map((j) => (
-                    <ChipJugador
-                      key={j.id}
-                      jugador={j}
-                      pending={pending}
-                      bombos={cuantos}
-                      onMover={(p) => correr(() => asignarBombo(j.id, p))}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {cuantos < MAX_BOMBOS && sinBombo.length > 0 ? (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={pending}
-            onClick={() =>
-              correr(() => asignarBombo(sinBombo[0].id, cuantos + 1))
-            }
-          >
-            <Plus aria-hidden /> Abrir {nombreDeBombo(cuantos + 1)}
-          </Button>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ChipJugador({
-  jugador,
-  bombos,
-  pending,
-  onMover,
-}: {
-  jugador: JugadorDelSorteo;
-  bombos: number;
-  pending: boolean;
-  onMover: (pot: number | null) => void;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-card py-1 pr-1 pl-2.5 text-xs">
-      {jugador.nombre}
-      <select
-        aria-label={`Bombo de ${jugador.nombre}`}
-        className="rounded-full bg-transparent px-1 text-[11px] text-muted-foreground outline-none [&>option]:bg-popover"
-        value={jugador.pot ?? ""}
-        disabled={pending}
-        onChange={(e) => onMover(e.target.value ? Number(e.target.value) : null)}
-      >
-        <option value="">—</option>
-        {Array.from({ length: bombos }, (_, i) => i + 1).map((p) => (
-          <option key={p} value={p}>
-            {String.fromCharCode(64 + p)}
-          </option>
-        ))}
-      </select>
-    </span>
-  );
-}
-
 // ---------- En curso ----------
 
 function EnCurso({
@@ -595,7 +478,8 @@ function EnCurso({
   onElegir: (j: JugadorDelSorteo) => void;
   onSiguienteRonda: () => void;
 }) {
-  const { draft, turno, equipoEnTurno, disponiblesEnLaRonda, picks } = data;
+  const { draft, turno, equipoEnTurno, disponiblesEnLaRonda, picks, potActual } =
+    data;
   // En el servidor no hay localStorage: el valor inicial es "con
   // sonido" y el real llega al hidratar, sin efectos ni parpadeo.
   const conSonido = useSyncExternalStore(
@@ -610,8 +494,8 @@ function EnCurso({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-[11px] tracking-[0.2em] text-muted-foreground uppercase">
-              {draft.mode === "pots"
-                ? nombreDeBombo(draft.current_round)
+              {draft.mode === "pots" && potActual
+                ? `${nombreDeBombo(potActual)} · vuelta ${draft.current_round}`
                 : `Vuelta ${draft.current_round}`}
             </p>
             {equipoEnTurno ? (
@@ -674,7 +558,7 @@ function EnCurso({
                 onClick={onSiguienteRonda}
               >
                 <RotateCcw aria-hidden />
-                {draft.mode === "pots" ? "Siguiente bombo" : "Siguiente vuelta"}
+                Siguiente vuelta
               </Button>
             ) : null}
           </div>
@@ -683,8 +567,8 @@ function EnCurso({
         {turno.rondaCompleta ? (
           <p className="text-sm text-muted-foreground">
             {disponiblesEnLaRonda.length === 0
-              ? "No quedan jugadores en esta ronda."
-              : "Ya eligieron todos."}{" "}
+              ? "Este bombo quedó vacío."
+              : `Ya eligieron todos. Quedan ${disponiblesEnLaRonda.length} en este bombo.`}{" "}
             {data.disponibles.length === 0
               ? "El bombo quedó vacío: puedes cerrar el sorteo."
               : null}

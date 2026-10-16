@@ -220,7 +220,7 @@ export async function elegirJugador(playerId: string) {
       draft_id: data.draft.id,
       team_id: equipo.teamId,
       player_id: playerId,
-      pot: data.draft.mode === "pots" ? data.draft.current_round : null,
+      pot: data.potActual,
       round: data.draft.current_round,
       pick_number: pickNumber,
     })
@@ -271,8 +271,10 @@ export async function deshacerUltima() {
   revalidarSorteo();
 }
 
-/** Pasa a la ronda siguiente. En modo bombos es el bombo siguiente, y si
- *  el orden es `per_round` se vuelve a sortear. */
+/** Abre otra vuelta. NO mueve el bombo: ese avanza solo cuando el
+ *  actual se queda sin gente, porque se deriva del bombo más bajo que
+ *  todavía tenga jugadores. Si el orden es `per_round`, se vuelve a
+ *  sortear. */
 export async function siguienteRonda(): Promise<
   { teamId: string; position: number }[] | null
 > {

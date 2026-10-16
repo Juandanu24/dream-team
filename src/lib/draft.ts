@@ -20,6 +20,10 @@ export interface JugadorDelSorteo {
   photoUrl: string | null;
   position: Player["position"];
   memberSince: string;
+  /** Lo que necesita la carta FIFA del editor de bombos. */
+  age: number;
+  foot: Player["dominant_foot"];
+  heightCm: number | null;
   /** En qué bombo quedó. Null en modo bolsa o si todavía no se asignó. */
   pot: number | null;
 }
@@ -56,6 +60,9 @@ export interface DraftData {
   equipos: EquipoDelSorteo[];
   /** Aprobados sin equipo: el bombo completo, sin repartir todavía. */
   disponibles: JugadorDelSorteo[];
+  /** El bombo del que se está eligiendo. Null en modo bolsa o si ya no
+   *  queda ninguno con gente. */
+  potActual: number | null;
   /** Los que puede elegir el equipo en turno AHORA mismo. */
   disponiblesEnLaRonda: JugadorDelSorteo[];
   picks: PickDelSorteo[];
@@ -72,6 +79,9 @@ function aJugador(p: Player, pot: number | null): JugadorDelSorteo {
     photoUrl: p.photo_url,
     position: p.position,
     memberSince: p.member_since,
+    age: p.age,
+    foot: p.dominant_foot,
+    heightCm: p.height_cm ?? null,
     pot,
   };
 }
@@ -219,10 +229,28 @@ export async function getDraftData(
       })
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-    // En modo bombos solo se puede elegir del bombo de la ronda.
+    // El bombo en curso es el MÁS BAJO que todavía tenga gente, no el
+    // número de ronda.
+    //
+    // Atarlo a la ronda fue un error que se vio en vivo: con cuatro
+    // equipos y bombos de siete, una vuelta deja tres sin elegir en ese
+    // bombo, y avanzar la ronda los abandonaba. El sorteo terminó en la
+    // ronda 7 con solo tres bombos y nueve jugadores inalcanzables.
+    //
+    // Derivándolo no hay estado que se desincronice: el bombo avanza
+    // solo cuando el anterior se vacía, y una vuelta nueva sobre el
+    // mismo bombo es simplemente la ronda siguiente.
+    const potActual =
+      draft.mode === "pots"
+        ? (disponibles
+            .map((j) => j.pot)
+            .filter((p): p is number => p != null)
+            .sort((a, b) => a - b)[0] ?? null)
+        : null;
+
     const disponiblesEnLaRonda =
       draft.mode === "pots"
-        ? disponibles.filter((j) => j.pot === draft.current_round)
+        ? disponibles.filter((j) => j.pot === potActual)
         : disponibles;
 
     const participantes = equipos
@@ -241,6 +269,7 @@ export async function getDraftData(
       tournamentId,
       equipos,
       disponibles,
+      potActual,
       disponiblesEnLaRonda,
       picks: picksDetalle,
       turno,
