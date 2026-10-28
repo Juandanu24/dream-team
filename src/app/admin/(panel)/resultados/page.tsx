@@ -10,7 +10,6 @@ import {
   type RosterEntry,
 } from "@/lib/admin-matches";
 import {
-  PIECE_VENUE,
   buildWhatsAppMessage,
   formatPieceWhen,
   shootoutLabel,
@@ -27,6 +26,7 @@ import {
   type Match,
   type MatchEvent,
   type Team,
+  canchaConCiudad,
 } from "@/lib/types";
 import { deleteEvent, reopenMatch, saveResult } from "./actions";
 import { MatchEventForm } from "./match-event-form";
@@ -265,7 +265,7 @@ function MatchResult({
                 score: match.away_score,
               }}
               when={formatPieceWhen(match.kickoff_at)}
-              venue={PIECE_VENUE}
+              venue={canchaConCiudad(match.venue)}
               homeScorers={
                 tallyScorers(matchEvents, home.id, away.id).home
               }

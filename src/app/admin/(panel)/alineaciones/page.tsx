@@ -2,9 +2,14 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { getLineupsData, type LineupWithPlayers } from "@/lib/lineups";
-import { formatPieceWhen, PIECE_VENUE } from "@/lib/match-summary";
+import { formatPieceWhen } from "@/lib/match-summary";
 import { readableAccent } from "@/lib/team-color";
-import { STAGE_LABELS, type LineupLine, type Team } from "@/lib/types";
+import {
+  canchaConCiudad,
+  STAGE_LABELS,
+  type LineupLine,
+  type Team,
+} from "@/lib/types";
 import { LineupCard, type EditorTarget, type LineupSeed } from "./lineup-editor";
 
 export const dynamic = "force-dynamic";
@@ -149,7 +154,7 @@ export default async function AlineacionesPage() {
                                 crestUrl: team.crest_url ?? null,
                                 rivalName: teamName(teams, rivalId),
                                 when,
-                                venue: PIECE_VENUE,
+                                venue: canchaConCiudad(match.venue),
                                 eyebrow,
                                 squad: squadOf(team.id),
                                 lineup: seedFrom(

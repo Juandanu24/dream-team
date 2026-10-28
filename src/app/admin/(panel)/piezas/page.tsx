@@ -9,6 +9,7 @@ import {
   type Match,
   type Player,
   type Team,
+  canchaConCiudad,
 } from "@/lib/types";
 import type { Encuadre, PerfilStat } from "@/lib/post-image";
 import { PiecesStudio, type PiecesData } from "./pieces-studio";
@@ -16,7 +17,6 @@ import { WeekPack } from "./week-pack";
 
 export const dynamic = "force-dynamic";
 
-const VENUE = "Cancha F8 · Montería";
 
 // "Martes 18 de agosto · 8:00 PM" en hora de Colombia. Se arma a mano
 // porque toLocaleString mete comas y "a. m." donde no van.
@@ -130,7 +130,7 @@ export default async function PiezasPage() {
         label: `Semana ${match.week} · ${home.name} vs ${away.name}`,
         eyebrow: `Semana ${match.week} · ${STAGE_LABELS[match.stage]}`,
         when: formatWhen(match.kickoff_at),
-        venue: VENUE,
+        venue: canchaConCiudad(match.venue),
         home: { ...home, score: match.home_score },
         away: { ...away, score: match.away_score },
         finished,

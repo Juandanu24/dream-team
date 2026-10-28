@@ -100,7 +100,9 @@ empuja a inscribirse.
   vale más que cualquier pieza nueva.
 
 Migraciones aplicadas hasta **`00018_semanas_hasta_20.sql`**.
-**Pendiente de correr: `00019_sorteo.sql`** (el sorteo de jugadores).
+**Pendiente de correr: `00020_cancha_por_partido.sql`** (la cancha de cada partido). Sin ella, programar o editar un partido falla.
+
+Antes: `00019_sorteo.sql` (el sorteo de jugadores).
 Verificada en un Postgres desechable: re-ejecutable, y los constraints
 rechazan dos sorteos por torneo, un modo inventado, un equipo repetido,
 un jugador en dos bombos, un bombo fuera de rango, elegir dos veces al

@@ -439,5 +439,26 @@ El entorno se configura siguiendo `SETUP.md` (crear proyecto Supabase, migració
   sorteo cambia cada pocos segundos y servir una versión de hace un minuto
   sería mostrar un turno que ya pasó. La pública se refresca sola cada 12
   segundos con `AutoRefresh`, que se detiene si la pestaña no está visible.
+- **La cancha es de cada partido** (`matches.venue`, migración 00020).
+  Hasta el torneo 2 todo era en la Cancha F8 y el nombre estaba escrito a
+  mano en las piezas, en el mensaje de WhatsApp y en la landing; con el
+  Complejo Deportivo Rey Pelé dejó de ser un dato del proyecto. Nulo = la
+  cancha por defecto, así los partidos viejos no hay que rellenarlos. Las
+  canchas conocidas viven en `CANCHAS` (`types.ts`) pero la columna es
+  texto libre: sumar una tercera no necesita migración. El mensaje de la
+  fecha lleva la cancha POR PARTIDO y no una sola al pie, porque dos
+  partidos de la misma fecha pueden ser en canchas distintas.
+- **`loadImage()` no pone `crossOrigin` en imágenes del mismo origen, y
+  lleva tope de tiempo.** Costó un botón girando para siempre en
+  producción: pedir `/logo-dt.webp` en modo CORS cuando el navegador ya lo
+  tenía cacheado desde el `<img>` del encabezado —pedido con credenciales—
+  deja la petición en una entrada que no se puede reusar, y en Chrome eso
+  no dispara `onload` NI `onerror`. La promesa no se resuelve nunca y la
+  pieza no sale. El aviso de consola lo decía: "a preload is found, but is
+  not used because the request credentials mode does not match". Una
+  imagen del mismo origen nunca mancha el canvas —comprobado: `toDataURL`
+  funciona igual—, así que el atributo solo traía el problema. El tope de
+  8 s es la red: una foto que no llega dibuja la pieza sin ella en vez de
+  dejar el botón muerto.
 - Privacidad: el email de los jugadores no se muestra en ninguna vista pública;
   solo en el panel admin.

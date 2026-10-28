@@ -6,7 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { STAGE_LABELS, type MatchStage, type Team } from "@/lib/types";
+import {
+  CANCHAS,
+  CANCHA_POR_DEFECTO,
+  STAGE_LABELS,
+  type MatchStage,
+  type Team,
+} from "@/lib/types";
 import { addWeek } from "./actions";
 
 const selectClass =
@@ -19,6 +25,8 @@ interface Fila {
   stage: MatchStage;
   date: string;
   time: string;
+  /** La cancha de ESE partido: desde el torneo 2 no todos son en la misma. */
+  venue: string;
   home: string;
   away: string;
 }
@@ -47,6 +55,9 @@ function filaNueva(previa?: Fila): Fila {
   return {
     id: crypto.randomUUID(),
     stage: previa?.stage ?? "group",
+    // Hereda la cancha de la fila anterior: lo normal es que la fecha
+    // entera sea en la misma.
+    venue: previa?.venue ?? CANCHA_POR_DEFECTO,
     date: previa?.date ?? "",
     time: previa ? masUnaHora(previa.time) : "20:00",
     home: "",
@@ -135,6 +146,7 @@ export function AddWeekForm({
             stage: f.stage,
             date: f.date,
             time: f.time,
+            venue: f.venue,
             home_team_id: f.home || null,
             away_team_id: f.away || null,
           })),
@@ -260,6 +272,26 @@ export function AddWeekForm({
                   onChange={(e) => editar(fila.id, { time: e.target.value })}
                   className="w-fit"
                 />
+              </div>
+              <div className="min-w-44 flex-1 space-y-1">
+                <Label
+                  htmlFor={`${uid}-${fila.id}-venue`}
+                  className="text-xs text-muted-foreground"
+                >
+                  Cancha
+                </Label>
+                <select
+                  id={`${uid}-${fila.id}-venue`}
+                  value={fila.venue}
+                  onChange={(e) => editar(fila.id, { venue: e.target.value })}
+                  className={selectClass}
+                >
+                  {CANCHAS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
               {filas.length > 1 ? (
                 <Button

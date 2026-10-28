@@ -1,4 +1,5 @@
 import {
+  canchaConCiudad,
   STAGE_LABELS,
   type Match,
   type MatchEventType,
@@ -119,10 +120,10 @@ export function buildWeekWhatsAppMessage(
   for (const match of matches) {
     lines.push(`*${nameOf(match.home_team_id)}* vs *${nameOf(match.away_team_id)}*`);
     lines.push(`🕗 ${cuando(match.kickoff_at)}`);
+    lines.push(`📍 ${canchaConCiudad(match.venue)}`);
     lines.push("");
   }
 
-  lines.push("📍 Cancha F8, Montería");
   lines.push(`⚽ Calendario completo: ${SITE_URL}/torneo?tab=calendario`);
 
   return lines.join("\n");
@@ -182,7 +183,10 @@ export function matchWinner(match: {
 }
 
 /** Lugar fijo del torneo, usado en las piezas. */
-export const PIECE_VENUE = "Cancha F8 · Montería";
+/** La cancha de siempre, para cuando no hay un partido de por medio.
+ *  Con un partido en la mano va `canchaConCiudad(match.venue)`, que
+ *  respeta la suya. */
+export const PIECE_VENUE = canchaConCiudad(null);
 
 // ---------- Alineaciones ----------
 

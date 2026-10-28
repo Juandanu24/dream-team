@@ -99,6 +99,8 @@ export interface Match {
   home_penalties?: number | null;
   away_penalties?: number | null;
   status: MatchStatus;
+  /** Dónde se juega. Nulo = la cancha por defecto (migración 00020). */
+  venue?: string | null;
   /** Cuándo se anunció esta semana del calendario; null = sin publicar. */
   announced_at?: string | null;
   /** Figura del partido, elegida a dedo por el admin. */
@@ -425,6 +427,33 @@ export const DRAFT_ORDER_LABELS: Record<DraftOrderMode, string> = {
   once: "Se sortea una vez y se mantiene",
   per_round: "Se vuelve a sortear en cada bombo",
 };
+
+// ---------- Canchas ----------
+//
+// Se juega en más de una desde el torneo 2. Dejan de estar escritas a
+// mano en las piezas y en la landing: cada partido guarda la suya y
+// nulo significa la de siempre, así los partidos viejos no hay que
+// rellenarlos. Para sumar otra basta agregarla acá; el campo es texto
+// libre en la base, de modo que una cancha nueva no necesita migración.
+export const CANCHAS = [
+  "Cancha F8",
+  "Complejo Deportivo Rey Pelé",
+] as const;
+
+export const CANCHA_POR_DEFECTO = CANCHAS[0];
+
+export const CIUDAD = "Montería";
+
+/** El nombre de la cancha de un partido, con la de siempre como
+ *  respaldo cuando el partido no la tiene guardada. */
+export function nombreDeCancha(venue?: string | null): string {
+  return venue?.trim() || CANCHA_POR_DEFECTO;
+}
+
+/** Cómo se escribe en una pieza o en un mensaje: con la ciudad. */
+export function canchaConCiudad(venue?: string | null): string {
+  return `${nombreDeCancha(venue)} · ${CIUDAD}`;
+}
 
 /** El torneo de pruebas. No sale en ninguna lista pública: tiene equipos
  *  y jugadores inventados y pasaría por real. */

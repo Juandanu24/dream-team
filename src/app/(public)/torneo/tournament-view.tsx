@@ -45,6 +45,7 @@ import {
   FOOT_LABELS,
   POSITION_SHORT,
   STAGE_LABELS,
+  nombreDeCancha,
   type Match,
   type MatchEventType,
   type Player,
@@ -227,6 +228,11 @@ function MatchRow({
             · {kickoff}
           </span>
         ) : null}
+        {/* La cancha ya no es siempre la misma: si no va acá, hay que
+            adivinarla. */}
+        <span className="tracking-normal text-muted-foreground normal-case">
+          · {nombreDeCancha(match.venue)}
+        </span>
       </p>
 
       {/* Escudo, nombre y marcador. El escudo hace de ancla visual: en una

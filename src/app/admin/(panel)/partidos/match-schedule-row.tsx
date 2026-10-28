@@ -7,7 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmButton } from "@/components/confirm-button";
-import { STAGE_LABELS, type Match, type Team } from "@/lib/types";
+import {
+  CANCHAS,
+  CANCHA_POR_DEFECTO,
+  STAGE_LABELS,
+  type Match,
+  type Team,
+} from "@/lib/types";
 import { deleteMatch, updateMatch } from "./actions";
 
 const selectClass =
@@ -58,6 +64,23 @@ export function MatchScheduleRow({
         defaultValue={kickoffValue}
         className="w-fit"
       />
+      <select
+        name="venue"
+        defaultValue={match.venue ?? CANCHA_POR_DEFECTO}
+        onChange={(e) => {
+          const fd = new FormData();
+          fd.set("venue", e.target.value);
+          void updateMatch(match.id, fd);
+        }}
+        className={selectClass}
+        aria-label="Cancha"
+      >
+        {CANCHAS.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
       <select
         name="home_team_id"
         value={home}

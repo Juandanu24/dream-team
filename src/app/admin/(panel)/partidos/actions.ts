@@ -47,6 +47,7 @@ const matchSchema = z.object({
   stage: z.enum(["group", "semifinal", "third_place", "final"]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
   time: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida"),
+  venue: z.string().trim().min(2).max(80).optional(),
   home_team_id: z.string().uuid().nullable(),
   away_team_id: z.string().uuid().nullable(),
 });
@@ -106,6 +107,7 @@ export async function addWeek(input: {
       stage: m.stage,
       week: parsed.week,
       kickoff_at: bogotaToIso(`${m.date}T${m.time}`),
+      venue: m.venue ?? null,
       home_team_id: m.home_team_id,
       away_team_id: m.away_team_id,
     })),
@@ -217,6 +219,10 @@ export async function updateMatch(matchId: string, formData: FormData) {
 
   const update: Record<string, string | null> = {};
   if (kickoffLocal) update.kickoff_at = bogotaToIso(kickoffLocal);
+  if (formData.has("venue")) {
+    const v = String(formData.get("venue") ?? "").trim();
+    update.venue = v || null;
+  }
   if (formData.has("home_team_id")) update.home_team_id = home || null;
   if (formData.has("away_team_id")) update.away_team_id = away || null;
 

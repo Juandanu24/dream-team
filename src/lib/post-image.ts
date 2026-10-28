@@ -268,13 +268,52 @@ export type Layout = Omit<(typeof LAYOUT)[PieceFormat], "w" | "h"> & {
   h: number;
 };
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
+/** Carga una imagen para el canvas, sin poder quedarse colgada.
+ *
+ *  Dos cosas que costaron un botón girando para siempre en producción:
+ *
+ *  1. `crossOrigin = "anonymous"` SOLO para las de otro origen. El logo
+ *     es nuestro, y pedirlo en modo CORS cuando el navegador ya lo tiene
+ *     cacheado desde el `<img>` del encabezado —que lo pidió con
+ *     credenciales— deja la petición en una entrada que no se puede
+ *     reusar. En Chrome eso no dispara `onload` NI `onerror`: la promesa
+ *     no se resuelve nunca. El aviso de consola lo decía ("a preload is
+ *     found, but is not used because the request credentials mode does
+ *     not match"). Una imagen del mismo origen nunca mancha el canvas,
+ *     así que el atributo solo traía el problema.
+ *
+ *  2. Un tope de tiempo igual. Aunque la causa de arriba esté resuelta,
+ *     una foto que no llega no puede dejar la pieza sin salir: se dibuja
+ *     sin ella, que es mucho mejor que un botón que no responde.
+ */
+function loadImage(
+  src: string,
+  timeoutMs = 8000,
+): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
-    // Sin esto el canvas queda "manchado" y no se puede exportar.
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
+
+    const mismoOrigen =
+      src.startsWith("/") ||
+      src.startsWith("data:") ||
+      src.startsWith("blob:") ||
+      (typeof window !== "undefined" && src.startsWith(window.location.origin));
+    if (!mismoOrigen) {
+      // Sin esto el canvas queda "manchado" y no se puede exportar.
+      img.crossOrigin = "anonymous";
+    }
+
+    let resuelto = false;
+    const terminar = (valor: HTMLImageElement | null) => {
+      if (resuelto) return;
+      resuelto = true;
+      window.clearTimeout(reloj);
+      resolve(valor);
+    };
+    const reloj = window.setTimeout(() => terminar(null), timeoutMs);
+
+    img.onload = () => terminar(img);
+    img.onerror = () => terminar(null);
     img.src = src;
   });
 }
@@ -770,9 +809,19 @@ function drawMatchBody(
   ctx.fillStyle = VOLT;
   ctx.fillText(data.when.toUpperCase(), L.w / 2, panelY + whenTop);
 
-  ctx.font = `600 ${conGoleadores ? 26 : 30}px ${sans}`;
+  // La cancha se encoge hasta caber en vez de confiar en que quepa:
+  // "COMPLEJO DEPORTIVO REY PELÉ · MONTERÍA" es cuatro veces más largo
+  // que "CANCHA F8 · MONTERÍA" y a 30px se salía del panel.
+  const venueTexto = data.venue.toUpperCase();
+  const venueMax = L.w - 220;
+  let venueSize = conGoleadores ? 26 : 30;
+  ctx.font = `600 ${venueSize}px ${sans}`;
+  while (venueSize > 16 && trackedWidth(ctx, venueTexto, 3) > venueMax) {
+    venueSize -= 1;
+    ctx.font = `600 ${venueSize}px ${sans}`;
+  }
   ctx.fillStyle = "#C9C9C9";
-  tracked(ctx, data.venue.toUpperCase(), L.w / 2, panelY + whenTop + (conGoleadores ? 42 : 58), 3);
+  tracked(ctx, venueTexto, L.w / 2, panelY + whenTop + (conGoleadores ? 42 : 58), 3);
 
   if (!conGoleadores) return;
 

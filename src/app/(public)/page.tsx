@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InteractiveBall } from "@/components/interactive-ball";
 import { getActiveTournamentName } from "@/lib/data";
+import { CANCHAS, CIUDAD } from "@/lib/types";
 import { TorneoUno } from "./torneo-uno";
 
 // Nada de esto depende de cuántos equipos entren. Lo que sí dependía
@@ -208,19 +209,31 @@ export default async function HomePage() {
                     <p className="text-sm text-muted-foreground">9:00 PM</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="size-6 shrink-0 text-dt-blue" aria-hidden />
+                {/* Desde el torneo 2 se juega en más de una cancha: salen
+                    de la lista, para no volver a escribirlas a mano. */}
+                <div className="flex items-start gap-3">
+                  <MapPin
+                    className="mt-1 size-6 shrink-0 text-dt-blue"
+                    aria-hidden
+                  />
                   <div>
-                    <p className="font-display text-2xl tracking-wide">CANCHA F8</p>
-                    <p className="text-sm text-muted-foreground">Montería</p>
+                    {CANCHAS.map((cancha) => (
+                      <p
+                        key={cancha}
+                        className="font-display text-2xl leading-tight tracking-wide"
+                      >
+                        {cancha.toUpperCase()}
+                      </p>
+                    ))}
+                    <p className="text-sm text-muted-foreground">{CIUDAD}</p>
                   </div>
                 </div>
                 {/* Los horarios son los de siempre del grupo, no el
                     fixture: en el torneo pasado hubo semanas con los dos
                     partidos el mismo jueves. */}
                 <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
-                  Son los horarios de siempre. El día exacto de cada partido
-                  se confirma con el calendario.
+                  Son los horarios de siempre. El día y la cancha de cada
+                  partido se confirman con el calendario.
                 </p>
               </CardContent>
             </Card>
